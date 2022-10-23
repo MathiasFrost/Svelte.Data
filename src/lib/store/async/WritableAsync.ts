@@ -1,4 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
+import type { AsyncState } from './AsyncState';
 
 /** @inheritDoc */
 export interface WritableAsync<T> extends Writable<T> {
@@ -6,22 +7,24 @@ export interface WritableAsync<T> extends Writable<T> {
 	reFetch(silent?: boolean): Promise<void>;
 }
 
-/** Is undefined when pending */
-export type AsyncState<T> = undefined | T | Error;
-
-/** @param asyncData Function returning the async data */
-export function writableAsync<T>(asyncData: () => Promise<T>): WritableAsync<AsyncState<T>> {
-	const { subscribe, set, update } = writable<AsyncState<T>>();
+/** @param asyncData Function returning the async data
+ * @param placeholder Optional placeholder value to use instead of undefined (pending) */
+export function writableAsync<T>(
+	asyncData: () => Promise<T>,
+	placeholder?: T
+): WritableAsync<AsyncState<T>> {
+	const { subscribe, set, update } = writable<AsyncState<T>>(placeholder);
 
 	async function reFetch(silent?: boolean): Promise<void> {
 		try {
 			if (silent !== true) {
-				update(() => undefined);
+				set(placeholder);
 			}
 			const state = await asyncData();
-			update(() => state);
+			set(state);
 		} catch (error) {
-			update(() => error as Error);
+			console.error(error);
+			set(error as Error);
 		}
 	}
 

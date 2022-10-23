@@ -1,5 +1,5 @@
 {
-	"name": "svelte.storesplus",
+	"name": "@mathias_frost/svelte.storesplus",
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "vite dev",
