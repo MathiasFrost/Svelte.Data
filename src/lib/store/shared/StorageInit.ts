@@ -1,3 +1,5 @@
+import type { StartStopNotifier } from 'svelte/store';
+
 /** For initializing localStorage, sessionStorage */
 export interface StorageInit<T> {
 	/** key Key to store data in storage */
@@ -8,4 +10,7 @@ export interface StorageInit<T> {
 
 	/** transform Optional predicate to transform storage value to desired type. Otherwise will naively call JSON.parse */
 	transform?: (json: string) => T;
+
+	/** Start and stop notifications for subscriptions */
+	start?: StartStopNotifier<T>;
 }

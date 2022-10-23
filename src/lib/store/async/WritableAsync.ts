@@ -1,21 +1,25 @@
-import { writable, type Writable } from 'svelte/store';
+import { writable, type StartStopNotifier, type Writable } from 'svelte/store';
 import type { AsyncState } from './AsyncState';
 
 /** @inheritDoc */
 export interface WritableAsync<T> extends Writable<T> {
-	/** @param silent Default false. Set to true if you don't want to set store to pending before refetching */
-	reFetch(silent?: boolean): Promise<void>;
+	/** Call `asyncData` again
+	 * @param silent Default `false`. Set to `true` if you don't want to set store to pending before refetching */
+	refresh(silent?: boolean): Promise<void>;
 }
 
-/** @param asyncData Function returning the async data
- * @param placeholder Optional placeholder value to use instead of undefined (pending) */
+/** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
+ * @param asyncData Function returning the async data
+ * @param placeholder Optional placeholder value to use instead of undefined (pending)
+ * @param start Start and stop notifications for subscriptions */
 export function writableAsync<T>(
 	asyncData: () => Promise<T>,
-	placeholder?: T
+	placeholder?: T,
+	start?: StartStopNotifier<AsyncState<T>>
 ): WritableAsync<AsyncState<T>> {
-	const { subscribe, set, update } = writable<AsyncState<T>>(placeholder);
+	const { subscribe, set, update } = writable<AsyncState<T>>(placeholder, start);
 
-	async function reFetch(silent?: boolean): Promise<void> {
+	async function refresh(silent?: boolean): Promise<void> {
 		try {
 			if (silent !== true) {
 				set(placeholder);
@@ -28,12 +32,12 @@ export function writableAsync<T>(
 		}
 	}
 
-	reFetch();
+	refresh();
 
 	return {
 		subscribe,
 		set,
 		update,
-		reFetch
+		refresh
 	};
 }

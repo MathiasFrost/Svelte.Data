@@ -47,7 +47,7 @@ export function writableStorage<T>(
 		}
 	}
 
-	const { subscribe, set: _set, update: _update } = writable<T>(getValue());
+	const { subscribe, set: _set, update: _update } = writable<T>(getValue(), init.start);
 
 	function set(value: T): void {
 		setValue(value);
