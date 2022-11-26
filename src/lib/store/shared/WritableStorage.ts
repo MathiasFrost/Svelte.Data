@@ -1,5 +1,5 @@
-import { type Updater, writable, type Writable } from 'svelte/store';
-import type { StorageInit } from './StorageInit';
+import {type Updater, writable, type Writable} from "svelte/store";
+import type {StorageInit} from "./StorageInit";
 
 /** localStorage, sessionStorage and cookies */
 export interface WritableStorage<T> extends Writable<T> {
@@ -11,27 +11,18 @@ export interface WritableStorage<T> extends Writable<T> {
 }
 
 /** */
-export function writableStorage<T>(
-	init: StorageInit<T>,
-	getStorage: () => Storage | null
-): WritableStorage<T> {
+export function writableStorage<T>(init: StorageInit<T>, getStorage: () => Storage | null): WritableStorage<T> {
 	function getValue(): T {
 		try {
 			const storage = getStorage();
 			const json = storage ? storage.getItem(init.key) : null;
-			return json
-				? typeof init.transform === 'function'
-					? init.transform(json)
-					: JSON.parse(json)
-				: init.initialValue;
+			return json ? (typeof init.transform === "function" ? init.transform(json) : JSON.parse(json)) : init.initialValue;
 		} catch (error) {
 			console.error(error);
 			if (init.initialValue) {
 				return init.initialValue;
 			}
-			throw new Error(
-				`Could not retrieve value from localStorage and no initial value was provided. Key: ${init.key}`
-			);
+			throw new Error(`Could not retrieve value from localStorage and no initial value was provided. Key: ${init.key}`);
 		}
 	}
 
@@ -47,7 +38,7 @@ export function writableStorage<T>(
 		}
 	}
 
-	const { subscribe, set: _set, update: _update } = writable<T>(getValue(), init.start);
+	const {subscribe, set: _set, update: _update} = writable<T>(getValue(), init.start);
 
 	function set(value: T): void {
 		setValue(value);
