@@ -7,7 +7,7 @@ export interface WritableAsync<T> extends Writable<T> {
 	 * @param silent Default `false`. Set to `true` if you don't want to set store to pending before fetching */
 	refresh(silent?: boolean): Promise<void>;
 }
-// ht
+
 /** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
  * @param asyncData Function returning the async data
  * @param placeholder Optional placeholder value to use instead of undefined (pending)

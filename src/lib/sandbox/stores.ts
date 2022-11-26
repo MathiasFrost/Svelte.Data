@@ -1,4 +1,4 @@
-import {writableAsync} from "../store/async/WritableAsync";
+import {historicWritableAsync} from "$lib/store/async/HistoricWritableAsync";
 import {WeatherForecast} from "./WeatherForecast";
 
 /** @internal */
@@ -15,4 +15,4 @@ async function getForecasts() {
 }
 
 /** @internal */
-export const forecasts = writableAsync<WeatherForecast[]>(getForecasts);
+export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, 10);

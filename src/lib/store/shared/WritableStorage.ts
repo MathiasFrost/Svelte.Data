@@ -7,7 +7,7 @@ export interface WritableStorage<T> extends Writable<T> {
 	key: string;
 
 	/** Set store value to the data stored in storage */
-	reset: () => void;
+	reset(): void;
 }
 
 /** */
