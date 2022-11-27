@@ -1,0 +1,38 @@
+name: Build, Test and Publish (main)
+
+on:
+    push:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [18]
+
+        steps:
+            - uses: actions/checkout@v3
+            - uses: pnpm/action-setup@v2
+              with:
+                  version: 7
+
+            - name: Setup Node
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "pnpm"
+
+            - name: Install
+              run: pnpm install
+
+            - name: Check & Lint
+              run: pnpm check && pnpm lint
+
+            - name: Build
+              run: pnpm build
+
+            - name: Publish npm
+              if: github.ref_name == 'main'
+              run: pnpm publish
+                env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

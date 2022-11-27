@@ -1,7 +1,7 @@
 <script lang="ts">
-	import {historicAsync} from "$lib/sandbox/stores";
-	import type {WeatherForecast} from "$lib/sandbox/WeatherForecast";
-	import {stateIsResolved, type AsyncState} from "$lib/store/async/AsyncState";
+	import {historicAsync} from "$lib/sandbox/stores/historicAsync";
+	import type {WeatherForecast} from "$lib/sandbox/models/WeatherForecast";
+	import {stateIsResolved} from "$lib/store/async/AsyncState";
 	import {onDestroy} from "svelte";
 
 	function updateSummary(e: any): void {
@@ -13,7 +13,7 @@
 		});
 	}
 
-	let history: AsyncState<WeatherForecast[]>[] = [];
+	let history: WeatherForecast[][] = [];
 	let index: number = 0;
 
 	let unsubscribeHistory = historicAsync.history.subscribe((value) => (history = value));

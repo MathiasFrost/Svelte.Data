@@ -1,4 +1,4 @@
-import {WeatherForecast} from "../WeatherForecast";
+import {WeatherForecast} from "../models/WeatherForecast";
 import {HttpClientBase} from "./HttpClientBase";
 
 export class TestClient extends HttpClientBase {

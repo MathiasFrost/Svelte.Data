@@ -72,6 +72,7 @@ export function __historicWritable<T>(value?: T, options?: HistoricWritableOptio
 	}
 
 	function addHistory(value: T): void {
+		console.log(value);
 		if (typeof options?.condition === "function" && !options.condition(value)) {
 			return;
 		}
@@ -101,6 +102,8 @@ export function __historicWritable<T>(value?: T, options?: HistoricWritableOptio
 			return value;
 		});
 	}
+
+	addHistory(value as T); // Initial value
 
 	return {
 		subscribe,
