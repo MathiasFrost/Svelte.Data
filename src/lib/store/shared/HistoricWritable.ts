@@ -1,5 +1,5 @@
 import {get, writable, type Readable, type StartStopNotifier, type Updater, type Writable} from "svelte/store";
-import {deepCopy} from "../shared/DeepCopy";
+import {deepCopy} from "./deepCopy";
 
 export interface HistoricWritable<T> extends Writable<T> {
 	/** Array of historic states */
@@ -19,11 +19,10 @@ export interface HistoricWritable<T> extends Writable<T> {
 }
 
 /** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
- * @param asyncData Function returning the async data
  * @param cap How many changes to remember
- * @param placeholder Optional placeholder value to use instead of undefined (pending)
+ * @param initialValue Optional placeholder value to use instead of undefined (pending)
  * @param start Start and stop notifications for subscriptions */
-export function historicWritableAsync<T>(asyncData: () => Promise<T>, cap: number, initialValue?: T, start?: StartStopNotifier<T>): HistoricWritable<T> {
+export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: StartStopNotifier<T>): HistoricWritable<T> {
 	const {subscribe, set: _set, update: _update} = writable<T>(initialValue, start);
 
 	const history = writable<T[]>([]);

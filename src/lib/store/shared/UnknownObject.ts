@@ -51,3 +51,13 @@ export function ensureDateString(something: unknown): Date {
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
 	return date;
 }
+
+/** Tells TypeScript that something is an unknown object */
+export function isObject(something: unknown): something is UnknownObject {
+	return typeof something === "object" || something !== null;
+}
+
+/** Tells TypeScript that something is an unknown object or null */
+export function isNullableObject(something: unknown): something is UnknownObject | null {
+	return typeof something === "object";
+}

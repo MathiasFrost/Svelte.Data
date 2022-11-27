@@ -4,7 +4,6 @@ import {HttpClientBase} from "./HttpClientBase";
 export class TestClient extends HttpClientBase {
 	public constructor(baseAddress?: string) {
 		super(baseAddress);
-		console.log("ctor");
 	}
 
 	public async getForecasts(): Promise<WeatherForecast[]> {

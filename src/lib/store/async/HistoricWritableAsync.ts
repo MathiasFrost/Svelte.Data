@@ -1,6 +1,6 @@
 import type {WritableAsync} from "$lib/store/async/WritableAsync";
 import {get, writable, type StartStopNotifier, type Updater} from "svelte/store";
-import {deepCopy} from "../shared/DeepCopy";
+import {deepCopy} from "../shared/deepCopy";
 import type {HistoricWritable} from "../shared/HistoricWritable";
 import {isValue, type AsyncState} from "./AsyncState";
 

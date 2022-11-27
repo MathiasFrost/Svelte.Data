@@ -1,30 +1,28 @@
-import type {UnknownObject} from "./UnknownObject";
+import {isObject, type UnknownObject} from "./UnknownObject";
 
 /** */
-export function deepCopy<T>(value: T): T {
-	let copy: T;
-	if (Array.isArray(value)) {
-		copy = value.map((el) => deepCopy(el)) as T;
-	} else if (typeof value === "object" && value !== null) {
-		copy = {} as T;
-		const keys = Object.keys(value);
+export function deepCopy<T>(something: T): T {
+	if (Array.isArray(something)) {
+		return something.map((el) => deepCopy(el)) as T;
+	} else if (isObject(something)) {
+		const copy: UnknownObject = {};
+		const keys = Object.keys(something);
 		for (const key of keys) {
-			const el = (value as UnknownObject)[key];
+			const el = something[key];
 			if (Array.isArray(el)) {
-				(copy as UnknownObject)[key] = el.map((e) => deepCopy(e));
+				copy[key] = el.map((e) => deepCopy(e));
 			}
 			// Special treatment for Date
 			else if (el instanceof Date) {
-				(copy as UnknownObject)[key] = new Date(el.valueOf());
+				copy[key] = new Date(el.valueOf());
 			} else if (typeof el === "object" && el !== null) {
-				(copy as UnknownObject)[key] = deepCopy(el);
+				copy[key] = deepCopy(el);
 			} else {
-				(copy as UnknownObject)[key] = el;
+				copy[key] = el;
 			}
 		}
-	} else {
-		copy = value;
+		return copy as T;
 	}
 
-	return copy;
+	return something;
 }
