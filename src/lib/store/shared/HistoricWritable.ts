@@ -1,29 +1,42 @@
 import {get, writable, type Readable, type StartStopNotifier, type Updater, type Writable} from "svelte/store";
 import {deepCopy} from "./deepCopy";
 
-export interface HistoricWritable<T> extends Writable<T> {
+/** */
+export type HistoricWritable<T> = {
 	/** Array of historic states */
 	history: Readable<T[]>;
 
-	/** Current index of history. -1 if history is empty array */
+	/** Which index of history corresponds to current store value */
 	index: Readable<number>;
 
-	/** Revert store to a previous state */
+	/** Revert store value to a previous state */
 	undo(): void;
 
-	/** Reverse an undo */
+	/** Revert store value to before the last undo */
 	redo(): void;
 
-	/** Delete history */
+	/** Reset history based on current value */
 	deleteHistory(): void;
-}
 
-/** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
- * @param cap How many changes to remember
- * @param initialValue Optional placeholder value to use instead of undefined (pending)
- * @param start Start and stop notifications for subscriptions */
-export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: StartStopNotifier<T>): HistoricWritable<T> {
-	const {subscribe, set: _set, update: _update} = writable<T>(initialValue, start);
+	/** Manually add a history entry. This is called automatically when invoking `set` or `update` */
+	addHistory(value: T): void;
+};
+
+/** Optional parameters */
+export type HistoricWritableOptions<T> = {
+	/** How many changes to remember. If not specified cap is unlimited */
+	cap?: number;
+
+	/** Start and stop notifications for subscriptions */
+	start?: StartStopNotifier<T>;
+
+	/** Must return true before adding value history */
+	condition?: (value: T) => boolean;
+};
+
+/** @internal */
+export function __historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>, store?: Writable<T>): HistoricWritable<T> & Writable<T> {
+	const {subscribe, set: _set, update: _update} = store ?? writable<T>(value, options?.start);
 
 	const history = writable<T[]>([]);
 	const {subscribe: subscribeHistory, update: _updateHistory} = history;
@@ -33,22 +46,24 @@ export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: 
 
 	function undo(): void {
 		const histories = get(history);
-		let i = get(index);
-		if (i > 0) {
-			i--;
-			_setIndex(i);
-			_set(deepCopy<T>(histories[i]));
-		}
+		_updateIndex((prev) => {
+			if (prev > 0) {
+				prev--;
+				_set(deepCopy<T>(histories[prev]));
+			}
+			return prev;
+		});
 	}
 
 	function redo(): void {
 		const histories = get(history);
-		let i = get(index);
-		if (i < histories.length - 1) {
-			i++;
-			_setIndex(i);
-			_set(deepCopy<T>(histories[i]));
-		}
+		_updateIndex((prev) => {
+			if (prev < histories.length - 1) {
+				prev++;
+				_set(deepCopy<T>(histories[prev]));
+			}
+			return prev;
+		});
 	}
 
 	function deleteHistory(): void {
@@ -58,10 +73,13 @@ export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: 
 	}
 
 	function addHistory(value: T): void {
+		if (typeof options?.condition === "function" && !options.condition(value)) {
+			return;
+		}
 		let i = get(index);
 		_updateHistory((prev) => {
 			const copy = deepCopy<T>(value);
-			if (prev.length >= cap) {
+			if (typeof options?.cap === "number" && prev.length >= options.cap) {
 				prev.splice(0, 1);
 				i = prev.length - 1;
 				_setIndex(i);
@@ -77,7 +95,7 @@ export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: 
 	}
 
 	function update(this: void, updater: Updater<T>): void {
-		_update((prev: T) => {
+		_update((prev) => {
 			const value = updater(prev);
 			addHistory(value);
 			return value;
@@ -92,6 +110,14 @@ export function historicWritableAsync<T>(cap: number, initialValue?: T, start?: 
 		index: {subscribe: subscribeIndex},
 		undo,
 		redo,
-		deleteHistory
+		deleteHistory,
+		addHistory
 	};
+}
+
+/** Create a `HistoricWritable` store that keeps track of changes made through `set` and `update`
+ * @param value Initial value
+ * @param options Optional parameters */
+export function historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>): HistoricWritable<T> & Writable<T> {
+	return __historicWritable(value, options);
 }

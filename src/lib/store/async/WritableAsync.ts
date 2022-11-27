@@ -1,34 +1,47 @@
 import {writable, type StartStopNotifier, type Writable} from "svelte/store";
 import type {AsyncState} from "./AsyncState";
 
-/** @inheritDoc */
-export interface WritableAsync<T> extends Writable<T> {
+/** */
+export type WritableAsync = {
 	/** Call `asyncData` again
-	 * @param silent Default `false`. Set to `true` if you don't want to set store to pending before fetching */
+	 * @param silent Default `false`. Set to `true` if you don't want to revert store value to placeholder before fetching */
 	refresh(silent?: boolean): Promise<void>;
-}
+};
 
-/** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
- * @param asyncData Function returning the async data
- * @param placeholder Optional placeholder value to use instead of undefined (pending)
- * @param start Start and stop notifications for subscriptions */
-export function writableAsync<T>(asyncData: () => Promise<T>, placeholder?: T, start?: StartStopNotifier<AsyncState<T>>): WritableAsync<AsyncState<T>> {
-	const {subscribe, set, update} = writable<AsyncState<T>>(placeholder, start);
+/** Optional parameters */
+export type WritableAsyncOptions<T> = {
+	/** Optional placeholder value to use instead of undefined (pending) */
+	placeholder?: T;
+
+	/** Start and stop notifications for subscriptions */
+	start?: StartStopNotifier<T>;
+
+	/** browserOnly Set to true if we should <b>not</b> fetch on the server */
+	browserOnly?: boolean;
+};
+
+/** @internal */
+export function __writableAsync<T>(
+	asyncData: () => Promise<T>,
+	options?: WritableAsyncOptions<T>,
+	store?: Writable<T>
+): WritableAsync & Writable<AsyncState<T>> {
+	const {subscribe, set, update} = store ?? writable<AsyncState<T>>(options?.placeholder, options?.start);
 
 	async function refresh(silent?: boolean): Promise<void> {
 		try {
-			if (silent !== true) {
-				set(placeholder);
+			if (!silent) {
+				set(options?.placeholder);
 			}
 			const state = await asyncData();
 			set(state);
-		} catch (error) {
-			console.error(error);
-			set(error as Error);
+		} catch (e) {
+			console.error(e);
+			set(e as Error);
 		}
 	}
 
-	refresh().then();
+	if (!options?.browserOnly || typeof window !== "undefined") refresh(true).then(); // Initially, store is already set to placeholder
 
 	return {
 		subscribe,
@@ -36,4 +49,11 @@ export function writableAsync<T>(asyncData: () => Promise<T>, placeholder?: T, s
 		update,
 		refresh
 	};
+}
+
+/** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API, using fetch.
+ * @param asyncData Function returning a promise for the data
+ * @param options Optional parameters */
+export function writableAsync<T>(asyncData: () => Promise<T>, options?: WritableAsyncOptions<T>): WritableAsync & Writable<AsyncState<T>> {
+	return __writableAsync(asyncData, options);
 }

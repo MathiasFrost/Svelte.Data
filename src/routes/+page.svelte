@@ -1,13 +1,13 @@
 <script lang="ts">
 	import {forecasts} from "$lib/sandbox/stores";
 	import type {WeatherForecast} from "$lib/sandbox/WeatherForecast";
-	import type {AsyncState} from "$lib/store/async/AsyncState";
+	import {stateIsResolved, type AsyncState} from "$lib/store/async/AsyncState";
 	import {onDestroy} from "svelte";
 
 	function updateSummary(e: any): void {
 		forecasts.update((prev) => {
-			if (typeof prev === "object") {
-				(<WeatherForecast[]>prev)[0].summary = e.target.value;
+			if (stateIsResolved(prev) && prev.length) {
+				prev[0].summary = e.target.value;
 			}
 			return prev;
 		});
@@ -61,6 +61,7 @@
 	<button on:click={forecasts.undo}>undo</button>
 	<button on:click={forecasts.redo}>redo</button>
 	<button on:click={() => forecasts.refresh()}>refresh</button>
+	<button on:click={() => forecasts.refresh(true)}>silent refresh</button>
 	<button on:click={forecasts.deleteHistory}>clear</button>
 	<p>Index: {index}</p>
 	<ul>
