@@ -1,5 +1,5 @@
 <h1>Svelte.StoresPlus</h1>
-historicAsync
+
 <h2>Welcome to your library project</h2>
 
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>

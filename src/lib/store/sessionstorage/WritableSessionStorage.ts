@@ -1,11 +1,13 @@
-import type {StorageInit} from "../shared/StorageInit";
-import {type WritableStorage, writableStorage} from "../shared/WritableStorage";
+import type {Writable} from "svelte/store";
+import {type WritableStorage, writableStorage, type WritableStorageOptions} from "../shared/WritableStorage";
 
-/** */
-export function writableSessionStorage<T>(init: StorageInit<T>): WritableStorage<T> {
+/** Create a `WritableSessionStorage` that syncs with `window.sessionStorage`
+ * @param key Key
+ * @param options Optional parameters */
+export function writableSessionStorage<T>(key: string, options?: WritableStorageOptions<T>): WritableStorage & Writable<T> {
 	function getLocalStorage(): Storage | null {
 		return typeof window === "undefined" ? null : window.sessionStorage;
 	}
 
-	return writableStorage<T>(init, getLocalStorage);
+	return writableStorage<T>(key, getLocalStorage, options);
 }

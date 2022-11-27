@@ -21,6 +21,8 @@
 
 <h1>Svelte.StoresPlus</h1>
 
+<h2>HistoricWritable</h2>
+
 <input type="text" value={$historic} on:change={updateSummary} />
 <button on:click={historic.undo}>undo</button>
 <button on:click={historic.redo}>redo</button>

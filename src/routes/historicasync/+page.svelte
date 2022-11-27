@@ -28,6 +28,8 @@
 
 <h1>Svelte.StoresPlus</h1>
 
+<h2>HistoricWritableAsync</h2>
+
 {#if typeof $historicAsync === "undefined"}
 	<p>Loading...</p>
 {:else if $historicAsync instanceof Error}
