@@ -1,7 +1,7 @@
-import {writableCookies} from "$lib/store/cookies/WritableCookies";
+import {writableCookie} from "$lib/store/cookie/WritableCookie";
 import {RandomModel} from "../models/RandomModel";
 
-export const cookies = writableCookies<RandomModel>("random_model", {
+export const cookie = writableCookie<RandomModel>("random_model", {
 	initialValue: new RandomModel(),
 	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
 });

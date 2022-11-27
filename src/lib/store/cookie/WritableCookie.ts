@@ -10,7 +10,7 @@ export type WritableCookie = {
 	reset(): void;
 };
 
-export function writableCookies<T>(name: string, options?: WritableStorageOptions<T>): WritableCookie & Writable<T> {
+export function writableCookie<T>(name: string, options?: WritableStorageOptions<T>): WritableCookie & Writable<T> {
 	function getValue(): T {
 		try {
 			const str = typeof document === "undefined" ? null : document.cookie;
@@ -29,7 +29,9 @@ export function writableCookies<T>(name: string, options?: WritableStorageOption
 			return;
 		}
 		try {
-			document.cookie = `${name}: ${JSON.stringify(value)}`;
+			const start = document.cookie.indexOf(name);
+			const end = document.cookie.lastIndexOf("; ", start);
+			document.cookie = document.cookie.substring(0, start) + `${name}=${encodeURI(JSON.stringify(value))}` + document.cookie.substring(end);
 		} catch (error) {
 			console.error(error);
 		}
