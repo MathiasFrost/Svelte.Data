@@ -2,8 +2,8 @@
 
 Convenient Svelte store abstractions
 
-
 # Stores
+
 ## AsyncWritable
 
 ```ts
@@ -13,8 +13,8 @@ import {WeatherForecast} from "./WeatherForecast";
 async function getForecasts() {
 	const res = await fetch("http://localhost:5000/WeatherForecast");
 
-    // Throw error if any checks fail
-    // WritableAsync will be updated to contain the error
+	// Throw error if any checks fail
+	// WritableAsync will be updated to contain the error
 	if (!res.ok) {
 		throw new Error("Not success");
 	}
@@ -36,12 +36,11 @@ export const forecasts = writableAsync<WeatherForecast[]>(getForecasts);
 <!-- undefined means loading -->
 {#if typeof $forecasts === "undefined"}
 	<p>Loading...</p>
-    
 {:else if $forecasts instanceof Error}
 	<p style="color: crimson">{$forecasts.message}</p>
 	<p>{$forecasts.stack}</p>
 
-<!-- If it is not undefined and not an error, it is the async data -->
+	<!-- If it is not undefined and not an error, it is the async data -->
 {:else}
 	<table>
 		<thead>
