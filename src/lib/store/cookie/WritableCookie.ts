@@ -13,8 +13,15 @@ export type WritableCookie = {
 export function writableCookie<T>(name: string, options?: WritableStorageOptions<T>): WritableCookie & Writable<T> {
 	function getValue(): T {
 		try {
-			const str = typeof document === "undefined" ? null : document.cookie;
-			return str ? (typeof options?.transform === "function" ? options.transform(str) : JSON.parse(str)) : options?.initialValue;
+			const cookies = typeof document === "undefined" ? null : document.cookie;
+			if (!cookies) {
+				return options?.initialValue as T;
+			}
+			const start = document.cookie.indexOf(name) + name.length + 1;
+			const end = document.cookie.indexOf("; ", start);
+			const value = end === -1 ? document.cookie.substring(start) : document.cookie.substring(start, end);
+			const str = decodeURI(value);
+			return typeof options?.transform === "function" ? options.transform(str) : JSON.parse(str);
 		} catch (error) {
 			console.error(error);
 			if (options?.initialValue) {
@@ -30,8 +37,8 @@ export function writableCookie<T>(name: string, options?: WritableStorageOptions
 		}
 		try {
 			const start = document.cookie.indexOf(name);
-			const end = document.cookie.lastIndexOf("; ", start);
-			document.cookie = document.cookie.substring(0, start) + `${name}=${encodeURI(JSON.stringify(value))}` + document.cookie.substring(end);
+			const end = document.cookie.indexOf("; ", start);
+			document.cookie = document.cookie.substring(0, start) + `${name}=${encodeURI(JSON.stringify(value))}` + "; " + document.cookie.substring(end);
 		} catch (error) {
 			console.error(error);
 		}
