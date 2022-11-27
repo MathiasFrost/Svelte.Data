@@ -2,12 +2,13 @@
 	import {historic} from "$lib/sandbox/stores/historic";
 	import {onDestroy} from "svelte";
 
-	function updateSummary(e: any): void {
-		historic.set(e.target.value);
+	function updateSummary(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		historic.set(target.value);
 	}
 
 	let history: string[] = [];
-	let index: number = 0;
+	let index = 0;
 
 	let unsubscribeHistory = historic.history.subscribe((value) => (history = value));
 	let unsubscribeIndex = historic.index.subscribe((value) => (index = value));

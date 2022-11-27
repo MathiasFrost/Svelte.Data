@@ -4,17 +4,18 @@
 	import {stateIsResolved} from "$lib/store/async/AsyncState";
 	import {onDestroy} from "svelte";
 
-	function updateSummary(e: any): void {
+	function updateSummary(e: Event): void {
 		historicAsync.update((prev) => {
 			if (stateIsResolved(prev) && prev.length) {
-				prev[0].summary = e.target.value;
+				const target = e.target as HTMLInputElement;
+				prev[0].summary = target.value;
 			}
 			return prev;
 		});
 	}
 
 	let history: WeatherForecast[][] = [];
-	let index: number = 0;
+	let index = 0;
 
 	let unsubscribeHistory = historicAsync.history.subscribe((value) => (history = value));
 	let unsubscribeIndex = historicAsync.index.subscribe((value) => (index = value));
