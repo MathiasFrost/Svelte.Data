@@ -28,8 +28,8 @@ export function writableStorage<T>(key: string, getStorage: () => Storage | null
 	function getValue(): T {
 		try {
 			const storage = getStorage();
-			const json = storage ? storage.getItem(key) : null;
-			return json ? (typeof options?.transform === "function" ? options.transform(json) : JSON.parse(json)) : options?.initialValue;
+			const str = storage ? storage.getItem(key) : null;
+			return str ? (typeof options?.transform === "function" ? options.transform(str) : JSON.parse(str)) : options?.initialValue;
 		} catch (error) {
 			console.error(error);
 			if (options?.initialValue) {
