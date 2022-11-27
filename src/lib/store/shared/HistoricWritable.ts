@@ -40,9 +40,7 @@ export function __historicWritable<T>(value?: T, options?: HistoricWritableOptio
 
 	const history = writable<T[]>([]);
 	const {subscribe: subscribeHistory, update: _updateHistory} = history;
-
-	const index = writable<number>(-1);
-	const {subscribe: subscribeIndex, set: _setIndex, update: _updateIndex} = index;
+	const {subscribe: subscribeIndex, set: _setIndex, update: _updateIndex} = writable<number>(-1);
 
 	function undo(): void {
 		const histories = get(history);
@@ -67,26 +65,28 @@ export function __historicWritable<T>(value?: T, options?: HistoricWritableOptio
 	}
 
 	function deleteHistory(): void {
-		const i = get(index);
-		_updateHistory((prev) => [prev[i]]);
-		_setIndex(0);
+		_updateIndex((i) => {
+			_updateHistory((prev) => [prev[i]]);
+			return 0;
+		});
 	}
 
 	function addHistory(value: T): void {
 		if (typeof options?.condition === "function" && !options.condition(value)) {
 			return;
 		}
-		let i = get(index);
-		_updateHistory((prev) => {
-			const copy = deepCopy<T>(value);
-			if (typeof options?.cap === "number" && prev.length >= options.cap) {
-				prev.splice(0, 1);
-				i = prev.length - 1;
-				_setIndex(i);
-			}
-			return [...prev.slice(0, i + 1), copy];
+		_updateIndex((i) => {
+			_updateHistory((prev) => {
+				const copy = deepCopy<T>(value);
+				if (typeof options?.cap === "number" && prev.length >= options.cap && i === prev.length - 1) {
+					prev.splice(0, 1);
+					i = prev.length - 1;
+					_setIndex(i);
+				}
+				return [...prev.slice(0, ++i), copy];
+			});
+			return i;
 		});
-		_updateIndex((prev) => ++prev);
 	}
 
 	function set(this: void, value: T): void {

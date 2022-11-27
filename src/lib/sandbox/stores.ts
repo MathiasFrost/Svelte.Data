@@ -7,7 +7,7 @@ import type {WeatherForecast} from "./WeatherForecast";
 const _testClient = new TestClient("http://localhost:5000");
 
 /** @internal */
-export const forecasts = historicWritableAsync<WeatherForecast[]>(_testClient.getForecasts.bind(_testClient), {cap: 10, browserOnly: true});
+export const historicAsync = historicWritableAsync<WeatherForecast[]>(_testClient.getForecasts.bind(_testClient), {cap: 10, browserOnly: true});
 
 /** @internal */
 export const historic = historicWritable<string>("test");
