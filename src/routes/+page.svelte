@@ -31,7 +31,7 @@
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-{#if $forecasts === void 0}
+{#if typeof $forecasts === "undefined"}
 	<p>Loading...</p>
 {:else if $forecasts instanceof Error}
 	<p style="color: crimson">{$forecasts.message}</p>
@@ -60,6 +60,8 @@
 	<input type="text" value={$forecasts[0].summary} on:change={updateSummary} />
 	<button on:click={forecasts.undo}>undo</button>
 	<button on:click={forecasts.redo}>redo</button>
+	<button on:click={() => forecasts.refresh()}>refresh</button>
+	<button on:click={forecasts.deleteHistory}>clear</button>
 	<p>Index: {index}</p>
 	<ul>
 		{#each history as item, i}

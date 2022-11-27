@@ -1,10 +1,19 @@
 import {get, writable, type Readable, type StartStopNotifier, type Updater, type Writable} from "svelte/store";
 
 export interface HistoricWritable<T> extends Writable<T> {
+	/** Array of historic states */
 	history: Readable<T[]>;
+
+	/** Current index of history. -1 if history is empty array */
 	index: Readable<number>;
+
+	/** Revert store to a previous state */
 	undo(): void;
+
+	/** Reverse an undo */
 	redo(): void;
+
+	/** Delete history */
 	deleteHistory(): void;
 }
 

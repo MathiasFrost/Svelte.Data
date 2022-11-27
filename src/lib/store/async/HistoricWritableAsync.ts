@@ -1,8 +1,8 @@
 import type {WritableAsync} from "$lib/store/async/WritableAsync";
 import {get, writable, type StartStopNotifier, type Updater} from "svelte/store";
-import {DeepCopy} from "../shared/deepCopy";
+import {deepCopy} from "../shared/DeepCopy";
 import type {HistoricWritable} from "../shared/HistoricWritable";
-import type {AsyncState} from "./AsyncState";
+import {isPendingOrError, type AsyncState} from "./AsyncState";
 
 export interface HistoricWritableAsync<T> extends HistoricWritable<T>, WritableAsync<T> {}
 
@@ -20,59 +20,67 @@ export function historicWritableAsync<T>(
 	const {subscribe, set: _set, update: _update} = writable<AsyncState<T>>(placeholder, start);
 
 	const history = writable<AsyncState<T>[]>([]);
-	const {subscribe: subscribeHistory, set: _setHistory, update: _updateHistory} = history;
+	const {subscribe: subscribeHistory, update: _updateHistory} = history;
 
 	const index = writable<number>(-1);
 	const {subscribe: subscribeIndex, set: _setIndex, update: _updateIndex} = index;
 
 	function undo(): void {
 		const histories = get(history);
-		const i = get(index);
+		let i = get(index);
 		if (i > 0) {
-			_updateIndex((prev) => --prev);
-			_set(histories[i - 1]);
+			i--;
+			_setIndex(i);
+			_set(deepCopy<T>(histories[i] as T));
 		}
 	}
 
 	function redo(): void {
 		const histories = get(history);
-		const i = get(index);
+		let i = get(index);
 		if (i < histories.length - 1) {
-			_updateIndex((prev) => ++prev);
-			_set(histories[i + 1]);
+			i++;
+			_setIndex(i);
+			_set(deepCopy<T>(histories[i] as T));
 		}
 	}
 
 	function deleteHistory(): void {
-		_setHistory([]);
+		const i = get(index);
+		_updateHistory((prev) => [prev[i]]);
 		_setIndex(0);
 	}
 
-	function addHistory(item: AsyncState<T>): void {
-		if (typeof item === "undefined" || item instanceof Error) {
+	function addHistory(value: AsyncState<T>): void {
+		if (isPendingOrError(value)) {
 			return;
 		}
+		let i = get(index);
 		_updateHistory((prev) => {
-			return [...prev, item];
+			const copy = deepCopy<T>(value as T);
+			if (prev.length >= cap) {
+				prev.splice(0, 1);
+				i = prev.length - 1;
+				_setIndex(i);
+			}
+			return [...prev.slice(0, i + 1), copy];
 		});
-		console.log(get(history));
 		_updateIndex((prev) => ++prev);
 	}
 
 	function set(this: void, value: AsyncState<T>): void {
-		const copy: AsyncState<T> = Array.isArray(value) ? value.map((i) => ({...i})) : value;
-		_set(copy);
-		addHistory(copy);
+		_set(value);
+		addHistory(value);
 	}
 
 	function update(this: void, updater: Updater<AsyncState<T>>): void {
 		_update((prev: AsyncState<T>) => {
 			const value = updater(prev);
-			const copy: AsyncState<T> = Array.isArray(value) ? value.map((i) => ({...i})) : value;
-			addHistory(copy);
-			return copy;
+			addHistory(value);
+			return value;
 		});
 	}
+
 	async function refresh(silent?: boolean): Promise<void> {
 		try {
 			if (silent !== true) {
@@ -86,7 +94,7 @@ export function historicWritableAsync<T>(
 		}
 	}
 
-	if (typeof window !== "undefined") refresh().then();
+	if (typeof window !== "undefined") refresh(true).then(); // Initially, store is already set to placeholder
 
 	return {
 		subscribe,
