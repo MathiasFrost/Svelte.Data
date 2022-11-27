@@ -34,5 +34,5 @@ jobs:
             - name: Publish npm
               if: github.ref_name == 'main'
               run: pnpm publish
-                env:
+              env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
