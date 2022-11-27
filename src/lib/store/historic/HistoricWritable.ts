@@ -1,5 +1,5 @@
 import {get, writable, type Readable, type StartStopNotifier, type Updater, type Writable} from "svelte/store";
-import {deepCopy} from "./deepCopy";
+import {deepCopy} from "../shared/deepCopy";
 
 /** */
 export type HistoricWritable<T> = {

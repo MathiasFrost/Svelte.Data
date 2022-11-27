@@ -1,6 +1,6 @@
 import {__writableAsync, type WritableAsync, type WritableAsyncOptions} from "$lib/store/async/WritableAsync";
 import {writable, type Writable} from "svelte/store";
-import {__historicWritable, type HistoricWritable, type HistoricWritableOptions} from "../shared/HistoricWritable";
+import {__historicWritable, type HistoricWritable, type HistoricWritableOptions} from "../historic/HistoricWritable";
 import {stateIsResolved, type AsyncState} from "./AsyncState";
 
 /** */

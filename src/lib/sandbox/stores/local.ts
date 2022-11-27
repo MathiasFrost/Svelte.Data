@@ -1,4 +1,4 @@
-import {writableLocalStorage} from "$lib/store/localstorage/WritableLocalStorage";
+import {writableLocalStorage} from "$lib/store/local/WritableLocalStorage";
 import {RandomModel} from "../models/RandomModel";
 
 export const local = writableLocalStorage<RandomModel>("random_model", {

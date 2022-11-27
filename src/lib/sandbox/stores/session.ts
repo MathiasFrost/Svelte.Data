@@ -1,4 +1,4 @@
-import {writableSessionStorage} from "$lib/store/sessionstorage/WritableSessionStorage";
+import {writableSessionStorage} from "$lib/store/session/WritableSessionStorage";
 import {RandomModel} from "../models/RandomModel";
 
 export const session = writableSessionStorage<RandomModel>("random_model", {
