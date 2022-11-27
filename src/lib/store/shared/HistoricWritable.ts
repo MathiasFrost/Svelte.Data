@@ -1,4 +1,5 @@
 import {get, writable, type Readable, type StartStopNotifier, type Updater, type Writable} from "svelte/store";
+import {deepCopy} from "../shared/DeepCopy";
 
 export interface HistoricWritable<T> extends Writable<T> {
 	/** Array of historic states */
@@ -17,29 +18,58 @@ export interface HistoricWritable<T> extends Writable<T> {
 	deleteHistory(): void;
 }
 
-export function historicWritable<T>(initialValue?: T, start?: StartStopNotifier<T>): HistoricWritable<T> {
+/** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API using fetch.
+ * @param asyncData Function returning the async data
+ * @param cap How many changes to remember
+ * @param placeholder Optional placeholder value to use instead of undefined (pending)
+ * @param start Start and stop notifications for subscriptions */
+export function historicWritableAsync<T>(asyncData: () => Promise<T>, cap: number, initialValue?: T, start?: StartStopNotifier<T>): HistoricWritable<T> {
 	const {subscribe, set: _set, update: _update} = writable<T>(initialValue, start);
 
-	let i = 0;
 	const history = writable<T[]>([]);
-	const {subscribe: subscribeHistory, set: _setHistory, update: _updateHistory} = history;
+	const {subscribe: subscribeHistory, update: _updateHistory} = history;
+
+	const index = writable<number>(-1);
+	const {subscribe: subscribeIndex, set: _setIndex, update: _updateIndex} = index;
 
 	function undo(): void {
-		_set(get(history)[--i]);
+		const histories = get(history);
+		let i = get(index);
+		if (i > 0) {
+			i--;
+			_setIndex(i);
+			_set(deepCopy<T>(histories[i]));
+		}
 	}
 
 	function redo(): void {
-		_set(get(history)[++i]);
+		const histories = get(history);
+		let i = get(index);
+		if (i < histories.length - 1) {
+			i++;
+			_setIndex(i);
+			_set(deepCopy<T>(histories[i]));
+		}
 	}
 
 	function deleteHistory(): void {
-		_setHistory([]);
-		i = 0;
+		const i = get(index);
+		_updateHistory((prev) => [prev[i]]);
+		_setIndex(0);
 	}
 
-	function addHistory(item: T): void {
-		_updateHistory((prev) => prev.concat(item));
-		i++;
+	function addHistory(value: T): void {
+		let i = get(index);
+		_updateHistory((prev) => {
+			const copy = deepCopy<T>(value);
+			if (prev.length >= cap) {
+				prev.splice(0, 1);
+				i = prev.length - 1;
+				_setIndex(i);
+			}
+			return [...prev.slice(0, i + 1), copy];
+		});
+		_updateIndex((prev) => ++prev);
 	}
 
 	function set(this: void, value: T): void {
@@ -55,5 +85,14 @@ export function historicWritable<T>(initialValue?: T, start?: StartStopNotifier<
 		});
 	}
 
-	return {subscribe, set, update, history: {subscribe: subscribeHistory}, undo, redo, deleteHistory};
+	return {
+		subscribe,
+		set,
+		update,
+		history: {subscribe: subscribeHistory},
+		index: {subscribe: subscribeIndex},
+		undo,
+		redo,
+		deleteHistory
+	};
 }

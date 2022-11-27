@@ -2,6 +2,6 @@
 export type AsyncState<T> = undefined | Error | T;
 
 /** */
-export function isPendingOrError<T>(state: AsyncState<T>): boolean {
-	return typeof state === "undefined" || state instanceof Error;
+export function isValue<T>(state: AsyncState<T>): state is T {
+	return typeof state !== "undefined" && !(state instanceof Error);
 }
