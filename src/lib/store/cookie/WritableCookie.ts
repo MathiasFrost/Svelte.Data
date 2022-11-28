@@ -10,16 +10,44 @@ export type WritableCookie = {
 	reset(): void;
 };
 
-export function writableCookie<T>(name: string, options?: WritableStorageOptions<T>): WritableCookie & Writable<T> {
+/** Optional parameters */
+export type WritableCookieOptions<T> = WritableStorageOptions<T> & {
+	/** Domain to set on cookie */
+	domain?: string;
+
+	/** Expire time to set on cookie. Leave empty for session cookies */
+	expires?: Date;
+
+	/** Set cookie to HostOnly */
+	hostOnly?: boolean;
+
+	/** Set cookie to HttpOnly */
+	httpOnly?: boolean;
+
+	/** Set cookie to HttpOnly */
+	path?: string;
+
+	/** Cookie SameSite policy. Default = 'None' */
+	sameSite?: "Lax" | "Strict" | "None";
+
+	/** Set cookie to secure. Default true */
+	secure?: boolean;
+};
+
+export function writableCookie<T>(name: string, options?: WritableCookieOptions<T>): WritableCookie & Writable<T> {
 	function getValue(): T {
 		try {
 			const cookies = typeof document === "undefined" ? null : document.cookie;
 			if (!cookies) {
 				return options?.initialValue as T;
 			}
-			const start = document.cookie.indexOf(name) + name.length + 1;
-			const end = document.cookie.indexOf("; ", start);
-			const value = end === -1 ? document.cookie.substring(start) : document.cookie.substring(start, end);
+			const value = document.cookie
+				.split("; ")
+				.find((row) => row.startsWith(`${name}=`))
+				?.split("=")[1];
+
+			if (typeof value === "undefined") throw new Error("Could not find value");
+
 			const str = decodeURI(value);
 			return typeof options?.transform === "function" ? options.transform(str) : JSON.parse(str);
 		} catch (error) {
@@ -36,9 +64,18 @@ export function writableCookie<T>(name: string, options?: WritableStorageOptions
 			return;
 		}
 		try {
-			const start = document.cookie.indexOf(name);
-			const end = document.cookie.indexOf("; ", start);
-			document.cookie = document.cookie.substring(0, start) + `${name}=${encodeURI(JSON.stringify(value))}` + "; " + document.cookie.substring(end);
+			options ??= {};
+			options.secure ??= true;
+			options.sameSite ??= "None";
+
+			const cookieComponents: string[] = [`${encodeURI(JSON.stringify(value))}`, `SameSite=${options.sameSite}`];
+			if (options.secure) cookieComponents.push("Secure");
+			if (options.expires) cookieComponents.push(`Expires=${options.expires.toUTCString()}`);
+			if (options.hostOnly) cookieComponents.push("HostOnly");
+			if (options.httpOnly) cookieComponents.push("HttpOnly");
+			if (options.path) cookieComponents.push(`Path=${options.path}`);
+
+			document.cookie = `${name}=${cookieComponents.join("; ")}`;
 		} catch (error) {
 			console.error(error);
 		}
