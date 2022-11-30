@@ -2,7 +2,7 @@ import {writable, type Updater, type Writable} from "svelte/store";
 import type {WritableStorageOptions} from "../shared/WritableStorage";
 
 /** */
-export type WritableCookie = {
+export type WritableCookie<T> = Writable<T> & {
 	/** Name of cookie */
 	name: string;
 
@@ -34,7 +34,8 @@ export type WritableCookieOptions<T> = WritableStorageOptions<T> & {
 	secure?: boolean;
 };
 
-export function writableCookie<T>(name: string, options?: WritableCookieOptions<T>): WritableCookie & Writable<T> {
+/** @internal */
+export function __writableCookie<T>(name: string, options?: WritableCookieOptions<T>, store?: Writable<T>): WritableCookie<T> {
 	function getValue(): T {
 		try {
 			const cookies = typeof document === "undefined" ? null : document.cookie;
@@ -81,7 +82,7 @@ export function writableCookie<T>(name: string, options?: WritableCookieOptions<
 		}
 	}
 
-	const {subscribe, set: _set, update: _update} = writable<T>(getValue(), options?.start);
+	const {subscribe, set: _set, update: _update} = store ?? writable<T>(getValue(), options?.start);
 
 	function set(value: T): void {
 		setValue(value);
@@ -107,4 +108,9 @@ export function writableCookie<T>(name: string, options?: WritableCookieOptions<
 		name,
 		reset
 	};
+}
+
+/** */
+export function writableCookie<T>(name: string, options?: WritableCookieOptions<T>): WritableCookie<T> {
+	return __writableCookie(name, options);
 }

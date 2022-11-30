@@ -2,7 +2,7 @@ import {get, writable, type Readable, type StartStopNotifier, type Updater, type
 import {deepCopy} from "../shared/deepCopy";
 
 /** */
-export type HistoricWritable<T> = {
+export type HistoricWritable<T> = Writable<T> & {
 	/** Array of historic states */
 	history: Readable<T[]>;
 
@@ -35,7 +35,7 @@ export type HistoricWritableOptions<T> = {
 };
 
 /** @internal */
-export function __historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>, store?: Writable<T>): HistoricWritable<T> & Writable<T> {
+export function __historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>, store?: Writable<T>): HistoricWritable<T> {
 	const {subscribe, set: _set, update: _update} = store ?? writable<T>(value, options?.start);
 
 	const history = writable<T[]>([]);
@@ -121,6 +121,6 @@ export function __historicWritable<T>(value?: T, options?: HistoricWritableOptio
 /** Create a `HistoricWritable` store that keeps track of changes made through `set` and `update`
  * @param value Initial value
  * @param options Optional parameters */
-export function historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>): HistoricWritable<T> & Writable<T> {
+export function historicWritable<T>(value?: T, options?: HistoricWritableOptions<T>): HistoricWritable<T> {
 	return __historicWritable(value, options);
 }

@@ -4,7 +4,7 @@ import {__historicWritable, type HistoricWritable, type HistoricWritableOptions}
 import {stateIsResolved, type AsyncState} from "./AsyncState";
 
 /** */
-export type HistoricWritableAsync<T> = HistoricWritable<T> & WritableAsync;
+export type HistoricWritableAsync<T> = WritableAsync<T> & HistoricWritable<T>;
 
 /** Optional parameters */
 export type HistoricWritableAsyncOptions<T> = HistoricWritableOptions<T> & WritableAsyncOptions<T>;
@@ -14,7 +14,7 @@ export function __historicWritableAsync<T>(
 	promise: () => Promise<T>,
 	options?: HistoricWritableAsyncOptions<T>,
 	store?: Writable<T>
-): HistoricWritableAsync<T> & Writable<AsyncState<T>> {
+): HistoricWritableAsync<T> {
 	store ??= writable<T>(options?.placeholder, options?.start);
 
 	options ??= {};
@@ -44,9 +44,6 @@ export function __historicWritableAsync<T>(
  * In addition to keeping track of changes made through `set` and `update`
  * @param promise Function returning a promise for the data
  * @param options Optional parameters */
-export function historicWritableAsync<T>(
-	promise: () => Promise<T>,
-	options?: HistoricWritableAsyncOptions<T>
-): HistoricWritableAsync<T> & Writable<AsyncState<T>> {
+export function historicWritableAsync<T>(promise: () => Promise<T>, options?: HistoricWritableAsyncOptions<T>): HistoricWritableAsync<T> {
 	return __historicWritableAsync(promise, options);
 }

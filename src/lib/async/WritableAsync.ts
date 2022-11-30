@@ -2,7 +2,7 @@ import {writable, type StartStopNotifier, type Writable} from "svelte/store";
 import type {AsyncState} from "./AsyncState";
 
 /** */
-export type WritableAsync = {
+export type WritableAsync<T> = Writable<AsyncState<T>> & {
 	/** Call `asyncData` again
 	 * @param silent Default `false`. Set to `true` if you don't want to revert store value to placeholder before fetching */
 	refresh(silent?: boolean): Promise<void>;
@@ -21,7 +21,7 @@ export type WritableAsyncOptions<T> = {
 };
 
 /** @internal */
-export function __writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>, store?: Writable<T>): WritableAsync & Writable<AsyncState<T>> {
+export function __writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>, store?: Writable<T>): WritableAsync<T> {
 	const {subscribe, set, update} = store ?? writable<AsyncState<T>>(options?.placeholder, options?.start);
 
 	async function refresh(silent?: boolean): Promise<void> {
@@ -50,6 +50,6 @@ export function __writableAsync<T>(promise: () => Promise<T>, options?: Writable
 /** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API, using fetch.
  * @param promise Function returning a promise for the data
  * @param options Optional parameters */
-export function writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>): WritableAsync & Writable<AsyncState<T>> {
+export function writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>): WritableAsync<T> {
 	return __writableAsync(promise, options);
 }

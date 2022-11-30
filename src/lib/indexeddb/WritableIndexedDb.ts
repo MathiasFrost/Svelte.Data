@@ -2,7 +2,7 @@ import {writable, type Updater, type Writable} from "svelte/store";
 import type {WritableStorageOptions} from "../shared/WritableStorage";
 
 /** */
-export type WritableIndexedDB = {
+export type WritableIndexedDB<T> = Writable<T> & {
 	/** Name of the database */
 	database: string;
 
@@ -22,8 +22,9 @@ export type WritableIndexedDBOptions<T> = WritableStorageOptions<T> & {
 	columns?: string[];
 };
 
-export function writableIndexedDB<T>(database: string, table: string, options: WritableIndexedDBOptions<T>): WritableIndexedDB & Writable<T> {
-	const {subscribe, set: _set, update: _update} = writable<T>(options.initialValue, options?.start);
+/** @internal */
+export function __writableIndexedDB<T>(database: string, table: string, options: WritableIndexedDBOptions<T>, store?: Writable<T>): WritableIndexedDB<T> {
+	const {subscribe, set: _set, update: _update} = store ?? writable<T>(options.initialValue, options?.start);
 
 	function getResult<T>(event: Event): T | null {
 		if (!event.target || !("result" in event.target)) {
@@ -121,4 +122,9 @@ export function writableIndexedDB<T>(database: string, table: string, options: W
 		update,
 		reset
 	};
+}
+
+/** */
+export function writableIndexedDB<T>(database: string, table: string, options: WritableIndexedDBOptions<T>): WritableIndexedDB<T> {
+	return __writableIndexedDB<T>(database, table, options);
 }

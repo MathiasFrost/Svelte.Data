@@ -1,7 +1,7 @@
 import {type Updater, writable, type Writable, type StartStopNotifier} from "svelte/store";
 
 /** */
-export type WritableStorage = {
+export type WritableStorage<T> = Writable<T> & {
 	/** Key to store data in storage */
 	key: string;
 
@@ -24,7 +24,7 @@ export type WritableStorageOptions<T> = {
 /** Create a `WritableStorage` that syncs with `window.sessionStorage`
  * @param key Key
  * @param options Optional parameters */
-export function writableStorage<T>(key: string, getStorage: () => Storage | null, options?: WritableStorageOptions<T>): WritableStorage & Writable<T> {
+export function writableStorage<T>(key: string, getStorage: () => Storage | null, options?: WritableStorageOptions<T>): WritableStorage<T> {
 	function getValue(): T {
 		try {
 			const storage = getStorage();
