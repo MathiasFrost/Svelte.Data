@@ -24,7 +24,7 @@ export function __historicWritableAsync<T>(
 	};
 
 	const {subscribe, set, update, history, index, redo, undo, deleteHistory, addHistory} = __historicWritable<T>(options?.placeholder, options, store);
-	const {refresh} = __writableAsync<AsyncState<T>>(promise, options, {subscribe, set, update});
+	const {refresh} = __writableAsync<AsyncState<T>>(promise, options, store);
 
 	return {
 		subscribe,
