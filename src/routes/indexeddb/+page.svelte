@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {indexedDB} from "$lib/sandbox/stores/indexedDB";
+	import {indexedDB} from "../../sandbox/stores/indexedDB";
 </script>
 
 <h1>Svelte.StoresPlus</h1>

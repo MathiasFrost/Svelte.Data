@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {session} from "$lib/sandbox/stores/session";
+	import {session} from "../../sandbox/stores/session";
 </script>
 
 <h1>Svelte.StoresPlus</h1>

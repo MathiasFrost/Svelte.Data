@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {async} from "$lib/sandbox/stores/async";
+	import {async} from "../../sandbox/stores/async";
 </script>
 
 <h1>Svelte.StoresPlus</h1>

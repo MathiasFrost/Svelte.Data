@@ -1,4 +1,4 @@
-import {historicWritableAsync} from "$lib/store/async/HistoricWritableAsync";
+import {historicWritableAsync} from "$lib/async/HistoricWritableAsync";
 import type {WeatherForecast} from "../models/WeatherForecast";
 import {testClient} from "../services/testClient";
 

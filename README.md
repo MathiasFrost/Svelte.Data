@@ -7,7 +7,7 @@ Convenient Svelte store abstractions
 ## AsyncWritable
 
 ```ts
-import {writableAsync} from "$lib/store/async/WritableAsync";
+import {writableAsync} from "@maal/svelte-stores-plus/WritableAsync";
 import {WeatherForecast} from "./WeatherForecast";
 
 async function getForecasts() {
@@ -30,7 +30,7 @@ export const forecasts = writableAsync<WeatherForecast[]>(getForecasts);
 
 ```svelte
 <script lang="ts">
-	import {forecasts} from "$lib/sandbox/stores";
+	import {forecasts} from "$lib/stores";
 </script>
 
 <!-- undefined means loading -->

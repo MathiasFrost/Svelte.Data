@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {promise} from "$lib/sandbox/stores/promise";
+	import {promise} from "../../sandbox/stores/promise";
 
 	function handleChange(e: Event): void {
 		const target = e.target as HTMLInputElement;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {cookie} from "$lib/sandbox/stores/cookie";
+	import {cookie} from "../../sandbox/stores/cookie";
 </script>
 
 <h1>Svelte.StoresPlus</h1>

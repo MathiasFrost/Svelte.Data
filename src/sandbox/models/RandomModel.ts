@@ -1,4 +1,4 @@
-import {ensureBoolean, ensureDateString, ensureNumber, ensureObject, ensureString} from "$lib/store/shared/UnknownObject";
+import {ensureBoolean, ensureDateString, ensureNumber, ensureObject, ensureString} from "$lib/shared/UnknownObject";
 
 export class RandomModel {
 	public date: Date = new Date();

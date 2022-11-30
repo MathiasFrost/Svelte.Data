@@ -1,6 +1,6 @@
 <script lang="ts">
-	import {historicAsync} from "$lib/sandbox/stores/historicAsync";
-	import type {WeatherForecast} from "$lib/sandbox/models/WeatherForecast";
+	import {historicAsync} from "../../sandbox/stores/historicAsync";
+	import type {WeatherForecast} from "../../sandbox/models/WeatherForecast";
 	import {onDestroy} from "svelte";
 
 	let history: WeatherForecast[][] = [];

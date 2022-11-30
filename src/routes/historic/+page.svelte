@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {historic} from "$lib/sandbox/stores/historic";
+	import {historic} from "../../sandbox/stores/historic";
 	import {onDestroy} from "svelte";
 
 	function updateSummary(e: Event): void {

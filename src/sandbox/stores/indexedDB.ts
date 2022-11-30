@@ -1,4 +1,4 @@
-import {writableIndexedDB} from "$lib/store/indexeddb/WritableIndexedDb";
+import {writableIndexedDB} from "$lib/indexeddb/WritableIndexedDb";
 import {RandomModel} from "../models/RandomModel";
 
 export const indexedDB = writableIndexedDB<RandomModel>("testDb", "random_table", {

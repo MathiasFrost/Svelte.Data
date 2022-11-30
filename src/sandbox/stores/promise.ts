@@ -1,4 +1,4 @@
-import {writablePromise} from "$lib/store/promise/WritablePromise";
+import {writablePromise} from "$lib/promise/WritablePromise";
 import type {WeatherForecast} from "../models/WeatherForecast";
 import {testClient} from "../services/testClient";
 

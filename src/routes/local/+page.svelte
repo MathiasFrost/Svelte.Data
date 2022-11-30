@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {local} from "$lib/sandbox/stores/local";
+	import {local} from "../../sandbox/stores/local";
 </script>
 
 <h1>Svelte.StoresPlus</h1>
