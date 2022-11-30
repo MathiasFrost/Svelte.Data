@@ -135,6 +135,7 @@ export const forecasts = writableAsync<WeatherForecast[]>(getForecasts);
 	</table>
 {/if}
 ```
+
 ### HistoricWritableAsync
 
 ```ts
@@ -157,7 +158,7 @@ async function getForecasts() {
 }
 
 // if using a method remember to bind: someClient.getForecasts.bind(someClient);
-export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, { cap: 20 });
+export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, {cap: 20});
 ```
 
 ```svelte
@@ -221,6 +222,7 @@ export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, 
 	</ul>
 {/if}
 ```
+
 ### WritableCookie
 
 ```ts
@@ -231,7 +233,6 @@ export const cookie = writableCookie<RandomModel>("random_model", {
 	initialValue: new RandomModel(),
 	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
 });
-
 ```
 
 ```svelte
@@ -267,7 +268,6 @@ export const local = writableLocalStorage<RandomModel>("random_model", {
 	initialValue: new RandomModel(),
 	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
 });
-
 ```
 
 ```svelte
@@ -303,7 +303,6 @@ export const session = writableSessionStorage<RandomModel>("random_model", {
 	initialValue: new RandomModel(),
 	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
 });
-
 ```
 
 ```svelte
