@@ -1,11 +1,11 @@
 import {isObject, type UnknownObject} from "./UnknownObject";
 
+/** @internal */
+const primitives = ["undefined", "string", "number", "bigint", "boolean", "function", "symbol"];
+
 /** */
 export function deepCopy<T>(something: T): T {
-	if (typeof something === "undefined") {
-		return something;
-	}
-	if (typeof something === "string") {
+	if (primitives.includes(typeof something) || something === null) {
 		return something;
 	}
 	if (Array.isArray(something)) {
@@ -22,7 +22,7 @@ export function deepCopy<T>(something: T): T {
 			// Special treatment for Date
 			else if (el instanceof Date) {
 				copy[key] = new Date(el.valueOf());
-			} else if (typeof el === "object" && el !== null) {
+			} else if (typeof el === "object") {
 				copy[key] = deepCopy(el);
 			} else {
 				copy[key] = el;
