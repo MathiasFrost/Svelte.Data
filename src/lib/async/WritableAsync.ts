@@ -3,7 +3,7 @@ import type {AsyncState} from "./AsyncState";
 
 /** */
 export type WritableAsync<T> = Writable<AsyncState<T>> & {
-	/** Call `asyncData` again
+	/** Call `promise` again
 	 * @param silent Default `false`. Set to `true` if you don't want to revert store value to placeholder before fetching */
 	refresh(silent?: boolean): Promise<void>;
 };
