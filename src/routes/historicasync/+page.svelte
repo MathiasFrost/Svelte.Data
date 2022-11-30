@@ -1,18 +1,7 @@
 <script lang="ts">
 	import {historicAsync} from "$lib/sandbox/stores/historicAsync";
 	import type {WeatherForecast} from "$lib/sandbox/models/WeatherForecast";
-	import {stateIsResolved} from "$lib/store/async/AsyncState";
 	import {onDestroy} from "svelte";
-
-	function updateSummary(e: Event): void {
-		historicAsync.update((prev) => {
-			if (stateIsResolved(prev) && prev.length) {
-				const target = e.target as HTMLInputElement;
-				prev[0].summary = target.value;
-			}
-			return prev;
-		});
-	}
 
 	let history: WeatherForecast[][] = [];
 	let index = 0;
@@ -56,7 +45,7 @@
 			{/each}
 		</tbody>
 	</table>
-	<input type="text" value={$historicAsync[0].summary} on:change={updateSummary} />
+	<input type="text" bind:value={$historicAsync[0].summary} />
 	<button on:click={historicAsync.undo}>undo</button>
 	<button on:click={historicAsync.redo}>redo</button>
 	<button on:click={() => historicAsync.refresh()}>refresh</button>

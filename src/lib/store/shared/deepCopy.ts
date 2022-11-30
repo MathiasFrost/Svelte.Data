@@ -2,6 +2,9 @@ import {isObject, type UnknownObject} from "./UnknownObject";
 
 /** */
 export function deepCopy<T>(something: T): T {
+	if (typeof something === "undefined") {
+		return something;
+	}
 	if (typeof something === "string") {
 		return something;
 	}

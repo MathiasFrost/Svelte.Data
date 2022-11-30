@@ -21,11 +21,7 @@ export type WritableAsyncOptions<T> = {
 };
 
 /** @internal */
-export function __writableAsync<T>(
-	asyncData: () => Promise<T>,
-	options?: WritableAsyncOptions<T>,
-	store?: Writable<T>
-): WritableAsync & Writable<AsyncState<T>> {
+export function __writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>, store?: Writable<T>): WritableAsync & Writable<AsyncState<T>> {
 	const {subscribe, set, update} = store ?? writable<AsyncState<T>>(options?.placeholder, options?.start);
 
 	async function refresh(silent?: boolean): Promise<void> {
@@ -33,7 +29,7 @@ export function __writableAsync<T>(
 			if (!silent) {
 				set(options?.placeholder);
 			}
-			const state = await asyncData();
+			const state = await promise();
 			set(state);
 		} catch (e) {
 			console.error(e);
@@ -52,8 +48,8 @@ export function __writableAsync<T>(
 }
 
 /** Create a `WritableAsync` store that fetches data asynchronously, i.e. from an API, using fetch.
- * @param asyncData Function returning a promise for the data
+ * @param promise Function returning a promise for the data
  * @param options Optional parameters */
-export function writableAsync<T>(asyncData: () => Promise<T>, options?: WritableAsyncOptions<T>): WritableAsync & Writable<AsyncState<T>> {
-	return __writableAsync(asyncData, options);
+export function writableAsync<T>(promise: () => Promise<T>, options?: WritableAsyncOptions<T>): WritableAsync & Writable<AsyncState<T>> {
+	return __writableAsync(promise, options);
 }
