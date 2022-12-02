@@ -4,7 +4,7 @@
 
 <h1>Svelte.StoresPlus</h1>
 
-<h2>WritableAsync</h2>
+<h2>local variable with async data</h2>
 
 {#if typeof $async === "undefined"}
 	<p>Loading...</p>
