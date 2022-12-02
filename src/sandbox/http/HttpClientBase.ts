@@ -38,11 +38,11 @@ export abstract class HttpClientBase {
 		this.baseAddress = baseAddress;
 	}
 
-	public buildURL(requestUri = ""): URL | string {
-		return this.baseAddress ? new URL(requestUri, this.baseAddress) : requestUri;
+	public buildURL(path = ""): URL | string {
+		return `${this.baseAddress}/${path}`;
 	}
 
-	protected async get(requestUri = ""): Promise<Response> {
-		return await fetch(this.buildURL(requestUri));
+	protected async get(path = ""): Promise<Response> {
+		return await fetch(this.buildURL(path));
 	}
 }

@@ -4,14 +4,14 @@ export type HistoryManagerOptions<T> = {
 	setValue?: (value: T) => void;
 	setIndex?: (index: number) => void;
 	setHistory?: (value: T[]) => void;
-	condition?: (value: T) => boolean;
+	ensureT?: (value: unknown) => value is T;
 	cap?: number;
 };
 
 export class HistoryManager<T> {
 	public constructor(options?: HistoryManagerOptions<T>) {
 		this.cap = options?.cap;
-		this.condition = options?.condition;
+		this.ensureT = options?.ensureT;
 		this.setValue = options?.setValue;
 		this.setIndex = options?.setIndex;
 		this.setHistory = options?.setHistory;
@@ -19,15 +19,15 @@ export class HistoryManager<T> {
 
 	public history: T[] = [];
 	public index = -1;
-	public setValue?: (value: T) => void;
-	public setIndex?: (index: number) => void;
-	public setHistory?: (value: T[]) => void;
-	public condition?: (value: T) => boolean;
 	public cap?: number = 10;
+	private setValue?: (value: T) => void;
+	private setIndex?: (index: number) => void;
+	private setHistory?: (value: T[]) => void;
+	private ensureT?: (value: unknown) => value is T;
 	private ignoreNext = false;
 
-	public addEntry(value: T): boolean {
-		if (this.ignoreNext || (typeof this.condition === "function" && !this.condition(value))) {
+	public addEntry(value: unknown): boolean {
+		if (this.ignoreNext || !this.ensureT?.(value)) {
 			this.ignoreNext = false;
 			return false;
 		}

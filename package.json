@@ -1,7 +1,7 @@
 {
 	"name": "@maal/svelte-stores-plus",
-	"version": "0.0.2",
-	"description": "Svelte store abstraction. Async data, history, localStoreage, sessionStorage and cookie",
+	"version": "0.0.3",
+	"description": "Utilities aiming to make it quick and easy to create Svelte stores with advanced functionality sich as history management; async data and storage.",
 	"author": "Mathias Amandus Andvik Løken",
 	"license": "MIT",
 	"scripts": {
