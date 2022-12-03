@@ -1,5 +1,7 @@
 # Svelte.StoresPlus - _SvelteKit_
 
+![Logo](https://raw.githubusercontent.com/MathiasFrost/Svelte.StoresPlus/main/logo.png)
+
 Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage.
 
 # Examples
