@@ -260,7 +260,7 @@ _See recommendation at the bottom for more info_
 **Recommendation**: For models, use classes. **Not** interfaces.  
 **Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
 But when dealing with data stored at various locations, we **don't** have that guarantee.  
-Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your could has not accounted for?  
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code has not accounted for?  
 All of these problems are dealt with when doing the following:
 
 ### 1. Make sure the `Response` is what you expect it to be
