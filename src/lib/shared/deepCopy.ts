@@ -3,7 +3,7 @@ import {isObject, type UnknownObject} from "./UnknownObject";
 /** @internal */
 const primitives = ["undefined", "string", "number", "bigint", "boolean", "function", "symbol"];
 
-/** */
+/** Create an entirely new instance of a variable, including objects with objects as properties */
 export function deepCopy<T>(something: T): T {
 	if (primitives.includes(typeof something) || something === null) {
 		return something;

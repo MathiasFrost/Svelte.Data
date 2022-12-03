@@ -1,8 +1,9 @@
+/** An object with unknown properties with unknown value */
 export type UnknownObject = {
 	[k: string]: unknown;
 };
 
-/** Make sure that something is an array */
+/** Make sure that something is an array (not null) */
 export function ensureArray(something: unknown): unknown[] {
 	if (!Array.isArray(something)) throw new Error(`Expected array, found ${typeof something}`);
 	return something;

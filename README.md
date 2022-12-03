@@ -1,192 +1,113 @@
 # Svelte.StoresPlus - _SvelteKit_
 
-Convenient Svelte store abstractions
+Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage.
 
-# Stores
+# Examples
 
-| Implemented                     | Name                                | From promise                    | Store          | With history                    |
-| ------------------------------- | ----------------------------------- | ------------------------------- | -------------- | ------------------------------- |
-| <input type="checkbox" checked> | WritableCookie                      | <input type="checkbox">         | Cookie         | <input type="checkbox">         |
-| <input type="checkbox" checked> | WritableLocalStorage                | <input type="checkbox">         | LocalStorage   | <input type="checkbox">         |
-| <input type="checkbox" checked> | WritableSessionStorage              | <input type="checkbox">         | SessionStorage | <input type="checkbox">         |
-| <input type="checkbox">         | WritableIndexedDB                   | <input type="checkbox">         | IndexedDB      |
-| <input type="checkbox">         | WritableCache                       | <input type="checkbox">         | Cache          |
-| <input type="checkbox" checked> | WritableAsync                       | <input type="checkbox" checked> | Memory         | <input type="checkbox">         |
-| <input type="checkbox">         | WritableCookieAsync                 | <input type="checkbox" checked> | Cookie         | <input type="checkbox">         |
-| <input type="checkbox">         | WritableLocalStorageAsync           | <input type="checkbox" checked> | LocalStorage   | <input type="checkbox">         |
-| <input type="checkbox">         | WritableSessionStorageAsync         | <input type="checkbox" checked> | SessionStorage | <input type="checkbox">         |
-| <input type="checkbox">         | WritableIndexedDBAsync              | <input type="checkbox" checked> | IndexedDB      | <input type="checkbox">         |
-| <input type="checkbox">         | WritableCacheAsync                  | <input type="checkbox" checked> | Cache          | <input type="checkbox">         |
-| <input type="checkbox" checked> | HistoricWritable                    | <input type="checkbox">         | Memory         | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableCookie              | <input type="checkbox">         | Cookie         | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableLocalStorage        | <input type="checkbox">         | LocalStorage   | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableSessionStorage      | <input type="checkbox">         | SessionStorage | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableIndexedDB           | <input type="checkbox">         | IndexedDB      | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableCache               | <input type="checkbox">         | Cache          | <input type="checkbox" checked> |
-| <input type="checkbox" checked> | HistoricWritableAsync               | <input type="checkbox" checked> | Memory         | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableCookieAsync         | <input type="checkbox" checked> | Cookie         | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableLocalStorageAsync   | <input type="checkbox" checked> | LocalStorage   | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableSessionStorageAsync | <input type="checkbox" checked> | SessionStorage | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableIndexedDBAsync      | <input type="checkbox" checked> | IndexedDB      | <input type="checkbox" checked> |
-| <input type="checkbox">         | HistoricWritableCacheAsync          | <input type="checkbox" checked> | Cache          | <input type="checkbox" checked> |
+## `Writable` from `Promise` with history Management
 
-## Examples
+### Common use case
 
-### HistoricWritable
+1. You need to fetch data from a server
+2. Multiple Svelte components needs access to this data
+3. User must be able to edit the data
+4. User should be able to undo, redo and reset their changes
+
+### Sample code
+
+The commonality of this store constitutes it's own wrapper:
 
 ```ts
-import {historicWritable} from "$lib/historic/HistoricWritable";
+import type {AsyncState} from "@maal/svelte-stores-plus";
+import {writable, type Readable, type Updater, type Writable} from "svelte/store";
+import {AsyncData, stateIsResolved, HistoryManager} from "@maal/svelte-stores-plus";
 
-export const historic = historicWritable<string>("initial value");
-```
+export type WritableAsyncHistoric<T> = Writable<AsyncState<T>> & {
+	refresh: (silent?: boolean) => void;
+	redo: () => void;
+	undo: () => void;
+};
 
-```svelte
-<script lang="ts">
-	import {historic} from "$lib/stores/historic";
-	import {onDestroy} from "svelte";
+export type WritableAsyncHistoricBundle<T> = {
+	value: WritableAsyncHistoric<T>;
+	index: Readable<number>;
+	history: Readable<T[]>;
+};
 
-	function update(e: Event): void {
-		const target = e.target as HTMLInputElement;
-		historic.set(target.value);
-	}
+export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsyncHistoricBundle<T> {
+	const {set: _set, update: _update, subscribe} = writable<AsyncState<T>>(void 0);
 
-	let history: string[] = [];
-	let index = 0;
+	const index = writable<number>(-1);
+	const history = writable<T[]>([]);
 
-	let unsubscribeHistory = historic.history.subscribe((value) => (history = value));
-	let unsubscribeIndex = historic.index.subscribe((value) => (index = value));
-
-	onDestroy(() => {
-		unsubscribeHistory();
-		unsubscribeIndex();
+	const manager = new HistoryManager<T>({
+		cap: 10,
+		setValue: (value) => set(value),
+		setIndex: (i) => index.set(i),
+		setHistory: (value) => history.set(value),
+		ensureT(value): value is T {
+			return stateIsResolved(value);
+		}
 	});
-</script>
 
-<input type="text" value={$historic} on:change={update} />
-<button on:click={historic.undo}>undo</button>
-<button on:click={historic.redo}>redo</button>
-<button on:click={historic.deleteHistory}>clear</button>
-<p>Index: {index}</p>
-<ul>
-	{#each history as item, i}
-		<li style={i === index ? "color: crimson;" : ""}>{item}</li>
-	{/each}
-</ul>
+	function set(value: AsyncState<T>): void {
+		_set(value);
+		manager.addEntry(value);
+	}
+
+	function update(updater: Updater<AsyncState<T>>): void {
+		_update((prev) => {
+			if (stateIsResolved(prev)) {
+				const val = updater(prev);
+				manager.addEntry(val);
+				return val;
+			}
+			return prev;
+		});
+	}
+
+	const data = new AsyncData<T>(promise, {
+		browserOnly: true,
+		setValue: (value) => set(value)
+	});
+
+	return {
+		value: {
+			set,
+			update,
+			subscribe,
+			refresh: data.refresh.bind(data),
+			redo: manager.redo.bind(manager),
+			undo: manager.undo.bind(manager)
+		},
+		index: {subscribe: index.subscribe},
+		history: {subscribe: history.subscribe}
+	};
+}
 ```
 
-### WritableAsync
-
 ```ts
-import {writableAsync} from "@maal/svelte-stores-plus/WritableAsync";
-import {WeatherForecast} from "./WeatherForecast";
+import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+import {testClient} from "$sandbox/services/testClient";
+import {writableAsyncHistoric} from "$sandbox/example/WritableAsyncHistoric";
 
-async function getForecasts() {
-	const res = await fetch("http://localhost:5000/WeatherForecast");
-
-	// Throw error if any checks fail
-	// WritableAsync will be updated to contain the error
-	if (!res.ok) {
-		throw new Error("Not success");
-	}
-	const json = await res.json();
-	if (!Array.isArray(json)) {
-		throw new Error("Not array");
-	}
-	return json.map((el) => new WeatherForecast(el));
-}
-
-// if using a method remember to bind: someClient.getForecasts.bind(someClient);
-export const forecasts = writableAsync<WeatherForecast[]>(getForecasts);
+export const {
+	history: forecastHistory, // Providing histry and index stores as separate objects are more convenient,
+	index: forecastIndex, // allowing you to use Svelte's auto-subscribe ('$')
+	value: forecasts
+} = writableAsyncHistoric<WeatherForecast[]>(testClient.getForecasts.bind(testClient));
 ```
 
 ```svelte
 <script lang="ts">
-	import {forecasts} from "$lib/stores/forecasts";
+	import {forecasts, forecastIndex, forecastHistory} from "$sandbox/stores/writableAsyncHistoric";
 </script>
 
-<!-- undefined means loading -->
 {#if typeof $forecasts === "undefined"}
 	<p>Loading...</p>
 {:else if $forecasts instanceof Error}
 	<p style="color: crimson">{$forecasts.message}</p>
 	<p>{$forecasts.stack}</p>
-
-	<!-- If it is not undefined and not an error, it is the async data -->
-{:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th>TemperatureC</th>
-				<th>TemperatureF</th>
-				<th>Summary</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each $forecasts as forecast}
-				<tr>
-					<td>{forecast.date}</td>
-					<td>{forecast.temperatureC}</td>
-					<td>{forecast.temperatureF}</td>
-					<td>{forecast.summary}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-{/if}
-```
-
-### HistoricWritableAsync
-
-```ts
-import {historicWritableAsync} from "@maal/svelte-stores-plus/HistoricWritableAsync";
-import {WeatherForecast} from "./WeatherForecast";
-
-async function getForecasts() {
-	const res = await fetch("http://localhost:5000/WeatherForecast");
-
-	// Throw error if any checks fail
-	// WritableAsync will be updated to contain the error
-	if (!res.ok) {
-		throw new Error("Not success");
-	}
-	const json = await res.json();
-	if (!Array.isArray(json)) {
-		throw new Error("Not array");
-	}
-	return json.map((el) => new WeatherForecast(el));
-}
-
-// if using a method remember to bind: someClient.getForecasts.bind(someClient);
-export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, {cap: 20});
-```
-
-```svelte
-<script lang="ts">
-	import {forecasts} from "$lib/stores/forecasts";
-	import type {WeatherForecast} from "$lib/models/WeatherForecast";
-	import {onDestroy} from "svelte";
-
-	let history: WeatherForecast[][] = [];
-	let index = 0;
-
-	let unsubscribeHistory = forecasts.history.subscribe((value) => (history = value));
-	let unsubscribeIndex = forecasts.index.subscribe((value) => (index = value));
-
-	onDestroy(() => {
-		unsubscribeHistory();
-		unsubscribeIndex();
-	});
-</script>
-
-<!-- undefined means loading -->
-{#if typeof $forecasts === "undefined"}
-	<p>Loading...</p>
-{:else if $forecasts instanceof Error}
-	<p style="color: crimson">{$forecasts.message}</p>
-	<p>{$forecasts.stack}</p>
-
-	<!-- If it is not undefined and not an error, it is the async data -->
 {:else}
 	<table>
 		<thead>
@@ -209,121 +130,176 @@ export const forecasts = historicWritableAsync<WeatherForecast[]>(getForecasts, 
 		</tbody>
 	</table>
 	<input type="text" bind:value={$forecasts[0].summary} />
-	<button on:click={forecasts.undo}>undo</button>
-	<button on:click={forecasts.redo}>redo</button>
+	<button on:click={() => forecasts.undo()}>undo</button>
+	<button on:click={() => forecasts.redo()}>redo</button>
 	<button on:click={() => forecasts.refresh()}>refresh</button>
 	<button on:click={() => forecasts.refresh(true)}>silent refresh</button>
-	<button on:click={forecasts.deleteHistory}>clear</button>
-	<p>Index: {index}</p>
+	<p>Index: {$forecastIndex}</p>
 	<ul>
-		{#each history as item, i}
-			<li style={i === index ? "color: crimson;" : ""}>{Array.isArray(item) && item[0].summary}</li>
+		{#each $forecastHistory as item, i}
+			<li style={i === $forecastIndex ? "color: crimson;" : ""}>{item[0].summary}</li>
 		{/each}
 	</ul>
 {/if}
 ```
 
-### WritableCookie
+## Variable with `localStorage` sync
 
-```ts
-import {writableCookie} from "@maal/svelte-stores-plus/WritableCookie";
-import {RandomModel} from "$lib/models/RandomModel";
+### Common use case
 
-export const cookie = writableCookie<RandomModel>("random_model", {
-	initialValue: new RandomModel(),
-	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
-});
-```
+1. You need a persistant variable but don't want to store it in a database
+
+### Sample code
 
 ```svelte
 <script lang="ts">
-	import {cookie} from "$lib/stores/cookie";
+	// String storage provides the simplest serialization/deserialization of strings
+	import {LocalStorageSyncer, stringStorage} from "@maal/svelte-stores-plus";
+
+	const syncer = new LocalStorageSyncer<string>("example", stringStorage("display this when server-rendering"));
+
+	let val = syncer.get("Initial value");
+	$: syncer.sync(val) || val;
 </script>
 
-<p>Date:</p>
-<pre>{$cookie.date}</pre>
-
-<p>Name:</p>
-<pre>{$cookie.name}</pre>
-
-<p>Num:</p>
-<pre>{$cookie.num}</pre>
-
-<p>Nully:</p>
-<pre>{$cookie.nully}</pre>
-
-<p>bool:</p>
-<pre>{$cookie.bool}</pre>
-
-<input type="text" bind:value={$cookie.name} />
+<p>Value: {val}</p>
+<input type="text" bind:value={val} />
 ```
 
-### WritableLocalStorage
+## Variable from `Promise`
 
-```ts
-import {writableLocalStorage} from "@maal/svelte-stores-plus/WritableLocalStorage";
-import {RandomModel} from "$lib/models/RandomModel";
+### Common use case
 
-export const local = writableLocalStorage<RandomModel>("random_model", {
-	initialValue: new RandomModel(),
-	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
-});
-```
+1. You need to fetch data from a server
+2. User must be able to edit the data _(Svelte's #await blocks are immutable)_
+
+### Sample code
 
 ```svelte
 <script lang="ts">
-	import {local} from "$lib/stores/local";
+	import {AsyncData} from "@maal/svelte-stores-plus";
+	import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+	import {testClient} from "$sandbox/services/testClient";
+
+	let forecasts: WeatherForecast[] | Error | undefined = void 0;
+	// Remember that if passing in a method, this has to be bound or wrapped in a lambda
+	const data = new AsyncData<WeatherForecast[]>(testClient.getForecasts.bind(testClient), {setValue: (value) => (forecasts = value)});
 </script>
 
-<p>Date:</p>
-<pre>{$local.date}</pre>
+<h1>Svelte.StoresPlus</h1>
 
-<p>Name:</p>
-<pre>{$local.name}</pre>
+<h2>local variable with async data</h2>
 
-<p>Num:</p>
-<pre>{$local.num}</pre>
-
-<p>Nully:</p>
-<pre>{$local.nully}</pre>
-
-<p>bool:</p>
-<pre>{$local.bool}</pre>
-
-<input type="text" bind:value={$local.name} />
+{#if typeof forecasts === "undefined"}
+	<p>Loading...</p>
+{:else if forecasts instanceof Error}
+	<p style="color: crimson">{forecasts.message}</p>
+	<p>{forecasts.stack}</p>
+{:else}
+	<table>
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>TemperatureC</th>
+				<th>TemperatureF</th>
+				<th>Summary</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each forecasts as forecast}
+				<tr>
+					<td>{forecast.date}</td>
+					<td>{forecast.temperatureC}</td>
+					<td>{forecast.temperatureF}</td>
+					<td>{forecast.summary}</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+	<input type="text" bind:value={forecasts[0].summary} />
+	<button on:click={() => data.refresh()}>refresh</button>
+	<button on:click={() => data.refresh(true)}>silent refresh</button>
+{/if}
 ```
 
-### WritableSessionStorage
+`getForecasts` is just a wrapper around a simple `fetch`
 
 ```ts
-import {writableSessionStorage} from "@maal/svelte-stores-plus/WritableSessionStorage";
-import {RandomModel} from "$lib/models/RandomModel";
+import {ensureArray} from "@maal/svelte-stores-plus";
+import {WeatherForecast} from "$sandbox/models/WeatherForecast";
 
-export const session = writableSessionStorage<RandomModel>("random_model", {
-	initialValue: new RandomModel(),
-	transform: (rawValue) => new RandomModel(JSON.parse(rawValue))
-});
+export class TestClient {
+	public async getForecasts(): Promise<WeatherForecast[]> {
+		const res = await fetch("http://localhost:5000/WeatherForecast");
+		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
+	}
+}
+```
+
+_See recommendation at the bottom for more info_
+
+## `Writable` from `Promise` with `indexedDB` sync
+
+### Common use case
+
+1. You need to fetch a lot of data from a server
+2. Holding all data in memory is unappealing
+
+### Sample code
+
+```ts
+// TODO
 ```
 
 ```svelte
-<script lang="ts">
-	import {session} from "$lib/stores/session";
-</script>
+<!-- TODO -->
+```
 
-<p>Date:</p>
-<pre>{$session.date}</pre>
+## Recommendations for serialization/deserialization
 
-<p>Name:</p>
-<pre>{$session.name}</pre>
+**Recommendation**: For models, use classes. **Not** interfaces
+**Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
+But when dealing with data stored at various locations, we **don't** have that guarantee.  
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your could has not accounted for?
+All of these problems are dealt with when doing the following:
 
-<p>Num:</p>
-<pre>{$session.num}</pre>
+### 1. Make sure the `Response` is what you expect it to be
 
-<p>Nully:</p>
-<pre>{$session.nully}</pre>
+```ts
+import {ensureArray} from "@maal/svelte-stores-plus";
 
-<p>bool:</p>
-<pre>{$session.bool}</pre>
+Response.prototype.ensureSuccess = function (): Response {
+	if (!this.ok) {
+		throw new Error(`Expected status code indicating success, got: ${this.status} ${this.statusText}`);
+	}
+	return this;
+};
 
-<input type="text" bind:value={$session.name} />
+export class TestClient {
+	public async getForecasts(): Promise<WeatherForecast[]> {
+		const res = await this.get("WeatherForecast");
+		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
+	}
+}
+```
+
+### 2. Make sure the JSON is what you expect it to be
+
+```ts
+import {ensureObject, ensureDateString, ensureNumber, ensureString} from "@maal/svelte-stores-plus";
+
+export class WeatherForecast {
+	date: Date;
+	temperatureC: number;
+	temperatureF: number;
+	summary: string | null;
+
+	public constructor(something: unknown) {
+		const o = ensureObject(something);
+		this.date = ensureDateString(o.date);
+		this.temperatureC = ensureNumber(o.temperatureC);
+		this.temperatureF = ensureNumber(o.temperatureF);
+		this.summary = ensureString(o.summary);
+	}
+}
 ```
