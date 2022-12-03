@@ -1,18 +1,20 @@
+import type {AsyncState} from "$lib/async/AsyncState";
+
 export type AsyncDataOptions<T> = {
-	setValue?: (value: undefined | T | Error) => void;
+	setValue?: (value: AsyncState<T>) => void;
 	placeholder?: T;
 	resolveImmediately?: boolean;
 	browserOnly?: boolean;
 };
 
 export class AsyncData<T> {
-	public setValue?: (value: undefined | T | Error) => void;
+	public setValue?: (value: AsyncState<T>) => void;
 
 	public promise: () => Promise<T>;
 
 	public placeholder?: T;
 
-	public value: undefined | T | Error;
+	public value: AsyncState<T>;
 
 	public browserOnly: boolean;
 

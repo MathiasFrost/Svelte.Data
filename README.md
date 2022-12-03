@@ -1,12 +1,10 @@
 # Svelte.StoresPlus - _SvelteKit_
 
-Utilities aiming to make it quick and easy to create Svelte stores with advanced functionality sich as history management; async data and storage.
+Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality sich as history management; async data and storage.
 
 # Examples
 
-## _Bread and butter_ `Writable` from `Promise` with history Management
-
-**Note**: `postinstall` will add an example wrapper for creating this type of store in `src/lib/example/writableAsyncHistoric`
+## `Writable` from `Promise` with history Management
 
 ### Common use case
 
@@ -17,10 +15,132 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 
 ### Sample code
 
+The commonality of this store constitutes it's own wrapper
+
+```ts
+import type {AsyncState} from "@maal/svelte-stores-plus";
+import {writable, type Readable, type Updater, type Writable} from "svelte/store";
+import {AsyncData, stateIsResolved, HistoryManager} from "@maal/svelte-stores-plus";
+
+export type WritableAsyncHistoric<T> = Writable<AsyncState<T>> & {
+	refresh: (silent?: boolean) => void;
+	redo: () => void;
+	undo: () => void;
+};
+
+export type WritableAsyncHistoricBundle<T> = {
+	value: WritableAsyncHistoric<T>;
+	index: Readable<number>;
+	history: Readable<T[]>;
+};
+
+export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsyncHistoricBundle<T> {
+	const {set: _set, update: _update, subscribe} = writable<AsyncState<T>>(void 0);
+
+	const index = writable<number>(-1);
+	const history = writable<T[]>([]);
+
+	const manager = new HistoryManager<T>({
+		cap: 10,
+		setValue: (value) => set(value),
+		setIndex: (i) => index.set(i),
+		setHistory: (value) => history.set(value),
+		ensureT(value): value is T {
+			return stateIsResolved(value);
+		}
+	});
+
+	function set(value: AsyncState<T>): void {
+		_set(value);
+		manager.addEntry(value);
+	}
+
+	function update(updater: Updater<AsyncState<T>>): void {
+		_update((prev) => {
+			if (stateIsResolved(prev)) {
+				const val = updater(prev);
+				manager.addEntry(val);
+				return val;
+			}
+			return prev;
+		});
+	}
+
+	const data = new AsyncData<T>(promise, {
+		browserOnly: true,
+		setValue: (value) => set(value)
+	});
+
+	return {
+		value: {
+			set,
+			update,
+			subscribe,
+			refresh: data.refresh.bind(data),
+			redo: manager.redo.bind(manager),
+			undo: manager.undo.bind(manager)
+		},
+		index: {subscribe: index.subscribe},
+		history: {subscribe: history.subscribe}
+	};
+}
+```
+
+```ts
+import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+import {testClient} from "$sandbox/services/testClient";
+import {writableAsyncHistoric} from "$sandbox/example/WritableAsyncHistoric";
+
+export const {
+	history: forecastHistory, // Providing histry and index stores as separate objects are more convenient,
+	index: forecastIndex, // allowing you to use Svelte's auto-subscribe ('$')
+	value: forecasts
+} = writableAsyncHistoric<WeatherForecast[]>(testClient.getForecasts.bind(testClient));
+```
+
 ```svelte
 <script lang="ts">
-	// Not that
+	import {forecasts, forecastIndex, forecastHistory} from "$sandbox/stores/writableAsyncHistoric";
 </script>
+
+{#if typeof $forecasts === "undefined"}
+	<p>Loading...</p>
+{:else if $forecasts instanceof Error}
+	<p style="color: crimson">{$forecasts.message}</p>
+	<p>{$forecasts.stack}</p>
+{:else}
+	<table>
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>TemperatureC</th>
+				<th>TemperatureF</th>
+				<th>Summary</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each $forecasts as forecast}
+				<tr>
+					<td>{forecast.date}</td>
+					<td>{forecast.temperatureC}</td>
+					<td>{forecast.temperatureF}</td>
+					<td>{forecast.summary}</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+	<input type="text" bind:value={$forecasts[0].summary} />
+	<button on:click={() => forecasts.undo()}>undo</button>
+	<button on:click={() => forecasts.redo()}>redo</button>
+	<button on:click={() => forecasts.refresh()}>refresh</button>
+	<button on:click={() => forecasts.refresh(true)}>silent refresh</button>
+	<p>Index: {$forecastIndex}</p>
+	<ul>
+		{#each $forecastHistory as item, i}
+			<li style={i === $forecastIndex ? "color: crimson;" : ""}>{item[0].summary}</li>
+		{/each}
+	</ul>
+{/if}
 ```
 
 ## Variable with `localStorage` sync
@@ -57,12 +177,13 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 
 ```svelte
 <script lang="ts">
-	import {AsyncData} from "@maal/svelte-stores-plus/AsyncData";
-	import type {WeatherForecast} from "../../sandbox/models/WeatherForecast";
-	import {testClient} from "../../sandbox/services/testClient";
+	import {AsyncData} from "@maal/svelte-stores-plus";
+	import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+	import {testClient} from "$sandbox/services/testClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {setValue: (value) => (forecasts = value)});
+	// Remember that if passing in a method, this has to be bound or wrapped in a lambda
+	const data = new AsyncData<WeatherForecast[]>(testClient.getForecasts.bind(testClient), {setValue: (value) => (forecasts = value)});
 </script>
 
 <h1>Svelte.StoresPlus</h1>
@@ -104,10 +225,13 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 `getForecasts` is just a wrapper around a simple `fetch`
 
 ```ts
-export class TestClient extends HttpClientBase {
+import {ensureArray} from "@maal/svelte-stores-plus";
+import {WeatherForecast} from "$sandbox/models/WeatherForecast";
+
+export class TestClient {
 	public async getForecasts(): Promise<WeatherForecast[]> {
 		const res = await fetch("http://localhost:5000/WeatherForecast");
-		return await res.ensureSuccess().getFromJsonArray<WeatherForecast>((el) => new WeatherForecast(el));
+		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
 	}
 }
 ```
@@ -142,6 +266,8 @@ All of these problems are dealt with when doing the following:
 ### 1. Make sure the `Response` is what you expect it to be
 
 ```ts
+import {ensureArray} from "@maal/svelte-stores-plus";
+
 Response.prototype.ensureSuccess = function (): Response {
 	if (!this.ok) {
 		throw new Error(`Expected status code indicating success, got: ${this.status} ${this.statusText}`);
@@ -149,28 +275,19 @@ Response.prototype.ensureSuccess = function (): Response {
 	return this;
 };
 
-Response.prototype.getFromJsonArray = async function <T>(ctor: (el: unknown) => T): Promise<T[]> {
-	const json = await this.json();
-	if (!Array.isArray(json)) {
-		throw new Error(`Expected body to be a JSON array, got: ${typeof json}`);
+export class TestClient {
+	public async getForecasts(): Promise<WeatherForecast[]> {
+		const res = await this.get("WeatherForecast");
+		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
 	}
-	return json.map(ctor);
-};
-
-Response.prototype.getFromJson = async function <T>(ctor: (el: unknown) => T): Promise<T> {
-	const json = await this.json();
-	if (typeof json !== "object") {
-		throw new Error(`Expected body to be a JSON object, got: ${typeof json}`);
-	}
-	return ctor(json);
-};
+}
 ```
-
-Similar extension methods can be made for other tpes such as `string` or `number`
 
 ### 2. Make sure the JSON is what you expect it to be
 
 ```ts
+import {ensureObject, ensureDateString, ensureNumber, ensureString} from "@maal/svelte-stores-plus";
+
 export class WeatherForecast {
 	date: Date;
 	temperatureC: number;
@@ -178,22 +295,11 @@ export class WeatherForecast {
 	summary: string | null;
 
 	public constructor(something: unknown) {
-		const o = ensureObject(something); // These helper methods are exported from @maal/svelte-stores-plus
+		const o = ensureObject(something);
 		this.date = ensureDateString(o.date);
 		this.temperatureC = ensureNumber(o.temperatureC);
 		this.temperatureF = ensureNumber(o.temperatureF);
 		this.summary = ensureString(o.summary);
-	}
-}
-```
-
-### 3. Put it all together
-
-```ts
-export class TestClient {
-	public async getForecasts(): Promise<WeatherForecast[]> {
-		const res = await this.get("WeatherForecast");
-		return await res.ensureSuccess().getFromJsonArray<WeatherForecast>((el) => new WeatherForecast(el));
 	}
 }
 ```
