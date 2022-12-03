@@ -1,8 +1,8 @@
 <script lang="ts">
 	import {LocalStorageSyncer} from "$lib";
-	import {stringStorage} from "$lib";
+	import {stringSerializer} from "$lib";
 
-	const syncer = new LocalStorageSyncer<string>("local_local", stringStorage(""));
+	const syncer = new LocalStorageSyncer<string>("local_local", stringSerializer(""));
 
 	let val = syncer.get("Initial value");
 	$: syncer.sync(val) || val;

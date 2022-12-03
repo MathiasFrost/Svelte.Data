@@ -1,6 +1,6 @@
 # Svelte.StoresPlus - _SvelteKit_
 
-Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality sich as history management; async data and storage.
+Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage.
 
 # Examples
 
@@ -15,7 +15,7 @@ Building blocks aiming to make it quick and easy to create Svelte stores with ad
 
 ### Sample code
 
-The commonality of this store constitutes it's own wrapper
+The commonality of this store constitutes it's own wrapper:
 
 ```ts
 import type {AsyncState} from "@maal/svelte-stores-plus";

@@ -1,5 +1,5 @@
 // Reexport your entry components here
-export {type SyncerOptions, stringStorage, Syncer} from "$lib/sync/Syncer";
+export {type SyncerOptions, stringSerializer, Syncer} from "$lib/sync/Syncer";
 export {SessionStorageSyncer} from "$lib/sync/SessionStorageSyncer";
 export {LocalStorageSyncer} from "$lib/sync/LocalStorageSyncer";
 export {type CookieSyncerOptions, CookieSyncer} from "$lib/sync/CookieSyncer";

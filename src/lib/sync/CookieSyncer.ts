@@ -1,5 +1,6 @@
 import {Syncer, type SyncerOptions} from "./Syncer";
 
+/** Optional parameters */
 export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 	/** Domain to set on cookie */
 	domain?: string;
@@ -23,23 +24,35 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 	secure?: boolean;
 };
 
+/** Replicate data to `cookie` */
 export class CookieSyncer<T> extends Syncer<T> {
+	/** Name of `cookie` */
 	public name: string;
 
+	/** Domain to set on cookie */
 	public domain?: string;
 
+	/** Expire time to set on cookie. Leave empty for session cookies */
 	public expires?: Date;
 
+	/** Set cookie to HostOnly */
 	public hostOnly?: boolean;
 
+	/** Set cookie to HttpOnly */
 	public httpOnly?: boolean;
 
+	/** Set cookie to HttpOnly */
 	public path?: string;
 
+	/** Cookie SameSite policy. Default = 'None' */
 	public sameSite?: "Lax" | "Strict" | "None";
 
+	/** Set cookie to secure. Default true */
 	public secure?: boolean;
 
+	/** Replicate data to `cookie`
+	 * @param name Name of `cookie`
+	 * @param options Optional parameters */
 	public constructor(name: string, options?: CookieSyncerOptions<T>) {
 		super(options);
 		this.name = name;
@@ -52,6 +65,8 @@ export class CookieSyncer<T> extends Syncer<T> {
 		this.secure = options?.secure ?? true;
 	}
 
+	/** Get value from `cookie`
+	 * @param fallback Return this when value could not be retrieved from `cookie` */
 	public override get(fallback: T): T;
 	public override get(fallback?: T): T | undefined {
 		try {
@@ -74,6 +89,7 @@ export class CookieSyncer<T> extends Syncer<T> {
 		return typeof fallback === "undefined" ? void 0 : fallback;
 	}
 
+	/** Store value in `cookie` */
 	public override sync(value: T): boolean {
 		const cookies = typeof document === "undefined" ? null : document.cookie;
 		if (cookies) {
