@@ -1,6 +1,6 @@
 <script lang="ts">
-	import {LocalStorageSyncer} from "$lib/sync/LocalStorageSyncer";
-	import {stringStorage} from "$lib/sync/Syncer";
+	import {LocalStorageSyncer} from "$lib";
+	import {stringStorage} from "$lib";
 
 	const syncer = new LocalStorageSyncer<string>("local_local", stringStorage(""));
 

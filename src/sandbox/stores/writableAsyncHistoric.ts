@@ -1,9 +1,7 @@
-import {AsyncData} from "$lib/async/AsyncData";
-import {stateIsResolved} from "$lib/async/AsyncState";
-import {HistoryManager} from "$lib/history/HistoryManager";
+import {AsyncData, stateIsResolved, HistoryManager} from "$lib";
 import {writable, type Readable, type Updater, type Writable} from "svelte/store";
-import type {WeatherForecast} from "../models/WeatherForecast";
-import {testClient} from "../services/testClient";
+import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+import {testClient} from "$sandbox/services/testClient";
 
 const {set: _set, update: _update, subscribe} = writable<undefined | WeatherForecast[] | Error>(void 0);
 

@@ -8,10 +8,15 @@ export type HistoryManagerOptions<T> = {
 	cap?: number;
 };
 
+/** @internal */
+function defaultEnsureT<T>(_value: unknown): _value is T {
+	return true;
+}
+
 export class HistoryManager<T> {
 	public constructor(options?: HistoryManagerOptions<T>) {
 		this.cap = options?.cap;
-		this.ensureT = options?.ensureT;
+		this.ensureT = options?.ensureT ?? defaultEnsureT;
 		this.setValue = options?.setValue;
 		this.setIndex = options?.setIndex;
 		this.setHistory = options?.setHistory;
@@ -23,11 +28,11 @@ export class HistoryManager<T> {
 	public setValue?: (value: T) => void;
 	public setIndex?: (index: number) => void;
 	public setHistory?: (value: T[]) => void;
-	public ensureT?: (value: unknown) => value is T;
+	public ensureT: (value: unknown) => value is T;
 	public ignoreNext = false;
 
 	public addEntry(value: unknown): boolean {
-		if (this.ignoreNext || !this.ensureT?.(value)) {
+		if (this.ignoreNext || !this.ensureT(value)) {
 			this.ignoreNext = false;
 			return false;
 		}

@@ -6,6 +6,8 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 
 ## _Bread and butter_ `Writable` from `Promise` with history Management
 
+**Note**: `postinstall` will add an example wrapper for creating this type of store in `src/lib/example/writableAsyncHistoric`
+
 ### Common use case
 
 1. You need to fetch data from a server

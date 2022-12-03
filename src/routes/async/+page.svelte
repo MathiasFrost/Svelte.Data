@@ -1,10 +1,10 @@
 <script lang="ts">
-	import {AsyncData} from "$lib/async/AsyncData";
-	import type {WeatherForecast} from "../../sandbox/models/WeatherForecast";
-	import {testClient} from "../../sandbox/services/testClient";
+	import {AsyncData} from "$lib";
+	import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
+	import {testClient} from "$sandbox/services/testClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {setValue: (value) => (forecasts = value)});
+	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {browserOnly: true, setValue: (value) => (forecasts = value)});
 </script>
 
 <h1>Svelte.StoresPlus</h1>

@@ -1,5 +1,6 @@
 import {Syncer, type SyncerOptions} from "./Syncer";
 
+/** @internal */
 export abstract class StorageSyncer<T> extends Syncer<T> {
 	public readonly key: string;
 	protected abstract getStorage(): Storage | null;

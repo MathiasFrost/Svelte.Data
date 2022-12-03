@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {HistoryManager} from "$lib/history/HistoryManager";
+	import {HistoryManager} from "$lib";
 
 	let val = "Initial value";
 	let index = -1;
@@ -11,7 +11,6 @@
 		setIndex: (i) => (index = i),
 		setHistory: (value) => (history = value)
 	});
-	manager.addEntry("test");
 	$: manager.addEntry(val) || val;
 </script>
 
