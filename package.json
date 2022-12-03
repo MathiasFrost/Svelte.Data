@@ -1,7 +1,7 @@
 {
 	"name": "@maal/svelte-stores-plus",
 	"version": "0.0.3",
-	"description": "Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage.",
+	"description": "Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage",
 	"author": "Mathias Amandus Andvik Løken",
 	"license": "MIT",
 	"scripts": {
