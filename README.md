@@ -4,18 +4,16 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 
 # Examples
 
-**Note:** throughout the examples we will use lambda functions instead of `Function.prototype.bind`. [Read more](https://stackoverflow.com/questions/42117911/lambda-functions-vs-bind-memory-and-performance).
+## _Bread and butter_ `Writable` from `Promise` with history Management
 
-## Bread and Butter Writable from Promise with History Management
-
-### Use Case
+### Common use case
 
 1. You need to fetch data from a server
 2. Multiple Svelte components needs access to this data
 3. User must be able to edit the data
 4. User should be able to undo, redo and reset their changes
 
-### Code
+### Sample code
 
 ```svelte
 <script lang="ts">
@@ -23,13 +21,13 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 </script>
 ```
 
-## Sync a variable to `localStorage`
+## Variable with `localStorage` sync
 
-### Use Case
+### Common use case
 
 1. You need a persistant variable but don't want to store it in a database
 
-### Code
+### Sample code
 
 ```svelte
 <script lang="ts">
@@ -46,13 +44,14 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 <input type="text" bind:value={val} />
 ```
 
-## Editable variable from `Promise`
+## Variable from `Promise`
 
-### Use Case
+### Common use case
+
 1. You need to fetch data from a server
 2. User must be able to edit the data _(Svelte's #await blocks are immutable)_
 
-### Code
+### Sample code
 
 ```svelte
 <script lang="ts">
@@ -106,6 +105,92 @@ Utilities aiming to make it quick and easy to create Svelte stores with advanced
 export class TestClient extends HttpClientBase {
 	public async getForecasts(): Promise<WeatherForecast[]> {
 		const res = await fetch("http://localhost:5000/WeatherForecast");
+		return await res.ensureSuccess().getFromJsonArray<WeatherForecast>((el) => new WeatherForecast(el));
+	}
+}
+```
+
+_See recommendation at the bottom for more info_
+
+## `Writable` from `Promise` with `indexedDB` sync
+
+### Common use case
+
+1. You need to fetch a lot of data from a server
+2. Holding all data in memory is unappealing
+
+### Sample code
+
+```ts
+// TODO
+```
+
+```svelte
+<!-- TODO -->
+```
+
+## Recommendations for serialization/deserialization
+
+**Recommendation**: For models, use classes. **Not** interfaces
+**Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
+But when dealing with data stored at various locations, we **don't** have that guarantee.  
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your could has not accounted for?
+All of these problems are dealt with when doing the following:
+
+### 1. Make sure the `Response` is what you expect it to be
+
+```ts
+Response.prototype.ensureSuccess = function (): Response {
+	if (!this.ok) {
+		throw new Error(`Expected status code indicating success, got: ${this.status} ${this.statusText}`);
+	}
+	return this;
+};
+
+Response.prototype.getFromJsonArray = async function <T>(ctor: (el: unknown) => T): Promise<T[]> {
+	const json = await this.json();
+	if (!Array.isArray(json)) {
+		throw new Error(`Expected body to be a JSON array, got: ${typeof json}`);
+	}
+	return json.map(ctor);
+};
+
+Response.prototype.getFromJson = async function <T>(ctor: (el: unknown) => T): Promise<T> {
+	const json = await this.json();
+	if (typeof json !== "object") {
+		throw new Error(`Expected body to be a JSON object, got: ${typeof json}`);
+	}
+	return ctor(json);
+};
+```
+
+Similar extension methods can be made for other tpes such as `string` or `number`
+
+### 2. Make sure the JSON is what you expect it to be
+
+```ts
+export class WeatherForecast {
+	date: Date;
+	temperatureC: number;
+	temperatureF: number;
+	summary: string | null;
+
+	public constructor(something: unknown) {
+		const o = ensureObject(something); // These helper methods are exported from @maal/svelte-stores-plus
+		this.date = ensureDateString(o.date);
+		this.temperatureC = ensureNumber(o.temperatureC);
+		this.temperatureF = ensureNumber(o.temperatureF);
+		this.summary = ensureString(o.summary);
+	}
+}
+```
+
+### 3. Put it all together
+
+```ts
+export class TestClient {
+	public async getForecasts(): Promise<WeatherForecast[]> {
+		const res = await this.get("WeatherForecast");
 		return await res.ensureSuccess().getFromJsonArray<WeatherForecast>((el) => new WeatherForecast(el));
 	}
 }

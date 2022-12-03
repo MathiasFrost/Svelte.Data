@@ -9,7 +9,7 @@
 
 <h1>Svelte.StoresPlus</h1>
 
-<h2>local variable with async data</h2>
+<h2>Variable from <code>Promise</code></h2>
 
 {#if typeof forecasts === "undefined"}
 	<p>Loading...</p>

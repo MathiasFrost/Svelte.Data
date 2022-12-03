@@ -24,21 +24,21 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 };
 
 export class CookieSyncer<T> extends Syncer<T> {
-	public readonly name: string;
+	public name: string;
 
-	private readonly domain?: string;
+	public domain?: string;
 
-	private readonly expires?: Date;
+	public expires?: Date;
 
-	private readonly hostOnly?: boolean;
+	public hostOnly?: boolean;
 
-	private readonly httpOnly?: boolean;
+	public httpOnly?: boolean;
 
-	private readonly path?: string;
+	public path?: string;
 
-	private readonly sameSite?: "Lax" | "Strict" | "None";
+	public sameSite?: "Lax" | "Strict" | "None";
 
-	private readonly secure?: boolean;
+	public secure?: boolean;
 
 	public constructor(name: string, options?: CookieSyncerOptions<T>) {
 		super(options);

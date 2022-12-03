@@ -9,11 +9,11 @@ export function stringStorage(serverValue?: string): SyncerOptions<string> {
 }
 
 export abstract class Syncer<T> {
-	protected readonly serverValue?: T;
+	public serverValue?: T;
 
-	protected readonly deserializer?: (str: string) => T;
+	public deserializer?: (str: string) => T;
 
-	protected readonly serializer?: (value: T) => string;
+	public serializer?: (value: T) => string;
 
 	protected constructor(options?: SyncerOptions<T>) {
 		this.serverValue = options?.serverValue;

@@ -20,11 +20,11 @@ export class HistoryManager<T> {
 	public history: T[] = [];
 	public index = -1;
 	public cap?: number = 10;
-	private setValue?: (value: T) => void;
-	private setIndex?: (index: number) => void;
-	private setHistory?: (value: T[]) => void;
-	private ensureT?: (value: unknown) => value is T;
-	private ignoreNext = false;
+	public setValue?: (value: T) => void;
+	public setIndex?: (index: number) => void;
+	public setHistory?: (value: T[]) => void;
+	public ensureT?: (value: unknown) => value is T;
+	public ignoreNext = false;
 
 	public addEntry(value: unknown): boolean {
 		if (this.ignoreNext || !this.ensureT?.(value)) {

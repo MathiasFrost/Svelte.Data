@@ -1,3 +1,4 @@
+import {ensureArray} from "$lib";
 import {WeatherForecast} from "../models/WeatherForecast";
 import {HttpClientBase} from "./HttpClientBase";
 
@@ -8,6 +9,6 @@ export class TestClient extends HttpClientBase {
 
 	public async getForecasts(): Promise<WeatherForecast[]> {
 		const res = await this.get("WeatherForecast");
-		return await res.ensureSuccess().getFromJsonArray<WeatherForecast>((el) => new WeatherForecast(el));
+		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
 	}
 }
