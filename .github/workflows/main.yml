@@ -26,9 +26,7 @@ jobs:
               run: pnpm inspect
 
             - name: Test project
-              run: |
-                  npx playwright install
-                  pnpm test
+              run: pnpm test
 
             - name: Build project
               run: pnpm build
