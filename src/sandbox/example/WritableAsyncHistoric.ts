@@ -1,6 +1,6 @@
-import type {AsyncState} from "$lib";
-import {writable, type Readable, type Updater, type Writable} from "svelte/store";
-import {AsyncData, stateIsResolved, HistoryManager} from "$lib";
+import type { AsyncState } from "$lib";
+import { writable, type Readable, type Updater, type Writable } from "svelte/store";
+import { AsyncData, stateIsResolved, HistoryManager } from "$lib";
 
 export type WritableAsyncHistoric<T> = Writable<AsyncState<T>> & {
 	refresh: (silent?: boolean) => void;
@@ -15,7 +15,7 @@ export type WritableAsyncHistoricBundle<T> = {
 };
 
 export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsyncHistoricBundle<T> {
-	const {set: _set, update: _update, subscribe} = writable<AsyncState<T>>(void 0);
+	const { set: _set, update: _update, subscribe } = writable<AsyncState<T>>(void 0);
 
 	const index = writable<number>(-1);
 	const history = writable<T[]>([]);
@@ -60,7 +60,7 @@ export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsy
 			redo: manager.redo.bind(manager),
 			undo: manager.undo.bind(manager)
 		},
-		index: {subscribe: index.subscribe},
-		history: {subscribe: history.subscribe}
+		index: { subscribe: index.subscribe },
+		history: { subscribe: history.subscribe }
 	};
 }

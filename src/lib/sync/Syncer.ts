@@ -11,7 +11,7 @@ export type SyncerOptions<T> = {
 /** `SyncerOptions` for plain strings
  * @param serverValue Value to return in `get`method when server rendering */
 export function stringSerializer(serverValue?: string): SyncerOptions<string> {
-	return {serverValue, deserializer: (str: string) => str, serializer: (str: string) => str};
+	return { serverValue, deserializer: (str: string) => str, serializer: (str: string) => str };
 }
 
 /** Base class for replicating data */

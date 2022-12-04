@@ -1,4 +1,4 @@
-import {ensureDateString, ensureNumber, ensureObject, ensureString} from "$lib";
+import { ensureDateString, ensureNumber, ensureObject, ensureString } from "$lib";
 
 /** @internal */
 export class WeatherForecast {

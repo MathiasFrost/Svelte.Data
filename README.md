@@ -20,9 +20,9 @@ Building blocks aiming to make it quick and easy to create Svelte stores with ad
 The commonality of this store constitutes it's own wrapper:
 
 ```ts
-import type {AsyncState} from "@maal/svelte-stores-plus";
-import {writable, type Readable, type Updater, type Writable} from "svelte/store";
-import {AsyncData, stateIsResolved, HistoryManager} from "@maal/svelte-stores-plus";
+import type { AsyncState } from "@maal/svelte-stores-plus";
+import { writable, type Readable, type Updater, type Writable } from "svelte/store";
+import { AsyncData, stateIsResolved, HistoryManager } from "@maal/svelte-stores-plus";
 
 export type WritableAsyncHistoric<T> = Writable<AsyncState<T>> & {
 	refresh: (silent?: boolean) => void;
@@ -37,7 +37,7 @@ export type WritableAsyncHistoricBundle<T> = {
 };
 
 export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsyncHistoricBundle<T> {
-	const {set: _set, update: _update, subscribe} = writable<AsyncState<T>>(void 0);
+	const { set: _set, update: _update, subscribe } = writable<AsyncState<T>>(void 0);
 
 	const index = writable<number>(-1);
 	const history = writable<T[]>([]);
@@ -55,6 +55,7 @@ export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsy
 	function set(value: AsyncState<T>): void {
 		_set(value);
 		manager.addEntry(value);
+		// You can also add syncing to a store here using something like LocalStorageSyncer
 	}
 
 	function update(updater: Updater<AsyncState<T>>): void {
@@ -82,16 +83,16 @@ export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsy
 			redo: manager.redo.bind(manager),
 			undo: manager.undo.bind(manager)
 		},
-		index: {subscribe: index.subscribe},
-		history: {subscribe: history.subscribe}
+		index: { subscribe: index.subscribe },
+		history: { subscribe: history.subscribe }
 	};
 }
 ```
 
 ```ts
-import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
-import {testClient} from "$sandbox/services/testClient";
-import {writableAsyncHistoric} from "$sandbox/example/WritableAsyncHistoric";
+import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
+import { testClient } from "$sandbox/services/testClient";
+import { writableAsyncHistoric } from "$sandbox/example/WritableAsyncHistoric";
 
 export const {
 	history: forecastHistory, // Providing histry and index stores as separate objects are more convenient,
@@ -102,7 +103,7 @@ export const {
 
 ```svelte
 <script lang="ts">
-	import {forecasts, forecastIndex, forecastHistory} from "$sandbox/stores/writableAsyncHistoric";
+	import { forecasts, forecastIndex, forecastHistory } from "$sandbox/stores/writableAsyncHistoric";
 </script>
 
 {#if typeof $forecasts === "undefined"}
@@ -156,7 +157,7 @@ export const {
 ```svelte
 <script lang="ts">
 	// String storage provides the simplest serialization/deserialization of strings
-	import {LocalStorageSyncer, stringStorage} from "@maal/svelte-stores-plus";
+	import { LocalStorageSyncer, stringStorage } from "@maal/svelte-stores-plus";
 
 	const syncer = new LocalStorageSyncer<string>("example", stringStorage("display this when server-rendering"));
 
@@ -179,13 +180,13 @@ export const {
 
 ```svelte
 <script lang="ts">
-	import {AsyncData} from "@maal/svelte-stores-plus";
-	import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
-	import {testClient} from "$sandbox/services/testClient";
+	import { AsyncData } from "@maal/svelte-stores-plus";
+	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
+	import { testClient } from "$sandbox/services/testClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
 	// Remember that if passing in a method, this has to be bound or wrapped in a lambda
-	const data = new AsyncData<WeatherForecast[]>(testClient.getForecasts.bind(testClient), {setValue: (value) => (forecasts = value)});
+	const data = new AsyncData<WeatherForecast[]>(testClient.getForecasts.bind(testClient), { setValue: (value) => (forecasts = value) });
 </script>
 
 <h1>Svelte.StoresPlus</h1>
@@ -227,8 +228,8 @@ export const {
 `getForecasts` is just a wrapper around a simple `fetch`
 
 ```ts
-import {ensureArray} from "@maal/svelte-stores-plus";
-import {WeatherForecast} from "$sandbox/models/WeatherForecast";
+import { ensureArray } from "@maal/svelte-stores-plus";
+import { WeatherForecast } from "$sandbox/models/WeatherForecast";
 
 export class TestClient {
 	public async getForecasts(): Promise<WeatherForecast[]> {
@@ -268,7 +269,7 @@ All of these problems are dealt with when doing the following:
 ### 1. Make sure the `Response` is what you expect it to be
 
 ```ts
-import {ensureArray} from "@maal/svelte-stores-plus";
+import { ensureArray } from "@maal/svelte-stores-plus";
 
 Response.prototype.ensureSuccess = function (): Response {
 	if (!this.ok) {
@@ -288,7 +289,7 @@ export class TestClient {
 ### 2. Make sure the JSON is what you expect it to be
 
 ```ts
-import {ensureObject, ensureDateString, ensureNumber, ensureString} from "@maal/svelte-stores-plus";
+import { ensureObject, ensureDateString, ensureNumber, ensureString } from "@maal/svelte-stores-plus";
 
 export class WeatherForecast {
 	date: Date;

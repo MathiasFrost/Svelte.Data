@@ -1,4 +1,4 @@
-import type {AsyncState} from "$lib/async/AsyncState";
+import type { AsyncState } from "$lib/async/AsyncState";
 
 /** Optional parameters */
 export type AsyncDataOptions<T> = {

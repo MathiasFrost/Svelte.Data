@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {forecasts, forecastData} from "$sandbox/stores/writableAsync";
+	import { forecasts, forecastData } from "$sandbox/stores/writableAsync";
 </script>
 
 {#if typeof $forecasts === "undefined"}

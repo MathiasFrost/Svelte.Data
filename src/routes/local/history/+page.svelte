@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {HistoryManager} from "$lib";
+	import { HistoryManager } from "$lib";
 
 	let val = "Initial value";
 	let index = -1;

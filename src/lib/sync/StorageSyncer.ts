@@ -1,4 +1,4 @@
-import {Syncer, type SyncerOptions} from "./Syncer";
+import { Syncer, type SyncerOptions } from "./Syncer";
 
 /** @internal Base class for `localStorage` and `sessionStorage` */
 export abstract class StorageSyncer<T> extends Syncer<T> {

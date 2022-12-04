@@ -1,4 +1,4 @@
-import {ensureBoolean, ensureDateString, ensureNumber, ensureObject, ensureString} from "$lib";
+import { ensureBoolean, ensureDateString, ensureNumber, ensureObject, ensureString } from "$lib";
 
 export class RandomModel {
 	public date: Date = new Date();

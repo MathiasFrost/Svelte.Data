@@ -1,5 +1,5 @@
-import {StorageSyncer} from "./StorageSyncer";
-import type {SyncerOptions} from "./Syncer";
+import { StorageSyncer } from "./StorageSyncer";
+import type { SyncerOptions } from "./Syncer";
 
 /** Replicate data to `sessionStorage` */
 export class SessionStorageSyncer<T> extends StorageSyncer<T> {
