@@ -27,7 +27,7 @@ jobs:
 
             - name: Test project
               run: |
-                  npx playwright install --with-deps
+                  npx playwright install
                   pnpm test
 
             - name: Build project
