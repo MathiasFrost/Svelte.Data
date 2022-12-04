@@ -29,17 +29,17 @@ jobs:
               run: pnpm inspect
 
             - name: Test project
-              run:
-                  - pnpm playwright install ${{ matrix.browser }}
-                  - pnpm test
+              run: |
+                  pnpm playwright install ${{ matrix.browser }}
+                  pnpm test
 
             - name: Build project
               run: pnpm build
 
             - name: Publish npm
               if: github.ref_name == 'main'
-              run:
-                  - pnpm cd package
-                  - pnpm publish --access public
+              run: |
+                  pnpm cd package
+                  pnpm publish --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
