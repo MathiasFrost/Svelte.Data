@@ -3,6 +3,10 @@ name: Build, Test and Publish (main)
 on:
     push:
 
+env:
+    # we call `pnpm playwright install` instead
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
     build:
         runs-on: ubuntu-latest
