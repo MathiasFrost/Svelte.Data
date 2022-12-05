@@ -1,11 +1,11 @@
 <script lang="ts">
-	import {AsyncData} from "$lib";
-	import {HistoryManager} from "$lib";
-	import type {WeatherForecast} from "$sandbox/models/WeatherForecast";
-	import {testClient} from "$sandbox/services/testClient";
+	import { AsyncData } from "$lib";
+	import { HistoryManager } from "$lib";
+	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
+	import { testClient } from "$sandbox/services/testClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {setValue: (value) => (forecasts = value)});
+	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), { setValue: (value) => (forecasts = value) });
 
 	let index = -1;
 	let history: WeatherForecast[][] = [];

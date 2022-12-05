@@ -1,6 +1,6 @@
-import {ensureArray} from "$lib";
-import {WeatherForecast} from "$sandbox/models/WeatherForecast";
-import {HttpClientBase} from "./HttpClientBase";
+import { ensureArray } from "$lib";
+import { WeatherForecast } from "$sandbox/models/WeatherForecast";
+import { HttpClientBase } from "./HttpClientBase";
 
 export class TestClient extends HttpClientBase {
 	public constructor(baseAddress?: string) {

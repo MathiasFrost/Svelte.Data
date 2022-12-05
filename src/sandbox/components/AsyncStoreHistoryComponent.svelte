@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {forecasts, forecastIndex, forecastHistory} from "$sandbox/stores/writableAsyncHistoric";
+	import { forecasts, forecastIndex, forecastHistory } from "$sandbox/stores/writableAsyncHistoric";
 </script>
 
 {#if typeof $forecasts === "undefined"}

@@ -19,17 +19,22 @@ jobs:
                   node-version: "18.x"
                   registry-url: "https://registry.npmjs.org"
 
-            - name: Install
+            - name: Install npm
               run: pnpm install
 
-            - name: Check & Lint
-              run: pnpm check && pnpm lint
+            - name: Inspect code
+              run: pnpm inspect
 
-            - name: Build
+            - name: Test project
+              run: pnpm test
+
+            - name: Build project
               run: pnpm build
 
             - name: Publish npm
               if: github.ref_name == 'main'
-              run: cd package && pnpm publish --access public
+              run: |
+                  pnpm cd package
+                  pnpm publish --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

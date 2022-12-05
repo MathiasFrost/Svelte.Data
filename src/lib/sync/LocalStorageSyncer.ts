@@ -1,5 +1,5 @@
-import {StorageSyncer} from "./StorageSyncer";
-import type {SyncerOptions} from "./Syncer";
+import { StorageSyncer } from "./StorageSyncer.js";
+import type { SyncerOptions } from "./Syncer.js";
 
 /** Replicate data to `localStorage` */
 export class LocalStorageSyncer<T> extends StorageSyncer<T> {
