@@ -1,4 +1,4 @@
-import { ensureDateString, ensureNumber, ensureObject, ensureString } from "$lib";
+import { ensureDateString, ensureNumber, ensureObject, ensureStringNullable } from "$lib";
 
 /** @internal */
 export class WeatherForecast {
@@ -12,6 +12,6 @@ export class WeatherForecast {
 		this.date = ensureDateString(o.date);
 		this.temperatureC = ensureNumber(o.temperatureC);
 		this.temperatureF = ensureNumber(o.temperatureF);
-		this.summary = ensureString(o.summary);
+		this.summary = ensureStringNullable(o.summary);
 	}
 }

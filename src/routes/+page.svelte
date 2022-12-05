@@ -1,3 +1,17 @@
+<script lang="ts">
+	import { testClient } from "$sandbox/services/testClient.js";
+	import { onMount } from "svelte";
+
+	onMount(async () => {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		const res = await testClient.getForecasts();
+		console.log(res);
+	});
+</script>
+
 <h1>Svelte.StoresPlus</h1>
 
 <h2>Welcome to your library project</h2>

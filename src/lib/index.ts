@@ -9,14 +9,20 @@ export { type AsyncDataOptions, AsyncData } from "$lib/async/AsyncData.js";
 export {
 	type UnknownObject,
 	isObject,
-	isNullableObject,
-	ensureString,
+	isObjectNullable,
 	ensureObject,
+	ensureObjectNullable,
+	ensureArray,
+	ensureArrayNullable,
+	ensureString,
+	ensureStringNullable,
 	ensureNumber,
-	ensureNullableObject,
-	ensureDateString,
+	ensureNumberNullable,
 	ensureBoolean,
+	ensureBooleanNullable,
 	ensureBigint,
-	ensureArray
+	ensureBigintNullable,
+	ensureDateString,
+	ensureDateStringNullable
 } from "$lib/shared/UnknownObject.js";
 export { deepCopy } from "$lib/shared/deepCopy.js";

@@ -1,4 +1,4 @@
-/** Is undefined when pending */
+/** The result of a `Promise` represented as undefined when pending and value or `Error` when resolved */
 export type AsyncState<T> = undefined | Error | T;
 
 /** Tells TypeScript that the AsyncState<T> is currently T (not undefined or Error) if true */
