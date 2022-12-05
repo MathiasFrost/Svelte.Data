@@ -1,4 +1,4 @@
-import { Syncer, type SyncerOptions } from "./Syncer";
+import { Syncer, type SyncerOptions } from "./Syncer.js";
 
 /** Optional parameters */
 export type CookieSyncerOptions<T> = SyncerOptions<T> & {

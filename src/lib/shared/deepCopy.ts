@@ -1,4 +1,4 @@
-import { isObject, type UnknownObject } from "./UnknownObject";
+import { isObject, type UnknownObject } from "./UnknownObject.js";
 
 /** @internal */
 const primitives = ["undefined", "string", "number", "bigint", "boolean", "function", "symbol"];
