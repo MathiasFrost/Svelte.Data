@@ -2,10 +2,15 @@
 export type SyncerOptions<T> = {
 	/** Value to return in `get` method when server rendering */
 	serverValue?: T;
+
 	/** Function to convert replicated string into value */
 	deserializer?: (str: string) => T;
+
 	/** Function to convert value into string for replication */
 	serializer?: (value: T) => string;
+
+	/** Will set replication source value to this. If not set, value will not be replicated until `sync` is called */
+	initialValue?: T;
 };
 
 /** `SyncerOptions` for plain strings

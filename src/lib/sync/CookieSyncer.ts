@@ -63,6 +63,19 @@ export class CookieSyncer<T> extends Syncer<T> {
 		this.path = options?.path;
 		this.sameSite = options?.sameSite ?? "None";
 		this.secure = options?.secure ?? true;
+
+		// Set key to initialValue if set
+		if (typeof options?.initialValue === "undefined") {
+			return;
+		}
+		const cookies = typeof document === "undefined" ? null : document.cookie;
+		if (!cookies) {
+			return;
+		}
+		const exists = document.cookie.split("; ").some((row) => row.startsWith(`${this.name}=`));
+		if (!exists) {
+			this.sync(options.initialValue);
+		}
 	}
 
 	/** Get value from `cookie`
