@@ -1,4 +1,4 @@
-import { deepCopy } from "$lib/shared/deepCopy";
+import { deepCopy } from "$lib/shared/deepCopy.js";
 
 /** Optional parameters */
 export type HistoryManagerOptions<T> = {
