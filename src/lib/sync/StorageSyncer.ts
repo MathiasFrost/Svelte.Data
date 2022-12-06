@@ -13,6 +13,15 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 	public constructor(key: string, options?: SyncerOptions<T>) {
 		super(options);
 		this.key = key;
+
+		// Set key to initialValue if set
+		if (typeof options?.initialValue === "undefined") {
+			return;
+		}
+		const storage = this.getStorage();
+		if (storage && !(this.key in storage)) {
+			this.sync(options.initialValue);
+		}
 	}
 
 	/** Get value from `Storage`
