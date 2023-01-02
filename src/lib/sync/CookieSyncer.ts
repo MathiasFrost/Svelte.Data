@@ -22,6 +22,9 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 
 	/** Set cookie to secure. Default true */
 	secure?: boolean;
+	
+	/** Will set cookie to this value if it does not already exist */
+	initialValue?: T
 };
 
 /** Replicate data to `cookie` */
@@ -84,7 +87,7 @@ export class CookieSyncer<T> extends Syncer<T> {
 	public override get(fallback?: T): T | undefined {
 		try {
 			const cookies = typeof document === "undefined" ? null : document.cookie;
-			if (cookies) {
+			if (cookies !== null) {
 				const str = document.cookie
 					.split("; ")
 					.find((row) => row.startsWith(`${this.name}=`))
@@ -105,7 +108,7 @@ export class CookieSyncer<T> extends Syncer<T> {
 	/** Store value in `cookie` */
 	public override sync(value: T): boolean {
 		const cookies = typeof document === "undefined" ? null : document.cookie;
-		if (cookies) {
+		if (typeof cookies !== null) {
 			const str = this.serializer?.(value) ?? JSON.stringify(value);
 			const cookieComponents: string[] = [`${encodeURI(str)}`, `SameSite=${this.sameSite}`];
 			if (this.domain) cookieComponents.push(`Domain=${this.domain}`);
