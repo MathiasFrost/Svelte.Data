@@ -22,9 +22,6 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 
 	/** Set cookie to secure. Default true */
 	secure?: boolean;
-	
-	/** Will set cookie to this value if it does not already exist */
-	initialValue?: T
 };
 
 /** Replicate data to `cookie` */
