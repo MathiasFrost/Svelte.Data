@@ -3,6 +3,11 @@ import type { SyncerOptions } from "./Syncer.js";
 
 /** Replicate data to `sessionStorage` */
 export class SessionStorageSyncer<T> extends StorageSyncer<T> {
+	/** @inheritdoc */
+	protected get storageName(): string {
+		return "sessionStorage";
+	}
+
 	/** @internal */
 	protected getStorage(): Storage | null {
 		return typeof window === "undefined" ? null : window.sessionStorage;
