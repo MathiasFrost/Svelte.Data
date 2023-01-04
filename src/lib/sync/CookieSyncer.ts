@@ -26,6 +26,16 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 
 /** Replicate data to `cookie` */
 export class CookieSyncer<T> extends Syncer<T> {
+	/** @inheritdoc */
+	protected get storageKey(): string {
+		return this.name;
+	}
+
+	/** @inheritdoc */
+	protected get storageName(): string {
+		return "cookies";
+	}
+
 	/** Name of `cookie` */
 	public name: string;
 
@@ -78,34 +88,27 @@ export class CookieSyncer<T> extends Syncer<T> {
 		}
 	}
 
-	/** Get value from `cookie`
-	 * @param fallback Return this when value could not be retrieved from `cookie` */
-	public override get(fallback: T): T;
-	public override get(fallback?: T): T | undefined {
+	/** @inheritdoc */
+	public tryGet(): T | undefined {
 		try {
-			const cookies = typeof document === "undefined" ? null : document.cookie;
-			if (cookies !== null) {
-				const str = document.cookie
-					.split("; ")
-					.find((row) => row.startsWith(`${this.name}=`))
-					?.split("=")[1];
+			const str = document.cookie
+				.split("; ")
+				.find((row) => row.startsWith(`${this.name}=`))
+				?.split("=")[1];
 
-				if (typeof str !== "undefined") {
-					return this.deserializer?.(str) ?? JSON.parse(str);
-				}
-			} else if (typeof this.serverValue !== "undefined") {
-				return this.serverValue;
+			if (typeof str !== "undefined") {
+				return this.deserializer?.(str) ?? JSON.parse(str);
 			}
 		} catch (e) {
 			console.error(e);
 		}
-		return typeof fallback === "undefined" ? void 0 : fallback;
+		return undefined;
 	}
 
 	/** Store value in `cookie` */
 	public override sync(value: T): boolean {
 		const cookies = typeof document === "undefined" ? null : document.cookie;
-		if (typeof cookies !== null) {
+		if (cookies !== null) {
 			const str = this.serializer?.(value) ?? JSON.stringify(value);
 			const cookieComponents: string[] = [`${encodeURI(str)}`, `SameSite=${this.sameSite}`];
 			if (this.domain) cookieComponents.push(`Domain=${this.domain}`);

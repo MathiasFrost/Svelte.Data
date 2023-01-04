@@ -5,6 +5,11 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 	/** Key for `Storage` */
 	public readonly key: string;
 
+	/** @inheritdoc */
+	protected get storageKey(): string {
+		return this.key;
+	}
+
 	/** @internal */
 	protected abstract getStorage(): Storage | null;
 
@@ -24,10 +29,8 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 		}
 	}
 
-	/** Get value from `Storage`
-	 * @param fallback Return this when value could not be retrieved from `Storage` */
-	public override get(fallback: T): T;
-	public override get(fallback?: T): T | undefined {
+	/** @inheritdoc */
+	public tryGet(): T | undefined {
 		try {
 			const storage = this.getStorage();
 			if (storage) {
@@ -41,7 +44,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 		} catch (e) {
 			console.error(e);
 		}
-		return typeof fallback === "undefined" ? void 0 : fallback;
+		return undefined;
 	}
 
 	/** Store value in `Storage` */
