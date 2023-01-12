@@ -13,6 +13,9 @@ export type AsyncDataOptions<T> = {
 
 	/** Set to true if you don't want promise to be invoked server-side */
 	browserOnly?: boolean;
+
+	/** Refresh cooldown in milliseconds */
+	cooldown?: number;
 };
 
 /** Manage async data */
@@ -29,6 +32,12 @@ export class AsyncData<T> {
 	/** Set to true if you don't want promise to be invoked server-side */
 	public browserOnly: boolean;
 
+	/** Refresh cooldown in milliseconds. Set to 0 to remove cooldown. */
+	public cooldown: number;
+
+	/** When refresh was last called */
+	public lastFetched?: Date;
+
 	/** Manage async data
 	 * @param promise The promise returning the data
 	 * @param options Optional parameters */
@@ -37,6 +46,7 @@ export class AsyncData<T> {
 		this.setValue = options?.setValue;
 		this.placeholder = options?.placeholder;
 		this.browserOnly = options?.browserOnly ?? false;
+		this.cooldown = options?.cooldown ?? 0;
 		if (options?.immediatelyInvoked ?? true) {
 			this.refresh();
 		}
@@ -48,6 +58,13 @@ export class AsyncData<T> {
 		if (this.browserOnly && typeof window === "undefined") {
 			return;
 		}
+		if (this.cooldown > 0 && this.lastFetched) {
+			const diff = new Date().getTime() - this.lastFetched.getTime();
+			if (diff < this.cooldown) {
+				console.info(`Refresh on cooldown (${this.cooldown - diff}s)`);
+				return;
+			}
+		}
 		try {
 			if (!silent) {
 				this.setValue?.(this.placeholder);
@@ -58,5 +75,6 @@ export class AsyncData<T> {
 			console.error(e);
 			this.setValue?.(e as Error);
 		}
+		this.lastFetched = new Date();
 	}
 }
