@@ -4,7 +4,12 @@
 	import { testClient } from "$sandbox/services/testClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), { browserOnly: true, setValue: (value) => (forecasts = value) });
+	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {
+		browserOnly: true,
+		setValue: (value) => (forecasts = value),
+		cooldown: 600,
+		refetch: 2_000
+	});
 </script>
 
 <h1>Svelte.StoresPlus</h1>

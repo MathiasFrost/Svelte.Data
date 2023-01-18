@@ -16,6 +16,9 @@ export type AsyncDataOptions<T> = {
 
 	/** Refresh cooldown in milliseconds */
 	cooldown?: number;
+
+	/** Refetch interval in milliseconds */
+	refetch?: number;
 };
 
 /** Manage async data */
@@ -38,6 +41,9 @@ export class AsyncData<T> {
 	/** When refresh was last called */
 	public lastFetched?: Date;
 
+	/** Refetch interval in milliseconds. Will always be silent. */
+	public refetch?: number;
+
 	/** Manage async data
 	 * @param promise The promise returning the data
 	 * @param options Optional parameters */
@@ -47,8 +53,12 @@ export class AsyncData<T> {
 		this.placeholder = options?.placeholder;
 		this.browserOnly = options?.browserOnly ?? false;
 		this.cooldown = options?.cooldown ?? 0;
+		this.refetch = options?.refetch;
 		if (options?.immediatelyInvoked ?? true) {
 			this.refresh();
+		}
+		if (typeof window !== "undefined" && typeof this.refetch === "number") {
+			window.setInterval(() => this.refresh(true), this.refetch);
 		}
 	}
 
@@ -61,7 +71,7 @@ export class AsyncData<T> {
 		if (this.cooldown > 0 && this.lastFetched) {
 			const diff = new Date().getTime() - this.lastFetched.getTime();
 			if (diff < this.cooldown) {
-				console.info(`Refresh on cooldown (${this.cooldown - diff}s)`);
+				console.info(`Refresh on cooldown (${this.cooldown - diff}ms)`);
 				return;
 			}
 		}
