@@ -8,7 +8,7 @@
 		browserOnly: true,
 		setValue: (value) => (forecasts = value),
 		cooldown: 600,
-		refetch: 2_000
+		interval: 2_000
 	});
 </script>
 
@@ -43,6 +43,6 @@
 		</tbody>
 	</table>
 	<input type="text" bind:value={forecasts[0].summary} />
-	<button on:click={() => data.refresh()}>refresh</button>
-	<button on:click={() => data.refresh(true)}>silent refresh</button>
+	<button on:click={() => data.invoke()}>refresh</button>
+	<button on:click={() => data.invoke(true)}>silent refresh</button>
 {/if}

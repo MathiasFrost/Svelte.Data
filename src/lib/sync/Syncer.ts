@@ -1,5 +1,5 @@
 /** Optional parameters */
-export type SyncerOptions<T> = {
+export interface ISyncerOptions<T> {
 	/** Value to return in `get` method when server rendering */
 	serverValue?: T;
 
@@ -11,10 +11,10 @@ export type SyncerOptions<T> = {
 
 	/** Will set replication source value to this. If not set, value will not be replicated until `sync` is called */
 	initialValue?: T;
-};
+}
 
 /** Base class for replicating data */
-export abstract class Syncer<T> {
+export abstract class Syncer<T> implements ISyncerOptions<T> {
 	/** Value to return in `get` method when on server */
 	public serverValue?: T;
 
@@ -26,7 +26,7 @@ export abstract class Syncer<T> {
 
 	/** Create a new instance
 	 * @param options Optional parameters */
-	protected constructor(options?: SyncerOptions<T>) {
+	protected constructor(options?: ISyncerOptions<T>) {
 		this.serverValue = options?.serverValue;
 		this.serializer = options?.serializer;
 		this.deserializer = options?.deserializer;

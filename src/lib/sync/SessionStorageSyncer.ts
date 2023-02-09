@@ -1,5 +1,5 @@
 import { StorageSyncer } from "./StorageSyncer.js";
-import type { SyncerOptions } from "./Syncer.js";
+import type { ISyncerOptions } from "./Syncer.js";
 
 /** Replicate data to `sessionStorage` */
 export class SessionStorageSyncer<T> extends StorageSyncer<T> {
@@ -16,7 +16,7 @@ export class SessionStorageSyncer<T> extends StorageSyncer<T> {
 	/** Replicate data to `sessionStorage`
 	 * @param key Key for `sessionStorage`
 	 * @param options Optional parameters */
-	public constructor(key: string, options?: SyncerOptions<T>) {
+	public constructor(key: string, options?: ISyncerOptions<T>) {
 		super(key, options);
 	}
 }

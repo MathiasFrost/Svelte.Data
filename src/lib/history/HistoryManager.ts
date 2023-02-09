@@ -1,7 +1,7 @@
 import { deepCopy } from "$lib/shared/deepCopy.js";
 
 /** Optional parameters */
-export type HistoryManagerOptions<T> = {
+export interface IHistoryManagerOptions<T> {
 	/** Called when manager wants to set the value we are tracking */
 	setValue?: (value: T) => void;
 
@@ -16,7 +16,7 @@ export type HistoryManagerOptions<T> = {
 
 	/** Limit how many changes can be stored */
 	cap?: number;
-};
+}
 
 /** @internal */
 function defaultEnsureT<T>(_value: unknown): _value is T {
@@ -24,10 +24,10 @@ function defaultEnsureT<T>(_value: unknown): _value is T {
 }
 
 /** Keep track of changes to a variable */
-export class HistoryManager<T> {
+export class HistoryManager<T> implements IHistoryManagerOptions<T> {
 	/** Keep track of changes to a variable
 	 * @param options Optional parameters */
-	public constructor(options?: HistoryManagerOptions<T>) {
+	public constructor(options?: IHistoryManagerOptions<T>) {
 		this.cap = options?.cap;
 		this.ensureT = options?.ensureT ?? defaultEnsureT;
 		this.setValue = options?.setValue;

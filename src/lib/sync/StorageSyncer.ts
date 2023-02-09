@@ -1,4 +1,4 @@
-import { Syncer, type SyncerOptions } from "./Syncer.js";
+import { Syncer, type ISyncerOptions } from "./Syncer.js";
 
 /** @internal Base class for `localStorage` and `sessionStorage` */
 export abstract class StorageSyncer<T> extends Syncer<T> {
@@ -15,7 +15,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 
 	/** Create a new instance
 	 * @param options Optional parameters */
-	public constructor(key: string, options?: SyncerOptions<T>) {
+	public constructor(key: string, options?: ISyncerOptions<T>) {
 		super(options);
 		this.key = key;
 

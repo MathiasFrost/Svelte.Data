@@ -1,7 +1,7 @@
-import { Syncer, type SyncerOptions } from "./Syncer.js";
+import { Syncer, type ISyncerOptions } from "./Syncer.js";
 
 /** Optional parameters */
-export type CookieSyncerOptions<T> = SyncerOptions<T> & {
+export interface ICookieSyncerOptions<T> extends ISyncerOptions<T> {
 	/** Domain to set on cookie */
 	domain?: string;
 
@@ -22,10 +22,10 @@ export type CookieSyncerOptions<T> = SyncerOptions<T> & {
 
 	/** Set cookie to secure. Default true */
 	secure?: boolean;
-};
+}
 
 /** Replicate data to `cookie` */
-export class CookieSyncer<T> extends Syncer<T> {
+export class CookieSyncer<T> extends Syncer<T> implements ICookieSyncerOptions<T> {
 	/** @inheritdoc */
 	protected get storageKey(): string {
 		return this.name;
@@ -63,7 +63,7 @@ export class CookieSyncer<T> extends Syncer<T> {
 	/** Replicate data to `cookie`
 	 * @param name Name of `cookie`
 	 * @param options Optional parameters */
-	public constructor(name: string, options?: CookieSyncerOptions<T>) {
+	public constructor(name: string, options?: ICookieSyncerOptions<T>) {
 		super(options);
 		this.name = name;
 		this.domain = options?.domain;

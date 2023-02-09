@@ -92,6 +92,21 @@ export function ensureDateStringNullable(something: unknown): Date | null {
 	return date;
 }
 
+/** Make sure that something is an instance of something */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function ensureInstanceOf<T>(something: unknown, t: Function): T {
+	if (something instanceof t) return something as T;
+	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);
+}
+
+/** Make sure that something is an instance of something */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function ensureInstanceOfNullable<T>(something: unknown, t: Function): T | null {
+	if (something === null) return null;
+	if (something instanceof t) return something as T;
+	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);
+}
+
 /** Tells TypeScript that something is an unknown object (not null) */
 export function isObject(something: unknown): something is UnknownObject {
 	return something !== null && typeof something === "object";
