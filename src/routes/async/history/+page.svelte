@@ -56,8 +56,8 @@
 	<input type="text" bind:value={forecasts[0].summary} />
 	<button on:click={() => manager.undo()}>undo</button>
 	<button on:click={() => manager.redo()}>redo</button>
-	<button on:click={() => data.refresh()}>refresh</button>
-	<button on:click={() => data.refresh(true)}>silent refresh</button>
+	<button on:click={() => data.invoke()}>refresh</button>
+	<button on:click={() => data.invoke(true)}>silent refresh</button>
 	<p>Index: {index}</p>
 	<ul>
 		{#each history as item, i}

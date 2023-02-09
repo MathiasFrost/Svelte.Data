@@ -1,7 +1,7 @@
 import type { AsyncState } from "$lib/async/AsyncState.js";
 
 /** Optional parameters */
-export type AsyncDataOptions<T> = {
+export interface IAsyncDataOptions<T> {
 	/** Called when there has been a change to `AsyncState` */
 	setValue?: (value: AsyncState<T>) => void;
 
@@ -18,11 +18,11 @@ export type AsyncDataOptions<T> = {
 	cooldown?: number;
 
 	/** Refetch interval in milliseconds */
-	refetch?: number;
-};
+	interval?: number;
+}
 
 /** Manage async data */
-export class AsyncData<T> {
+export class AsyncData<T> implements IAsyncDataOptions<T> {
 	/** Called when there has been a change to `AsyncState` */
 	public setValue?: (value: AsyncState<T>) => void;
 
@@ -42,29 +42,29 @@ export class AsyncData<T> {
 	public lastFetched?: Date;
 
 	/** Refetch interval in milliseconds. Will always be silent. */
-	public refetch?: number;
+	public interval?: number;
 
 	/** Manage async data
 	 * @param promise The promise returning the data
 	 * @param options Optional parameters */
-	public constructor(promise: () => Promise<T>, options?: AsyncDataOptions<T>) {
+	public constructor(promise: () => Promise<T>, options?: IAsyncDataOptions<T>) {
 		this.promise = promise;
 		this.setValue = options?.setValue;
 		this.placeholder = options?.placeholder;
 		this.browserOnly = options?.browserOnly ?? false;
 		this.cooldown = options?.cooldown ?? 0;
-		this.refetch = options?.refetch;
+		this.interval = options?.interval;
 		if (options?.immediatelyInvoked ?? true) {
-			this.refresh();
+			this.invoke();
 		}
-		if (typeof window !== "undefined" && typeof this.refetch === "number") {
-			window.setInterval(() => this.refresh(true), this.refetch);
+		if (typeof window !== "undefined" && typeof this.interval === "number") {
+			window.setInterval(() => this.invoke(true), this.interval);
 		}
 	}
 
-	/** Call to re-invoke promise
+	/** Call to invoke or re-invoke promise
 	 * @param silent Set to true if we should not call `setValue` with placeholder before invoking promise */
-	public async refresh(silent?: boolean): Promise<void> {
+	public async invoke(silent?: boolean): Promise<void> {
 		if (this.browserOnly && typeof window === "undefined") {
 			return;
 		}

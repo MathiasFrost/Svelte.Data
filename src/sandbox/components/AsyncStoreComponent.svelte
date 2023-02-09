@@ -29,6 +29,6 @@
 		</tbody>
 	</table>
 	<input type="text" bind:value={$forecasts[0].summary} />
-	<button on:click={() => forecastData.refresh()}>refresh</button>
-	<button on:click={() => forecastData.refresh(true)}>silent refresh</button>
+	<button on:click={() => forecastData.invoke()}>refresh</button>
+	<button on:click={() => forecastData.invoke(true)}>silent refresh</button>
 {/if}
