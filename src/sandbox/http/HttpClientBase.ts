@@ -1,3 +1,6 @@
+import type { UnknownObject } from "../../lib/shared/UnknownObject";
+import { ensureArray, ensureObject } from "../../lib/shared/UnknownObject";
+
 declare global {
 	interface Response {
 		ensureSuccess(): Response;
@@ -24,5 +27,15 @@ export abstract class HttpClientBase {
 
 	protected async get(path = ""): Promise<Response> {
 		return await fetch(this.buildURL(path));
+	}
+
+	protected async getFromJsonObject(requestPath: string): Promise<UnknownObject> {
+		const res = await this.get(requestPath);
+		return ensureObject(await res.ensureSuccess().json());
+	}
+
+	protected async getFromJsonArray(requestPath: string): Promise<unknown[]> {
+		const res = await this.get(requestPath);
+		return ensureArray(await res.ensureSuccess().json());
 	}
 }

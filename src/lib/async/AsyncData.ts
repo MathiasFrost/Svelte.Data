@@ -19,30 +19,39 @@ export interface IAsyncDataOptions<T> {
 
 	/** Refetch interval in milliseconds */
 	interval?: number;
+
+	/** This will be called instead of default logic when promise is rejected */
+	handleError?: (e: Error) => void;
 }
 
 /** Manage async data */
 export class AsyncData<T> implements IAsyncDataOptions<T> {
-	/** Called when there has been a change to `AsyncState` */
+	/** @inheritdoc */
 	public setValue?: (value: AsyncState<T>) => void;
 
 	/** Promise used to fetch the data */
 	public promise: () => Promise<T>;
 
-	/** Value to set when panding */
+	/** @inheritdoc */
 	public placeholder?: T;
 
-	/** Set to true if you don't want promise to be invoked server-side */
+	/** @inheritdoc */
 	public browserOnly: boolean;
 
-	/** Refresh cooldown in milliseconds. Set to 0 to remove cooldown. */
+	/** @inheritdoc */
 	public cooldown: number;
 
 	/** When refresh was last called */
 	public lastFetched?: Date;
 
-	/** Refetch interval in milliseconds. Will always be silent. */
+	/** @inheritdoc */
 	public interval?: number;
+
+	/** @inheritdoc */
+	public handleError?: (e: Error) => void;
+
+	/** */
+	private _interval = 0;
 
 	/** Manage async data
 	 * @param promise The promise returning the data
@@ -54,11 +63,12 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 		this.browserOnly = options?.browserOnly ?? false;
 		this.cooldown = options?.cooldown ?? 0;
 		this.interval = options?.interval;
+		this.handleError = options?.handleError;
 		if (options?.immediatelyInvoked ?? true) {
 			this.invoke();
 		}
 		if (typeof window !== "undefined" && typeof this.interval === "number") {
-			window.setInterval(() => this.invoke(true), this.interval);
+			this._interval = window.setInterval(() => this.invoke(true), this.interval);
 		}
 	}
 
@@ -82,9 +92,18 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 			const res = await this.promise();
 			this.setValue?.(res);
 		} catch (e) {
-			console.error(e);
-			this.setValue?.(e as Error);
+			if (typeof this.handleError === "function") {
+				this.handleError(e as Error);
+			} else {
+				console.error(e);
+				this.setValue?.(e as Error);
+			}
 		}
 		this.lastFetched = new Date();
+	}
+
+	/** If `interval` is set, this should preferrably be called `onDestroy` */
+	public clearInterval(): void {
+		if (typeof window !== "undefined") window.clearInterval(this._interval);
 	}
 }
