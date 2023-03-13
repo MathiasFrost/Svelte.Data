@@ -1,14 +1,13 @@
-import { ensureArray } from "$lib";
-import { WeatherForecast } from "$sandbox/models/WeatherForecast";
-import { HttpClientBase } from "./HttpClientBase";
+import {WeatherForecast} from "$sandbox/models/WeatherForecast";
+import {HttpClient} from "./HttpClient";
 
-export class TestClient extends HttpClientBase {
-	public constructor(baseAddress?: string) {
-		super(baseAddress);
-	}
+/** @static */
+export class TestClient {
+    /** */
+    private static client = new HttpClient("http://localhost:5000/", "APIClient");
 
-	public async getForecasts(): Promise<WeatherForecast[]> {
-		const res = await this.get("WeatherForecast");
-		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
-	}
+    /** */
+    public static async getForecasts(): Promise<WeatherForecast[]> {
+        return await this.client.getFromJsonArray("WeatherForecast", something => new WeatherForecast(something));
+    }
 }
