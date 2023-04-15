@@ -16,7 +16,9 @@ export function deepCopy<T>(something: T): T {
 		const keys = Object.keys(something);
 		for (const key of keys) {
 			const el = something[key];
-			if (Array.isArray(el)) {
+			if (typeof el === "function") {
+				copy[key] = el.bind(copy);
+			} else if (Array.isArray(el)) {
 				copy[key] = el.map((e) => deepCopy(e));
 			}
 			// Special treatment for Date

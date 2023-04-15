@@ -1,9 +1,12 @@
 import type { ISyncerOptions } from "$lib/sync/Syncer.js";
 
+export type Serializer<T> = (value: T) => string;
+export type Deserializer<T> = (string: string) => T;
+
 /** `SyncerOptions` for plain strings
  * @param serverValue Value to return in `get`method when server rendering */
-export function stringSerializer(serverValue?: string): ISyncerOptions<string> {
-	return { serverValue, deserializer: (str: string) => str, serializer: (str: string) => str };
+export function stringSerializer(): [Serializer<string>, Deserializer<string>] {
+	return [(str: string) => str, (str: string) => str];
 }
 
 /** `SyncerOptions` for numbers
