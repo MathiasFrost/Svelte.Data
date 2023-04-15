@@ -3,10 +3,10 @@
 	import { SyncBuilder } from "$lib/SyncBuilder";
 	import { onMount } from "svelte";
 
-	const testPromise = () =>
-		new Promise<string>((resolve) => {
-			window.setTimeout(() => resolve("promise resolved"), 600);
-		});
+	const testPromise = async () => {
+		const res = await fetch("http://localhost:5000/Basic/Ip");
+		return await res.text();
+	};
 
 	let { value, update, invoke, error, undo, redo, history, historyIndex } = new SyncBuilder<string>("value")
 		.withSerializer((str) => str)
@@ -14,7 +14,7 @@
 		.fromLocalStorage("test")
 		.fromPromise(() => testPromise())
 		.to((val) => (value = val))
-		.toLocalStorage("test")
+		.toLocalStorage()
 		.withHistory()
 		.historyTo((entries) => (history = entries))
 		.historyIndexTo((index) => (historyIndex = index))
