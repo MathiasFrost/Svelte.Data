@@ -27,7 +27,7 @@ export {
 	ensureDateStringNullable
 } from "$lib/shared/UnknownObject.js";
 export { deepCopy } from "$lib/shared/deepCopy.js";
-export { HTTPClient } from "$lib/http/HTTPClientTEMP.js";
+export { HTTPClient } from "$lib/http/HTTPClient.js";
 export { HTTPRequestBuilder, type Dictionary, type Deserialize, type HTTPMethod } from "$lib/http/HTTPRequestBuilder.js";
 export { type Postprocess } from "$lib/http/Postprocess.js";
 export { type Preprocess } from "$lib/http/Preprocess.js";
