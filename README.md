@@ -1,4 +1,4 @@
-# Svelte.StoresPlus - _SvelteKit_
+# Svelte.Data - _Svelte_
 
 ![Logo](https://raw.githubusercontent.com/MathiasFrost/Svelte.StoresPlus/main/logo.png)
 
