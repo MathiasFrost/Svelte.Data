@@ -1,4 +1,4 @@
-import { HTTPClient } from "$lib/http/HTTPClient";
+import { HTTPClient } from "$lib/http/HTTPClientTEMP";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast";
 
 /** @static */
