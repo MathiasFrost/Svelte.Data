@@ -1,13 +1,18 @@
+import { HTTPClient } from "$lib/http/HTTPClient";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast";
-import { HttpClient } from "./HttpClient";
 
 /** @static */
 export class TestClient {
 	/** */
-	private static client = new HttpClient("http://localhost:5000/", HttpClient.ApiInit);
+	private static client = new HTTPClient("http://localhost:5000/", HTTPClient.backendInit());
 
 	/** */
 	public static async getForecasts(): Promise<WeatherForecast[]> {
-		return await this.client.getFromJsonArray("WeatherForecast", (something) => new WeatherForecast(something));
+		return await this.client.get("WeatherForecast").fromJSONArray((something) => new WeatherForecast(something));
+	}
+
+	/** */
+	public static async getTest(): Promise<string | null> {
+		return await this.client.get("WeatherForecast/Test").withNullStatus(404).fromStringNullable();
 	}
 }

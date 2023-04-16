@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { AsyncData } from "$lib";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
-	import { testClient } from "$sandbox/services/testClient";
+	import { TestClient } from "$sandbox/http/TestClient";
 
 	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	const data = new AsyncData<WeatherForecast[]>(() => testClient.getForecasts(), {
+	const data = new AsyncData<WeatherForecast[]>(() => TestClient.getForecasts(), {
 		browserOnly: true,
 		setValue: (value) => (forecasts = value),
 		cooldown: 600,

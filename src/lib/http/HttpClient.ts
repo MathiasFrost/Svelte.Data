@@ -1,5 +1,7 @@
-import { ValidationError } from "./ValidationErrors";
-import { ensureArray } from "../shared/UnknownObject";
+import { HTTPRequestBuilder } from "./HTTPRequestBuilder";
+import type { Postprocess } from "./Postprocess";
+import type { Preprocess } from "./Preprocess";
+import { ValidationError } from "./ValidationError";
 
 declare global {
 	interface Response {
@@ -28,171 +30,58 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 	return this;
 };
 
-/** */
-type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
-/** */
-type HTTPContent = JSONStringify | BodyInit | null;
-
-/** Function to turn something into a JSON string */
-export type JSONStringify = () => string;
-
-/** */
-export interface IHttpClientOptions {
-	defaultRequestInit: RequestInit;
-	preprocess: (requestInit: RequestInit) => Promise<RequestInit>;
-	postprocess: (response: Response) => Promise<Response>;
-}
-
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
-export class HttpClient {
+export class HTTPClient {
 	/** */
 	private readonly baseAddress: URL | null = null;
 
-	/** */
-	private readonly defaultInit: RequestInit;
+	/** @see RequestInit */
+	private readonly defaultRequestInit: RequestInit;
+
+	/** @see Preprocess */
+	private readonly preprocess?: Preprocess;
+
+	/** @see Postprocess */
+	private readonly postprocess?: Postprocess;
+
+	/** Default RequestInit for use agaist backend for this frontend.
+	 * We use manual redirect to detect when auth challenge results in redirect (needs user interaction) */
+	public static backendInit: () => RequestInit = () => ({ credentials: "include", redirect: "manual" });
 
 	/** */
-	private readonly preprocess: (requestInit: RequestInit) => Promise<RequestInit>;
-
-	/** */
-	private readonly postprocess: (response: Response) => Promise<Response>;
-
-	/** */
-	public constructor(baseAddress = "", options: Partial<IHttpClientOptions> = {}) {
-		this.defaultInit = options.defaultRequestInit ?? {};
-		this.preprocess = typeof options.preprocess === "function" ? options.preprocess : async (requestInit) => requestInit;
-		this.postprocess = typeof options.postprocess === "function" ? options.postprocess : async (response) => response;
+	public constructor(baseAddress = "", defaultRequestInit?: RequestInit, preprocess?: Preprocess, postprocess?: Postprocess) {
 		try {
 			this.baseAddress = new URL(baseAddress);
 		} catch (e) {
 			console.warn("Base address could not be constructed from constructor");
 		}
-	}
-
-	/** Combine `baseAddress` with `requestUri` in the same fashion as .NET `Uri` */
-	private buildURI(requestUri: string): string {
-		if (this.baseAddress === null) {
-			if (requestUri.startsWith("https://") || requestUri.startsWith("http://")) return requestUri;
-			throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
-		}
-
-		if (this.baseAddress.href.endsWith("/")) {
-			if (requestUri.startsWith("/")) return this.baseAddress.host + requestUri;
-			else return this.baseAddress.href + requestUri;
-		} else {
-			if (requestUri.startsWith("/")) return this.baseAddress.href + requestUri;
-			else return this.baseAddress.host + "/" + requestUri;
-		}
+		this.defaultRequestInit = defaultRequestInit ?? {};
+		this.preprocess = preprocess;
+		this.postprocess = postprocess;
 	}
 
 	/** */
-	private async buildRequestInit(method: HTTPMethod, content: HTTPContent, requestInit?: RequestInit, abort?: AbortSignal): Promise<RequestInit> {
-		const headers = new Headers(this.defaultInit.headers);
-		let body: BodyInit | null = null;
-
-		function isNativeContent(content: HTTPContent): content is BodyInit | null {
-			if (
-				content === null ||
-				content instanceof ReadableStream ||
-				content instanceof Blob ||
-				content instanceof ArrayBuffer ||
-				content instanceof FormData ||
-				content instanceof URLSearchParams ||
-				typeof content === "string" ||
-				("buffer" in content && content instanceof ArrayBuffer)
-			) {
-				return true;
-			}
-			return false;
-		}
-
-		let json = false;
-		if (!isNativeContent(content)) {
-			if (typeof content === "function") {
-				body = content();
-				json = true;
-			} else if (Array.isArray(content)) {
-				body = JSON.stringify(content);
-				json = true;
-			} else if (typeof content === "object") {
-				body = JSON.stringify(content);
-				json = true;
-			}
-		}
-
-		if (json) headers.append("Content-Type", "application/json");
-		return await this.preprocess({ ...this.defaultInit, headers, body, method, signal: abort, ...requestInit });
-	}
-
-	/** Make an HTTP request
-	 * @returns The Response */
-	public async send(requestUri: string, method: HTTPMethod, content: HTTPContent, requestInit?: RequestInit, abort?: AbortSignal): Promise<Response> {
-		const init = await this.buildRequestInit(method, content, requestInit, abort);
-		const res = await fetch(this.buildURI(requestUri), init);
-		return await this.postprocess(res);
-	}
-
-	/** Make a GET request
-	 * @returns The Response if success */
-	public async get(requestUri: string, requestInit?: RequestInit, signal?: AbortSignal): Promise<Response> {
-		const res = await this.send(requestUri, "GET", null, requestInit, signal);
-		return res.ensureSuccess();
-	}
-
-	/** Make a DELETE request
-	 * @returns The Response if success */
-	public async delete(requestUri: string, requestInit?: RequestInit, signal?: AbortSignal): Promise<Response> {
-		const res = await this.send(requestUri, "DELETE", null, requestInit, signal);
-		return res.ensureSuccess();
-	}
-
-	/** Make a POST request
-	 * @returns The Response if success */
-	public async post(requestUri: string, content: HTTPContent, requestInit?: RequestInit, signal?: AbortSignal): Promise<Response> {
-		const res = await this.send(requestUri, "POST", content, requestInit, signal);
-		return res.ensureSuccess();
-	}
-
-	/** Make a PATCH request
-	 * @returns The Response if success */
-	public async patch(requestUri: string, content: HTTPContent, requestInit?: RequestInit, signal?: AbortSignal): Promise<Response> {
-		const res = await this.send(requestUri, "PATCH", content, requestInit, signal);
-		return res.ensureSuccess();
-	}
-
-	/** Make a PUT request
-	 * @returns The Response if success */
-	public async put(requestUri: string, content: HTTPContent, requestInit?: RequestInit, signal?: AbortSignal): Promise<Response> {
-		const res = await this.send(requestUri, "PUT", content, requestInit, signal);
-		return res.ensureSuccess();
+	public get(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
+		return new HTTPRequestBuilder(this.baseAddress, "GET", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
 	/** */
-	public async getFromArray<TValue>(requestUri: string, transform: (something: unknown) => TValue, signal?: AbortSignal): Promise<TValue[]> {
-		const res = await this.send(requestUri, "GET", null, undefined, signal);
-		const json = ensureArray(await res.ensureSuccess().json());
-		return json.map((something) => transform(something));
+	public post(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
+		return new HTTPRequestBuilder(this.baseAddress, "POST", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
 	/** */
-	public async getFromArrayNullable<TValue>(requestUri: string, transform: (something: unknown) => TValue, signal?: AbortSignal): Promise<TValue[] | null> {
-		const res = await this.send(requestUri, "GET", null, undefined, signal);
-		const json = ensureArray(await res.ensureSuccess().json());
-		return json.map((something) => transform(something));
+	public put(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
+		return new HTTPRequestBuilder(this.baseAddress, "PUT", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
-	/** Make a POST request using XMLHttpRequest */
-	public postLargeFile(path = "", name: string, file: File, init: (request: XMLHttpRequest) => void): void {
-		const request = new XMLHttpRequest();
-		request.open("POST", this.buildURI(path), true);
+	/** */
+	public patch(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
+		return new HTTPRequestBuilder(this.baseAddress, "PATCH", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
+	}
 
-		request.withCredentials = true;
-		const formData = new FormData();
-		formData.append("file", file, name);
-
-		init(request);
-
-		request.send(formData);
+	/** */
+	public delete(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
+		return new HTTPRequestBuilder(this.baseAddress, "DELETE", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 }

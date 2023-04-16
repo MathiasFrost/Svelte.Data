@@ -20,8 +20,8 @@
 
 <p>Value: {val}</p>
 <input type="text" bind:value={val} />
-<button on:click={manager.undo.bind(manager)}>undo</button>
-<button on:click={manager.redo.bind(manager)}>redo</button>
+<button on:click={() => manager.undo()}>undo</button>
+<button on:click={() => manager.redo()}>redo</button>
 <p>Index: {index}</p>
 <ul>
 	{#each history as item, i}
