@@ -33,6 +33,6 @@ jobs:
 
             - name: Publish npm
               if: github.ref_name == 'main'
-              run: pnpm publish ./package --access public
+              run: pnpm publish --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
