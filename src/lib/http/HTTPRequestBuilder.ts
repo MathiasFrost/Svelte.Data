@@ -157,23 +157,30 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** @returns True if this response should be treated as 204 No Content  */
-	private isNoContent(response: Response): boolean {
-		return response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
-	}
-
 	/** @returns The raw request result */
-	public async fetch(nullable: boolean, signal?: AbortSignal): Promise<Response> {
+	public async fetch(signal?: AbortSignal): Promise<Response> {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
 		const response = await fetch(this.requestUri, this.requestInit);
-		if (this.ensureSuccess && !nullable && !this.isNoContent(response)) {
-			response.ensureSuccess();
-		}
+		if (this.ensureSuccess) response.ensureSuccess();
 
 		if (typeof this.postprocess === "function") await this.postprocess(response);
 		return response;
+	}
+
+	/** @returns The raw request result */
+	private async fetchNullable(signal?: AbortSignal): Promise<[Response, boolean]> {
+		this.requestInit.signal = signal;
+		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+
+		const response = await fetch(this.requestUri, this.requestInit);
+
+		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
+		if (!isNull && this.ensureSuccess) response.ensureSuccess();
+
+		if (typeof this.postprocess === "function") await this.postprocess(response);
+		return [response, isNull];
 	}
 
 	/** @returns The XMLHttpRequest */
@@ -191,15 +198,15 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as a JSON object */
 	public async fromJSONObject<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult> {
-		const response = await this.fetch(false, signal);
+		const response = await this.fetch(signal);
 		const json = await response.json();
 		return deserialize(json);
 	}
 
 	/** The request body deserialized as a JSON object or null if 204 */
 	public async fromJSONObjectNullable<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult | null> {
-		const response = await this.fetch(true, signal);
-		if (this.isNoContent(response)) return null;
+		const [response, isNull] = await this.fetchNullable(signal);
+		if (isNull) return null;
 
 		const json = await response.json();
 		return deserialize(json);
@@ -207,15 +214,15 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as a JSON array */
 	public async fromJSONArray<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult[]> {
-		const response = await this.fetch(false, signal);
+		const response = await this.fetch(signal);
 		const json = await response.json();
 		return ensureArray(json).map(deserialize);
 	}
 
 	/** The request body deserialized as a JSON array or null if 204 */
 	public async fromJSONArrayNullable<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
-		const response = await this.fetch(true, signal);
-		if (this.isNoContent(response)) return null;
+		const [response, isNull] = await this.fetchNullable(signal);
+		if (isNull) return null;
 
 		const json = await response.json();
 		return ensureArray(json).map(deserialize);
@@ -223,14 +230,14 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as string */
 	public async fromString(signal?: AbortSignal): Promise<string> {
-		const response = await this.fetch(false, signal);
+		const response = await this.fetch(signal);
 		return await response.text();
 	}
 
 	/** The request body deserialized as string */
 	public async fromStringNullable(signal?: AbortSignal): Promise<string | null> {
-		const response = await this.fetch(true, signal);
-		if (this.isNoContent(response)) return null;
+		const [response, isNull] = await this.fetchNullable(signal);
+		if (isNull) return null;
 		return await response.text();
 	}
 
