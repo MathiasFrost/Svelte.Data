@@ -1,6 +1,6 @@
 {
 	"name": "@maal/svelte-data",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Package aiming to make it easier to manage data in Svelte apps",
 	"author": "Mathias Amandus Andvik Løken",
 	"license": "MIT",
