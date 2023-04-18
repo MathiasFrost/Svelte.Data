@@ -122,7 +122,7 @@ export class HTTPRequestBuilder {
 
 	/** Add headers to content */
 	public withHeaders(headers: Dictionary): HTTPRequestBuilder {
-		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not heppening");
+		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
 		for (const key of Object.keys(headers)) {
 			this.requestInit.headers.append(key, headers[key]);
 		}
@@ -131,7 +131,7 @@ export class HTTPRequestBuilder {
 
 	/** HTTP request with application/json content */
 	public asJSON(content: object | string): HTTPRequestBuilder {
-		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not heppening");
+		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
 		this.requestInit.headers.append("Content-Type", "application/json");
 		this.requestInit.body = typeof content === "string" ? content : JSON.stringify(content);
 		return this;
