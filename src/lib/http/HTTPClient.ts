@@ -1,7 +1,7 @@
-import { HTTPRequestBuilder } from "./HTTPRequestBuilder";
-import type { Postprocess } from "./Postprocess";
-import type { Preprocess } from "./Preprocess";
-import { ValidationError } from "./ValidationError";
+import { HTTPRequestBuilder } from "./HTTPRequestBuilder.js";
+import type { Postprocess } from "./Postprocess.js";
+import type { Preprocess } from "./Preprocess.js";
+import { ValidationError } from "./ValidationError.js";
 
 declare global {
 	interface Response {

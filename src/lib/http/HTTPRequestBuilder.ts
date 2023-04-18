@@ -1,6 +1,6 @@
-import { ensureArray, ensureBigint, ensureBoolean, ensureDateString, ensureNumber } from "$lib/shared/UnknownObject";
-import type { Postprocess } from "./Postprocess";
-import type { Preprocess } from "./Preprocess";
+import { ensureArray, ensureBigint, ensureBoolean, ensureDateString, ensureNumber } from "$lib/shared/UnknownObject.js";
+import type { Postprocess } from "./Postprocess.js";
+import type { Preprocess } from "./Preprocess.js";
 
 /** */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
