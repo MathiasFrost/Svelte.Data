@@ -42,9 +42,6 @@ export class HTTPRequestBuilder {
 	/** */
 	private optional: unknown | null = null;
 
-	/** */
-	private headers: Headers = new Headers();
-
 	/** Status codes to ignore from ensureing success when calling `from{Type}Nullable` */
 	private nullStatusCodes: number[] | null = null;
 
@@ -61,6 +58,7 @@ export class HTTPRequestBuilder {
 		this.baseAddress = baseAddress;
 		this.requestInit = defaultRequestInit;
 		this.requestInit.method = httpMethod;
+		this.requestInit.headers = new Headers();
 		this._requestUri = requestUri;
 		this.ensureSuccess = ensureSuccess;
 		this.preprocess = preprocess;
@@ -124,15 +122,17 @@ export class HTTPRequestBuilder {
 
 	/** Add headers to content */
 	public withHeaders(headers: Dictionary): HTTPRequestBuilder {
+		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
 		for (const key of Object.keys(headers)) {
-			this.headers.append(key, headers[key]);
+			this.requestInit.headers.append(key, headers[key]);
 		}
 		return this;
 	}
 
 	/** HTTP request with application/json content */
-	public asJson(content: object | string): HTTPRequestBuilder {
-		this.headers.append("Content-Type", "application/json");
+	public asJSON(content: object | string): HTTPRequestBuilder {
+		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
+		this.requestInit.headers.append("Content-Type", "application/json");
 		this.requestInit.body = typeof content === "string" ? content : JSON.stringify(content);
 		return this;
 	}
