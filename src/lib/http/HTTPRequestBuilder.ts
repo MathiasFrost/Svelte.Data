@@ -56,7 +56,7 @@ export class HTTPRequestBuilder {
 		postprocess?: Postprocess
 	) {
 		this.baseAddress = baseAddress;
-		this.requestInit = defaultRequestInit;
+		this.requestInit = { ...defaultRequestInit }; // TODO: deep copy this object
 		this.requestInit.method = httpMethod;
 		this.requestInit.headers = new Headers();
 		this._requestUri = requestUri;
