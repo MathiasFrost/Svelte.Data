@@ -1,3 +1,5 @@
+import type { MaybePromise } from "$app/forms";
+
 /** Optional parameters */
 export interface IAsyncDataOptions<T> {
 	/** Called when there has been a change to `AsyncState` */
@@ -76,7 +78,7 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 
 /** */
 export type AsyncObject<T> = {
-	value: Promise<T>;
+	value: MaybePromise<T>;
 	refresh: (silent: boolean) => void;
 	setPromise: (promise: () => Promise<T>) => void;
 };
@@ -125,8 +127,8 @@ export class AsyncBuilder<T> {
 			refresh(true);
 		};
 
-		let value: Promise<T>;
-		if (typeof this.initialValue !== "undefined") value = Promise.resolve(this.initialValue);
+		let value: MaybePromise<T>;
+		if (typeof this.initialValue !== "undefined") value = this.initialValue;
 		else if (typeof this.promise !== "undefined") value = this.promise();
 		else throw new Error("Neither promise nor initialValue was set");
 

@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { page } from "$app/stores";
 	import { TestClient } from "$sandbox/http/TestClient";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
 	import { onMount } from "svelte";
 	import type { PageData } from "./$types";
 	import { browser } from "$app/environment";
-	import { AsyncData } from "$lib";
 	import { AsyncBuilder, type AsyncObject } from "$lib/async/AsyncData";
 
 	function testPromise(forecast: string): Promise<string> {
@@ -19,11 +17,11 @@
 	}
 
 	/** */
-	//export let data: PageData;
+	export let data: PageData;
 
 	const forecasts: AsyncObject<WeatherForecast[]> = new AsyncBuilder<WeatherForecast[]>()
 		.fromPromise(() => TestClient.getForecasts())
-		.withInitialValue([])
+		.withInitialValue(data.forecasts)
 		.withSetter((value) => (forecasts.value = value))
 		.asObject();
 
@@ -31,7 +29,7 @@
 		.withInitialValue("")
 		.withSetter((value) => (second.value = value))
 		.asObject();
-	$: forecasts.value.then((forecasts) => second.setPromise(() => testPromise(forecasts[0]?.summary ?? "")));
+	$: Promise.resolve(forecasts.value).then((forecasts) => second.setPromise(() => testPromise(forecasts[0]?.summary ?? "")));
 
 	let historyIndex = 0;
 	let history: string[];
@@ -45,7 +43,7 @@
 
 	onMount(async () => {
 		if (browser) {
-			forecasts.refresh(false);
+			//forecasts.refresh(false);
 		}
 	});
 </script>
@@ -87,6 +85,25 @@
 				</tr>
 			{/each}
 		{/await}
+	</tbody>
+</table>
+
+<table>
+	<thead>
+		<tr>
+			<th>Date</th>
+			<th>C</th>
+			<th>Summary</th>
+		</tr>
+	</thead>
+	<tbody>
+		{#each data.forecasts as forecast}
+			<tr>
+				<td>{forecast.date}</td>
+				<td>{forecast.temperatureC}</td>
+				<td><input type="text" bind:value={forecast.summary} /></td>
+			</tr>
+		{/each}
 	</tbody>
 </table>
 
