@@ -46,6 +46,21 @@ export class HTTPRequestBuilder {
 	private nullStatusCodes: number[] | null = null;
 
 	/** */
+	private static __fetch: typeof window.fetch | null = null;
+
+	/** */
+	private static get _fetch(): typeof window.fetch {
+		if (typeof window !== "undefined") return window.fetch;
+		if (this.__fetch === null) throw new Error("Attempting to use HTTPClient server-side without calling setFetch with the fetch passed from load");
+		return this.__fetch;
+	}
+
+	/** @internal */
+	public static setFetch(fetch: typeof window.fetch): void {
+		this.__fetch = fetch;
+	}
+
+	/** */
 	constructor(
 		baseAddress: URL | null,
 		httpMethod: HTTPMethod,
@@ -162,7 +177,7 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await fetch(this.requestUri, this.requestInit);
+		const response = await HTTPRequestBuilder._fetch(this.requestUri, this.requestInit);
 		if (this.ensureSuccess) response.ensureSuccess();
 
 		if (typeof this.postprocess === "function") await this.postprocess(response);
@@ -174,7 +189,7 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await fetch(this.requestUri, this.requestInit);
+		const response = await HTTPRequestBuilder._fetch(this.requestUri, this.requestInit);
 
 		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
 		if (!isNull && this.ensureSuccess) response.ensureSuccess();

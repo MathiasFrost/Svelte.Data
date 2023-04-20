@@ -56,7 +56,7 @@ export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsy
 			set,
 			update,
 			subscribe,
-			refresh: data.invoke.bind(data),
+			refresh: data.refresh.bind(data),
 			redo: manager.redo.bind(manager),
 			undo: manager.undo.bind(manager)
 		},

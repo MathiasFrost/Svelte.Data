@@ -1,12 +1,11 @@
-//import { ensureArray } from "$lib";
-//import { WeatherForecast } from "$sandbox/models/WeatherForecast";
-
-import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
+import { HTTPClient, ensureArray } from "$lib";
+import { TestClient } from "$sandbox/http/TestClient";
+import { WeatherForecast } from "$sandbox/models/WeatherForecast";
 
 /** @type {import('./$types').PageLoad} */
-export async function load() {
-	//const res = await fetch("http://localhost:5000/WeatherForecast");
-	const item: WeatherForecast[] = []; //ensureArray(await res.json()).map((something) => new WeatherForecast(something));
-
-	return { item };
+export async function load({ fetch }) {
+	HTTPClient.setFetch(fetch);
+	//const forecasts = ensureArray(await (await fetch("http://localhost:5000/WeatherForecast")).json()).map((something) => new WeatherForecast(something));
+	const forecasts = await TestClient.getServerForecasts(fetch);
+	return { forecasts };
 }

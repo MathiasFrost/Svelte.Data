@@ -1,18 +1,7 @@
-import type { AsyncState } from "$lib/async/AsyncState.js";
-
 /** Optional parameters */
 export interface IAsyncDataOptions<T> {
 	/** Called when there has been a change to `AsyncState` */
-	setValue?: (value: AsyncState<T>) => void;
-
-	/** Value to set when panding */
-	placeholder?: T;
-
-	/** Set to false if you don't want to immediately invoke promise */
-	immediatelyInvoked?: boolean;
-
-	/** Set to true if you don't want promise to be invoked server-side */
-	browserOnly?: boolean;
+	setter?: (promise: Promise<T>) => void;
 
 	/** Refresh cooldown in milliseconds */
 	cooldown?: number;
@@ -27,16 +16,10 @@ export interface IAsyncDataOptions<T> {
 /** Manage async data */
 export class AsyncData<T> implements IAsyncDataOptions<T> {
 	/** @inheritdoc */
-	public setValue?: (value: AsyncState<T>) => void;
+	public setter?: (promsie: Promise<T>) => void;
 
 	/** Promise used to fetch the data */
 	public promise: () => Promise<T>;
-
-	/** @inheritdoc */
-	public placeholder?: T;
-
-	/** @inheritdoc */
-	public browserOnly: boolean;
 
 	/** @inheritdoc */
 	public cooldown: number;
@@ -58,24 +41,19 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 	 * @param options Optional parameters */
 	public constructor(promise: () => Promise<T>, options?: IAsyncDataOptions<T>) {
 		this.promise = promise;
-		this.setValue = options?.setValue;
-		this.placeholder = options?.placeholder;
-		this.browserOnly = options?.browserOnly ?? false;
+		this.setter = options?.setter;
 		this.cooldown = options?.cooldown ?? 0;
 		this.interval = options?.interval;
 		this.handleError = options?.handleError;
-		if (options?.immediatelyInvoked ?? true) {
-			this.invoke();
-		}
 		if (typeof window !== "undefined" && typeof this.interval === "number") {
-			this._interval = window.setInterval(() => this.invoke(true), this.interval);
+			this._interval = window.setInterval(() => this.refresh(true), this.interval);
 		}
 	}
 
 	/** Call to invoke or re-invoke promise
-	 * @param silent Set to true if we should not call `setValue` with placeholder before invoking promise */
-	public async invoke(silent?: boolean): Promise<void> {
-		if (this.browserOnly && typeof window === "undefined") {
+	 * @param silent Set to true if we should not call `setter` with placeholder before invoking promise */
+	public async refresh(silent?: boolean): Promise<void> {
+		if (typeof window === "undefined") {
 			return;
 		}
 		if (this.cooldown > 0 && this.lastFetched) {
@@ -85,25 +63,73 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 				return;
 			}
 		}
-		try {
-			if (!silent) {
-				this.setValue?.(this.placeholder);
-			}
-			const res = await this.promise();
-			this.setValue?.(res);
-		} catch (e) {
-			if (typeof this.handleError === "function") {
-				this.handleError(e as Error);
-			} else {
-				console.error(e);
-				this.setValue?.(e as Error);
-			}
-		}
+		const promise = silent ? Promise.resolve(await this.promise()) : this.promise();
+		this.setter?.(promise);
 		this.lastFetched = new Date();
 	}
 
 	/** If `interval` is set, this should preferrably be called `onDestroy` */
 	public clearInterval(): void {
 		if (typeof window !== "undefined") window.clearInterval(this._interval);
+	}
+}
+
+/** */
+export type AsyncObject<T> = {
+	value: Promise<T>;
+	refresh: (silent: boolean) => void;
+	setPromise: (promise: () => Promise<T>) => void;
+};
+
+/** */
+export class AsyncBuilder<T> {
+	/** */
+	private promise?: () => Promise<T>;
+
+	/** */
+	private initialValue?: T;
+
+	/** */
+	private setter?: (promise: Promise<T>) => void;
+
+	/** The promise */
+	public fromPromise(promise: () => Promise<T>): AsyncBuilder<T> {
+		this.promise = promise;
+		return this;
+	}
+
+	/** Adding this will prevent promise from being called immediately.
+	 *
+	 * Useful for providing a server value if promise uses browser APIs */
+	public withInitialValue(value: T): AsyncBuilder<T> {
+		this.initialValue = value;
+		return this;
+	}
+
+	/** Set the value when it changes, like updateing the initial promise from `asObject` */
+	public withSetter(setter: (this: void, value: Promise<T>) => void): AsyncBuilder<T> {
+		this.setter = setter;
+		return this;
+	}
+
+	/** */
+	public asObject(): AsyncObject<T> {
+		const refresh: (silent: boolean) => void = async (silent) => {
+			if (typeof this.promise === "undefined") return;
+			const value = silent ? Promise.resolve(await this.promise()) : this.promise();
+			this.setter?.(value);
+		};
+
+		const setPromise: (promise: () => Promise<T>) => void = (promise) => {
+			this.promise = promise;
+			refresh(true);
+		};
+
+		let value: Promise<T>;
+		if (typeof this.initialValue !== "undefined") value = Promise.resolve(this.initialValue);
+		else if (typeof this.promise !== "undefined") value = this.promise();
+		else throw new Error("Neither promise nor initialValue was set");
+
+		return { value, refresh, setPromise };
 	}
 }

@@ -1,3 +1,4 @@
+import { ensureArray } from "$lib";
 import { HTTPClient } from "$lib/http/HTTPClient";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast";
 
@@ -8,7 +9,14 @@ export class TestClient {
 
 	/** */
 	public static async getForecasts(): Promise<WeatherForecast[]> {
+		console.log("invoked");
 		return await this.client.get("WeatherForecast").fromJSONArray((something) => new WeatherForecast(something));
+	}
+
+	/** */
+	public static async getServerForecasts(fetch: typeof window.fetch): Promise<WeatherForecast[]> {
+		console.log("invoked");
+		return ensureArray(await (await fetch("http://localhost:5000/WeatherForecast")).json()).map((something) => new WeatherForecast(something));
 	}
 
 	/** */
