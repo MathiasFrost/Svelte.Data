@@ -2,7 +2,61 @@
 
 ![Logo](https://raw.githubusercontent.com/MathiasFrost/Svelte.StoresPlus/main/logo.png)
 
-Building blocks aiming to make it quick and easy to create Svelte stores with advanced functionality such as history management; async data and storage.
+Package aiming to make it easier to manage data in Svelte apps
+
+## Builders
+
+### ValueBuilder
+
+Handles data that is never a `Promise`
+- value
+- reset
+
+### PromiseBuilder
+
+Handles data that is always initially a `Promise`
+- promise
+- refresh
+- setPromise
+
+### MaybePromiseBuilder
+
+Handles data that might be a value and might be a `Promise`
+- value
+- refresh
+- silentRefresh
+- setPromise
+- setAndInvoke
+- setAndSilentInvoke
+- catch
+
+## Builder branches
+
+### historyBuilder
+
+Converts the builder into one that can manage change history
+- history
+- index
+- undo
+- redo
+
+### storageBuilder
+
+Converts the builder into one that can sync data to some storage, like cookie, localStorage, sessionStorage and indexedDB
+
+## Result
+
+### asObject
+
+Returns an object that can be used in a single Svelte component
+
+### asWritable
+
+Returns a svelte `Writable` store
+
+### asReadable
+
+Returns a ssvelte `Readable` store
 
 # Examples
 

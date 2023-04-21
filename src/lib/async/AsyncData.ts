@@ -78,9 +78,13 @@ export class AsyncData<T> implements IAsyncDataOptions<T> {
 
 /** */
 export type AsyncObject<T> = {
-	value: MaybePromise<T>;
-	refresh: (silent: boolean) => void;
+	get value(): MaybePromise<T>;
+	set value(promise: MaybePromise<T>);
+	refresh: () => void;
+	silentRefresh: () => void;
 	setPromise: (promise: () => Promise<T>) => void;
+	setAndInvoke: (promise: () => Promise<T>) => void;
+	setAndInvokeSilent: (promise: () => Promise<T>) => void;
 };
 
 /** */
@@ -116,22 +120,41 @@ export class AsyncBuilder<T> {
 
 	/** */
 	public asObject(): AsyncObject<T> {
-		const refresh: (silent: boolean) => void = async (silent) => {
+		const _refresh: (silent: boolean) => void = async (silent) => {
 			if (typeof this.promise === "undefined") return;
 			const value = silent ? Promise.resolve(await this.promise()) : this.promise();
 			this.setter?.(value);
 		};
 
-		const setPromise: (promise: () => Promise<T>) => void = (promise) => {
+		const _setPromise: (promise: () => Promise<T>, silent?: boolean) => void = (promise, silent) => {
 			this.promise = promise;
-			refresh(true);
+			if (typeof silent === "boolean") _refresh(silent);
 		};
 
-		let value: MaybePromise<T>;
-		if (typeof this.initialValue !== "undefined") value = this.initialValue;
-		else if (typeof this.promise !== "undefined") value = this.promise();
+		let _value: MaybePromise<T>;
+		if (typeof this.initialValue !== "undefined") _value = this.initialValue;
+		else if (typeof this.promise !== "undefined") _value = this.promise();
 		else throw new Error("Neither promise nor initialValue was set");
 
-		return { value, refresh, setPromise };
+		const refresh = () => _refresh(false);
+		const silentRefresh = () => _refresh(true);
+		const setPromise = (promise: () => Promise<T>) => _setPromise(promise);
+		const setAndInvoke = (promise: () => Promise<T>) => _setPromise(promise, false);
+		const setAndInvokeSilent = (promise: () => Promise<T>) => _setPromise(promise, true);
+
+		return {
+			get value() {
+				return _value;
+			},
+			set value(promise) {
+				console.log(promise);
+				_value = promise;
+			},
+			refresh,
+			silentRefresh,
+			setPromise,
+			setAndInvoke,
+			setAndInvokeSilent
+		};
 	}
 }

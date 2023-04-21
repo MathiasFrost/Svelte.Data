@@ -1,16 +1,13 @@
 <script lang="ts">
 	import { TestClient } from "$sandbox/http/TestClient";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
-	import { onMount } from "svelte";
 	import type { PageData } from "./$types";
 	import { browser } from "$app/environment";
 	import { AsyncBuilder, type AsyncObject } from "$lib/async/AsyncData";
-	import type { MaybePromise } from "$app/forms";
 
 	function testPromise(forecast: string): Promise<string> {
 		return new Promise<string>((resolve) =>
 			window.setTimeout(() => {
-				console.log("rsolved");
 				resolve(forecast.toUpperCase());
 			}, 600)
 		);
@@ -30,31 +27,14 @@
 		.withSetter((value) => (second.value = value))
 		.asObject();
 	function setSecond(forecasts: WeatherForecast[]): void {
-		console.log("test");
 		if (browser) second.setAndInvoke(() => testPromise(forecasts[0]?.summary ?? ""));
 	}
 	$: Promise.resolve(forecasts.value).then(setSecond);
-
-	let historyIndex = 0;
-	let history: string[];
-	function undo(): void {}
-
-	async function sync(value: MaybePromise<WeatherForecast[]>): Promise<void> {
-		console.log("test");
-	}
-
-	$: sync(forecasts.value);
-
-	onMount(async () => {
-		if (browser) {
-			//forecasts.refresh(false);
-		}
-	});
 </script>
 
-<h1>Svelte.StoresPlus</h1>
+<h1>Svelte.Data</h1>
 
-<h2>Welcome to your library project</h2>
+<h2>Async object from universal load</h2>
 
 <button on:click={forecasts.refresh}> Refresh </button>
 <button on:click={forecasts.silentRefresh}> Silent Refresh </button>
@@ -88,28 +68,10 @@
 					</td>
 				</tr>
 			{/each}
+		{:catch e}
+			<tr>
+				<td colspan="4">{e.message}</td>
+			</tr>
 		{/await}
 	</tbody>
 </table>
-
-<table>
-	<thead>
-		<tr>
-			<th>Date</th>
-			<th>C</th>
-			<th>Summary</th>
-		</tr>
-	</thead>
-	<tbody>
-		{#each data.forecasts as forecast}
-			<tr>
-				<td>{forecast.date}</td>
-				<td>{forecast.temperatureC}</td>
-				<td><input type="text" bind:value={forecast.summary} /></td>
-			</tr>
-		{/each}
-	</tbody>
-</table>
-
-<p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
