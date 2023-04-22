@@ -9,36 +9,41 @@ Package aiming to make it easier to manage data in Svelte apps
 ### ValueBuilder
 
 Handles data that is never a `Promise`
-- value
-- reset
+
+-   value
+-   reset
 
 ### PromiseBuilder
 
 Handles data that is always initially a `Promise`
-- promise
-- refresh
-- setPromise
+
+-   promise
+-   refresh
+-   setPromise
+-   setAndInvoke
 
 ### MaybePromiseBuilder
 
 Handles data that might be a value and might be a `Promise`
-- value
-- refresh
-- silentRefresh
-- setPromise
-- setAndInvoke
-- setAndSilentInvoke
-- catch
+
+-   value
+-   refresh
+-   silentRefresh
+-   setPromise
+-   setAndInvoke
+-   setAndSilentInvoke
+-   catch
 
 ## Builder branches
 
 ### historyBuilder
 
 Converts the builder into one that can manage change history
-- history
-- index
-- undo
-- redo
+
+-   history
+-   index
+-   undo
+-   redo
 
 ### storageBuilder
 

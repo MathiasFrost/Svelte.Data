@@ -1,47 +1,66 @@
-import { writable, type Writable } from "svelte/store";
-
-export type WritableHistoryAsync<T> = Writable<HistoryAsync<T>>;
-export type HistoryAsync<T> = Omit<History<T>, "value"> & Async<T>;
-
-export type WritableHistory<T> = Writable<History<T>>;
-export type History<T> = Value<T> & {
-	historyIndex: number;
-	history: string[];
-	undo: () => void;
-	redo: () => void;
-	addEntry: (value: T) => void;
-};
-
-export type WritableAsync<T> = Writable<Async<T>>;
-export type Async<T> = Omit<Value<T>, "value"> & {
-	value: Promise<T>;
-	update: (value: T) => void;
-	invoke: () => void;
-};
-
-export type Value<T> = { value: T };
+/** */
+type Get<T> = () => T | Promise<T>;
 
 /** */
-export class SyncBuilder<TValue> {
-	/** */
-	public initialValue: TValue;
+type Set<T> = (value: T | Promise<T>) => void;
 
-	/** */
-	public constructor(initialValue: TValue) {
-		this.initialValue = initialValue;
-	}
+/** */
+type Getter<T> = {
+	awaited: boolean;
+	get: Get<T>;
+};
 
+/** */
+type Setter<T> = {
+	awaited: boolean;
+	set: Set<T>;
+};
+
+/** */
+function isFunction<T>(getter: Get<T>): getter is Get<T> {
+	return typeof getter === "function";
+}
+
+/** */
+export type Data<T> = {
+	/** Push a value to destinations defined with `.to{Something?}` */
+	push: (value: T | Promise<T>) => Data<T>;
+
+	/** Get value from the first successful source defined with `.from{Something?}` */
+	pull: () => Data<T>;
+
+	/** Resets data state, clearing storages */
+	reset: () => Data<T>;
+
+	/** Add getters with higher priority than existing */
+	unshiftFrom: (...getters: Get<T>[]) => Data<T>;
+
+	/** Add getters with higher priority than existing and await them before processing */
+	unshiftFromAwaited: (...getters: Get<T>[]) => Data<T>;
+
+	/** Add getters with lower priority than existing */
+	pushFrom: (...getters: Get<T>[]) => Data<T>;
+
+	/** Add getters with lower priority than existing and await them before processing */
+	pushFromAwaited: (...getters: Get<T>[]) => Data<T>;
+
+	/** Add setters with lower priority than existing */
+	pushTo: (...setters: Set<T>[]) => Data<T>;
+
+	/** Add setters with lower priority than existing and await them before processing */
+	pushToAwaited: (...setters: Set<T>[]) => Data<T>;
+};
+
+/** */
+export class DataBuilder<T> {
 	/** */
-	public setters: ((value: TValue) => void)[] = [];
+	public setters: Setter<T>[] = [];
 
 	/** */
 	public alwaysInvoke = true;
 
 	/** */
-	public getters: (() => TValue | undefined)[] = [];
-
-	/** */
-	public promises: (() => Promise<TValue>)[] = [];
+	public getters: Getter<T>[] = [];
 
 	/** */
 	public history = false;
@@ -50,45 +69,57 @@ export class SyncBuilder<TValue> {
 	private key?: string;
 
 	/** */
-	private serializer: (value: TValue) => string = (value) => JSON.stringify(value);
+	private serializer: (value: T) => string = (value) => JSON.stringify(value);
 
 	/** */
-	private deserializer: (string: string) => TValue = (string) => JSON.parse(string);
+	private deserializer: (string: string) => T = (string) => JSON.parse(string);
 
 	/** */
-	public withSerializer(serializer: (value: TValue) => string): SyncBuilder<TValue> {
+	public isString(): DataBuilder<T> {
+		this.serializer = (value) => value as string;
+		this.deserializer = (str) => str as T;
+		return this;
+	}
+
+	/** */
+	public withSerializer(serializer: (value: T) => string): DataBuilder<T> {
 		this.serializer = serializer;
 		return this;
 	}
 
 	/** */
-	public withDeserializer(deserializer: (string: string) => TValue): SyncBuilder<TValue> {
+	public withDeserializer(deserializer: (string: string) => T): DataBuilder<T> {
 		this.deserializer = deserializer;
 		return this;
 	}
 
 	/** */
-	public toLocalStorage(key?: string): SyncBuilder<TValue> {
-		this.setters.push((value) => {
-			if (typeof window === "undefined") return;
-			window.localStorage.setItem(this.getKey(key), this.serializer(value));
-		});
+	public to(setter: (value: T) => void): DataBuilder<T> {
+		this.setters.push({ awaited: false, set: setter as Set<T> }); // Difference is handled by awaited prop
 		return this;
 	}
 
 	/** */
-	public to(destination: (value: TValue) => void): SyncBuilder<TValue> {
-		this.setters.push(destination);
+	public toAwaited(setter: (value: Promise<T>) => void): DataBuilder<T> {
+		this.setters.push({ awaited: true, set: setter as Set<T> }); // Difference is handled by awaited prop
 		return this;
 	}
 
 	/** */
-	public from(source: () => TValue): SyncBuilder<TValue> {
+	public from(getter: Get<T>): DataBuilder<T> {
 		this.alwaysInvoke = true;
-		this.getters.push(source);
+		this.getters.push({ awaited: false, get: isFunction(getter) ? getter : () => getter });
 		return this;
 	}
 
+	/** */
+	public fromAwaited(getter: Get<T>): DataBuilder<T> {
+		this.alwaysInvoke = true;
+		this.getters.push({ awaited: true, get: isFunction(getter) ? getter : () => getter });
+		return this;
+	}
+
+	/** */
 	private getKey(key?: string): string {
 		if (this.key && !key) return this.key;
 		if (key && !this.key) {
@@ -100,139 +131,118 @@ export class SyncBuilder<TValue> {
 	}
 
 	/** */
-	public fromLocalStorage(key?: string): SyncBuilder<TValue> {
-		this.alwaysInvoke = true;
-		this.getters.push(() => {
-			if (typeof window === "undefined") return void 0 as TValue;
-			const string = window.localStorage.getItem(this.getKey(key));
-			if (string === null) return void 0 as TValue;
-			return this.deserializer(string);
+	public toSessionStorage(key?: string): DataBuilder<T> {
+		this.setters.push({
+			awaited: true, // Awaited is true so value is always resolved
+			set: (value) => {
+				window.sessionStorage.setItem(this.getKey(key), this.serializer(value as T));
+			}
 		});
 		return this;
 	}
 
 	/** */
-	public withHistory(): SyncBuilder<TValue> {
-		this.history = true;
-		return this;
-	}
-
-	/** */
-	public fromPromise(promise: () => Promise<TValue>): SyncBuilder<TValue> {
-		this.alwaysInvoke = false;
-		this.promises.push(promise);
-		return this;
-	}
-
-	/** */
-	public asWritable() {
-		return writable<TValue>();
-	}
-
-	/** */
-	public withCatch(catcher: (e: Error) => void): SyncBuilder<TValue> {
-		this.catcher = catcher;
-		return this;
-	}
-
-	/** */
-	private catcher?: (e: Error) => void;
-
-	/** */
-	private historySetter?: (entries: string[]) => void;
-
-	/** */
-	private historyIndexSetter?: (index: number) => void;
-
-	/** */
-	public historyTo(setter: (entries: string[]) => void): SyncBuilder<TValue> {
-		this.historySetter = setter;
-		return this;
-	}
-
-	/** */
-	public historyIndexTo(setter: (index: number) => void): SyncBuilder<TValue> {
-		this.historyIndexSetter = setter;
-		return this;
-	}
-
-	/** @returns The components as an anonymous object */
-	public asHistoryAsync(): HistoryAsync<TValue> {
-		let gotFromGetters = false;
-		let valueInternal = this.initialValue;
-		for (const getter of this.getters) {
-			const val = getter();
-			if (typeof val === "undefined") continue;
-			valueInternal = val;
-			gotFromGetters = true;
-		}
-
-		let index = 0;
-		const history: string[] = typeof valueInternal === "undefined" ? [] : [this.serializer(valueInternal)];
-
-		let ignoreNext = false;
-
-		const addEntry = (value: TValue) => {
-			if (ignoreNext) {
-				ignoreNext = false;
-				return;
+	public fromSessionStorage(key?: string): DataBuilder<T> {
+		this.alwaysInvoke = true;
+		this.getters.push({
+			awaited: false,
+			get: () => {
+				const string = window.sessionStorage.getItem(this.getKey(key));
+				if (string === null) throw new Error("Key not found");
+				return this.deserializer(string);
 			}
-			const str = this.serializer(value);
-			if (str === valueInternal) return; // Don't add duplicate adjacent entries
-			history.push(str);
-			index++;
-			this.historySetter?.(history);
-			this.historyIndexSetter?.(index);
-		};
+		});
+		return this;
+	}
 
-		const update: (value: TValue) => false = (value) => {
-			for (const setter of this.setters) {
-				setter(value);
-			}
-			addEntry(value);
-			valueInternal = value;
-			return false;
-		};
-
-		const undo = () => {
-			if (index > 0) {
-				ignoreNext = true;
-				update(this.deserializer(history[--index]));
-				this.historyIndexSetter?.(index);
+	/** */
+	public asObject(): Data<T> {
+		const data: Data<T> = {
+			reset() {
+				return data;
+			},
+			push() {
+				return data;
+			},
+			pull() {
+				return data;
+			},
+			unshiftFromAwaited() {
+				return data;
+			},
+			unshiftFrom() {
+				return data;
+			},
+			pushToAwaited() {
+				return data;
+			},
+			pushTo() {
+				return data;
+			},
+			pushFromAwaited() {
+				return data;
+			},
+			pushFrom() {
+				return data;
 			}
 		};
 
-		const redo = () => {
-			if (index < history.length - 1) {
-				ignoreNext = true;
-				update(this.deserializer(history[++index]));
-				this.historyIndexSetter?.(index);
-			}
-		};
-
-		const invoke = () => {
-			if (!this.alwaysInvoke && gotFromGetters) {
-				this.alwaysInvoke = true;
-				return;
-			}
-			const invokePromise = async (index: number) => {
+		data.push = (value) => {
+			this.setters.forEach(async (setter, i) => {
 				try {
-					const res = await this.promises[index]();
-					update(res);
+					if (setter.awaited) setter.set(await value);
+					else setter.set(value);
 				} catch (e) {
-					if (typeof this.catcher === "function") this.catcher(e as Error);
-					else console.error(e);
-					if (++index < this.promises.length - 1) invokePromise(++index);
+					console.error(`Setter ${i} threw an exception: ${e}`);
+				}
+			});
+			return data;
+		};
+		data.pull = () => {
+			const _pull = async () => {
+				for (const getter of this.getters) {
+					try {
+						const value = getter.awaited ? await getter.get() : getter.get();
+						data.push(value);
+						return;
+					} catch (e) {
+						console.error(`Getter ${this.getters.indexOf(getter)} threw en exception: ${e}`);
+					}
 				}
 			};
-			invokePromise(0);
+			_pull();
+			return data;
+		};
+		data.reset = () => {
+			window.sessionStorage.removeItem(this.key ?? "");
+			return data;
+		};
+		data.pushFrom = (...getters) => {
+			this.getters = getters.map((getter) => ({ awaited: false, get: isFunction(getter) ? getter : () => getter }));
+			return data;
+		};
+		data.pushFromAwaited = (...getters) => {
+			this.getters = getters.map((getter) => ({ awaited: true, get: isFunction(getter) ? getter : () => getter }));
+			return data;
+		};
+		data.unshiftFrom = (...getters) => {
+			this.getters.unshift(...getters.map((getter) => ({ awaited: false, get: isFunction(getter) ? getter : () => getter })));
+			return data;
+		};
+		data.unshiftFromAwaited = (...getters) => {
+			this.getters.unshift(...getters.map((getter) => ({ awaited: true, get: isFunction(getter) ? getter : () => getter })));
+			return data;
+		};
+		data.pushTo = (...setters) => {
+			this.setters.unshift(...setters.map((setter) => ({ awaited: false, set: setter })));
+			return data;
+		};
+		data.pushToAwaited = (...setters) => {
+			this.setters.unshift(...setters.map((setter) => ({ awaited: true, set: setter })));
+			return data;
 		};
 
-		return { value: valueInternal, addEntry, undo, redo, history, historyIndex: index };
-	}
-
-	/** */
-	public asWritableHistoric(): Writable<TValue> {
-		return writable<TValue>();
+		data.pull();
+		return data;
 	}
 }
