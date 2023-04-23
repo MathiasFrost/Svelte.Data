@@ -23,7 +23,7 @@
 <h1>Svelte.Data</h1>
 
 <h2>Scenario 1</h2>
-<p>MaybePromise dependent on MaybePromise refreshed</p>
+<p>MaybePromise dependent on MaybePromise that automatically re-invokes</p>
 
 <input type="range" min="0" max="20000" step="1000" bind:value={ms} />
 {ms}
