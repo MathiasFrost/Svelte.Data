@@ -1,71 +1,35 @@
-/** Optional parameters */
-export interface ISyncerOptions<T> {
-	/** Value to return in `get` method when server rendering */
-	serverValue?: T;
-
-	/** Function to convert replicated string into value */
-	deserializer?: (str: string) => T;
-
-	/** Function to convert value into string for replication */
-	serializer?: (value: T) => string;
-
-	/** Will set replication source value to this. If not set, value will not be replicated until `sync` is called */
-	initialValue?: T;
-}
+import type { ITransformer } from "$lib/types/ITransformer.js";
+import { anyTransformer } from "$lib/types/transformers.js";
 
 /** Base class for replicating data */
-export abstract class Syncer<T> implements ISyncerOptions<T> {
-	/** Value to return in `get` method when on server */
-	public serverValue?: T;
-
-	/** Function to convert replicated string into value */
-	public deserializer?: (str: string) => T;
-
-	/** Function to convert value into string for replication */
-	public serializer?: (value: T) => string;
-
-	/** Create a new instance
-	 * @param options Optional parameters */
-	protected constructor(options?: ISyncerOptions<T>) {
-		this.serverValue = options?.serverValue;
-		this.serializer = options?.serializer;
-		this.deserializer = options?.deserializer;
-	}
+export abstract class Syncer<T> {
+	/** Functions to convert value to and from it's string representation */
+	public transformer: ITransformer<T>;
 
 	/** */
-	protected abstract get storageKey(): string;
+	protected key: string;
 
-	/** */
+	/** Used when we are inevitably unable to retrieve value from replication source */
+	public fallback: T;
+
+	/** Type of storage, i.e.: sessionStorage. Used for logging */
 	protected abstract get storageName(): string;
-
-	/** Try to get value from replication source */
-	public abstract tryGet(): T | undefined;
 
 	/** Get value from replication source.
 	 *
-	 * Will use serverValue when called on the server and throw error if unable to fetch value and no fallback is provided.
-	 * @param fallback Return this when value could not be retrieved from replication source */
-	public get(fallback?: T): T {
-		if (typeof window === "undefined") {
-			if (typeof this.serverValue !== "undefined") return this.serverValue;
-			else throw new Error(`Tried to fetch value of '${this.storageKey}' from ${this.storageName} on server, but serverValue was not set`);
-		}
+	 * Will return fallback value when unable */
+	public abstract pull(): T;
 
-		let res: T | undefined;
-		try {
-			res = this.tryGet();
-		} catch (e) {
-			console.error(e);
-		}
+	/** Store value in replication sourc */
+	public abstract push(value: T): void;
 
-		if (typeof res === "undefined") {
-			if (typeof fallback === "undefined")
-				throw new Error(`Tried to fetch value of '${this.storageKey}' from ${this.storageName}, but no value was found and no fallback was provided`);
-			else return fallback;
-		}
-		return res;
+	/** */
+	public abstract clear(): void;
+
+	/** */
+	protected constructor(key: string, fallback: T, transformer: ITransformer<T> = anyTransformer()) {
+		this.key = key;
+		this.fallback = fallback;
+		this.transformer = transformer;
 	}
-
-	/** Store value in replication source */
-	public abstract sync(value: T): boolean;
 }

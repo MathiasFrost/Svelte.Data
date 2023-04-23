@@ -1,109 +1,102 @@
-import type { AsyncState } from "$lib/async/AsyncState.js";
-
-/** Optional parameters */
 export interface IAsyncDataOptions<T> {
-	/** Called when there has been a change to `AsyncState` */
-	setValue?: (value: AsyncState<T>) => void;
+	/** Function that returns the promise */
+	promiseFactory: () => Promise<T>;
 
-	/** Value to set when panding */
-	placeholder?: T;
+	/** Milliseconds required to pass before allowed to re-invoke promise */
+	cooldown: number;
 
-	/** Set to false if you don't want to immediately invoke promise */
-	immediatelyInvoked?: boolean;
+	/** Milliseconds between each automatic re-invocation */
+	milliseconds: number;
 
-	/** Set to true if you don't want promise to be invoked server-side */
-	browserOnly?: boolean;
+	/** @inheritdoc */
+	onInvoked: (e: Promise<T>) => void;
 
-	/** Refresh cooldown in milliseconds */
-	cooldown?: number;
+	/** @inheritdoc */
+	onResolved: (e: T) => void;
 
-	/** Refetch interval in milliseconds */
-	interval?: number;
-
-	/** This will be called instead of default logic when promise is rejected */
-	handleError?: (e: Error) => void;
+	/** @inheritdoc */
+	onReject: (e: Error) => void;
 }
 
-/** Manage async data */
-export class AsyncData<T> implements IAsyncDataOptions<T> {
-	/** @inheritdoc */
-	public setValue?: (value: AsyncState<T>) => void;
+/** Manage refreshing of async data */
+export class AsyncData<T> {
+	/** Function that returns the promise */
+	public promiseFactory?: () => Promise<T>;
 
-	/** Promise used to fetch the data */
-	public promise: () => Promise<T>;
-
-	/** @inheritdoc */
-	public placeholder?: T;
-
-	/** @inheritdoc */
-	public browserOnly: boolean;
-
-	/** @inheritdoc */
+	/** Milliseconds required to pass before allowed to re-invoke promise */
 	public cooldown: number;
 
-	/** When refresh was last called */
-	public lastFetched?: Date;
+	/** When promise was last invoked */
+	public lastInvoked?: Date;
 
-	/** @inheritdoc */
-	public interval?: number;
+	/** Milliseconds between each automatic re-invocation */
+	public get milliseconds(): number {
+		return this._milliseconds;
+	}
 
-	/** @inheritdoc */
-	public handleError?: (e: Error) => void;
-
-	/** */
-	private _interval = 0;
-
-	/** Manage async data
-	 * @param promise The promise returning the data
-	 * @param options Optional parameters */
-	public constructor(promise: () => Promise<T>, options?: IAsyncDataOptions<T>) {
-		this.promise = promise;
-		this.setValue = options?.setValue;
-		this.placeholder = options?.placeholder;
-		this.browserOnly = options?.browserOnly ?? false;
-		this.cooldown = options?.cooldown ?? 0;
-		this.interval = options?.interval;
-		this.handleError = options?.handleError;
-		if (options?.immediatelyInvoked ?? true) {
-			this.invoke();
-		}
-		if (typeof window !== "undefined" && typeof this.interval === "number") {
-			this._interval = window.setInterval(() => this.invoke(true), this.interval);
+	/** Milliseconds between each automatic re-invocation */
+	public set milliseconds(value: number) {
+		this._milliseconds = value < 0 ? 0 : value; // Clamp to min 0
+		if (this._milliseconds === 0) {
+			this.stop();
+		} else {
+			this.start();
 		}
 	}
 
-	/** Call to invoke or re-invoke promise
-	 * @param silent Set to true if we should not call `setValue` with placeholder before invoking promise */
-	public async invoke(silent?: boolean): Promise<void> {
-		if (this.browserOnly && typeof window === "undefined") {
-			return;
-		}
-		if (this.cooldown > 0 && this.lastFetched) {
-			const diff = new Date().getTime() - this.lastFetched.getTime();
+	/** @inheritdoc */
+	public onInvoked?: (e: Promise<T>) => void;
+
+	/** @inheritdoc */
+	public onResolved?: (e: T) => void;
+
+	/** @inheritdoc */
+	public onReject?: (e: Error) => void;
+
+	/** Milliseconds between each automatic re-invocation */
+	private _milliseconds: number;
+
+	/** */
+	private interval = 0;
+
+	/** */
+	public constructor(options: Partial<IAsyncDataOptions<T>> = {}) {
+		this._milliseconds = options.milliseconds ?? 0;
+		this.cooldown = options.cooldown ?? 0;
+		this.promiseFactory = options.promiseFactory;
+		this.onInvoked = options.onInvoked;
+		this.onResolved = options.onResolved;
+		this.onReject = options.onReject;
+	}
+
+	/** */
+	public stop(): void {
+		if (typeof window !== "undefined") window.clearInterval(this.interval);
+		this.interval = 0;
+	}
+
+	/** */
+	public start(): void {
+		if (typeof window === "undefined" || this.milliseconds <= 0) return;
+		if (this.interval !== 0) window.clearInterval(this.interval);
+		this.interval = window.setInterval(() => this.invoke(), this.milliseconds);
+	}
+
+	/** Call to re-invoke promise */
+	public invoke(): void {
+		if (typeof window === "undefined" || typeof this.promiseFactory === "undefined") return;
+		if (this.cooldown > 0 && this.lastInvoked) {
+			const diff = new Date().getTime() - this.lastInvoked.getTime();
 			if (diff < this.cooldown) {
 				console.info(`Refresh on cooldown (${this.cooldown - diff}ms)`);
 				return;
 			}
 		}
-		try {
-			if (!silent) {
-				this.setValue?.(this.placeholder);
-			}
-			const res = await this.promise();
-			this.setValue?.(res);
-		} catch (e) {
-			if (typeof this.handleError === "function") {
-				this.handleError(e as Error);
-			} else {
-				console.error(e);
-				this.setValue?.(e as Error);
-			}
-		}
-		this.lastFetched = new Date();
-	}
 
-	/** If `interval` is set, this should preferrably be called `onDestroy` */
-	public clearInterval(): void {
-		if (typeof window !== "undefined") window.clearInterval(this._interval);
+		const promise = this.promiseFactory();
+		this.onInvoked?.(promise);
+		promise.then((res) => this.onResolved?.(res)).catch((e) => this.onReject?.(e));
+
+		this.lastInvoked = new Date();
 	}
 }

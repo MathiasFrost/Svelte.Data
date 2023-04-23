@@ -1,22 +1,20 @@
+import type { ITransformer } from "$lib/types/ITransformer.js";
 import { StorageSyncer } from "./StorageSyncer.js";
-import type { ISyncerOptions } from "./Syncer.js";
 
-/** Replicate data to `localStorage` */
+/** */
 export class LocalStorageSyncer<T> extends StorageSyncer<T> {
 	/** @inheritdoc */
-	protected get storageName(): string {
-		return "localStorage";
-	}
-
-	/** @internal */
-	protected getStorage(): Storage | null {
+	protected override get storage(): Storage | null {
 		return typeof window === "undefined" ? null : window.localStorage;
 	}
 
-	/** Replicate data to `localStorage`
-	 * @param key Key for `localStorage`
-	 * @param options Optional parameters */
-	public constructor(key: string, options?: ISyncerOptions<T>) {
-		super(key, options);
+	/** @inheritdoc */
+	protected override get storageName(): string {
+		return "localStorage";
+	}
+
+	/** @inheritdoc */
+	public constructor(key: string, fallback: T, transformer?: ITransformer<T>) {
+		super(key, fallback, transformer);
 	}
 }
