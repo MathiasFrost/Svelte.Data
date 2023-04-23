@@ -2,333 +2,54 @@
 
 ![Logo](https://raw.githubusercontent.com/MathiasFrost/Svelte.StoresPlus/main/logo.png)
 
-Package aiming to make it easier to manage data in Svelte apps
+Package aiming to make it easier to manage data with advanced features in Svelte apps
 
-## Builders
+## Important
 
-### ValueBuilder
+Your tsconfig.json [must be set](https://kit.svelte.dev/docs/packaging#typescript) to `"moduleResolution": "nodenext"`
 
-Handles data that is never a `Promise`
+## Components
 
--   value
--   reset
+### AsyncData
 
-### PromiseBuilder
+Handles automatic and on-demand re-invocation of promises
 
-Handles data that is always initially a `Promise`
+### HistoryManager
 
--   promise
--   refresh
--   setPromise
--   setAndInvoke
+Manages change history with undo and redo
 
-### MaybePromiseBuilder
+### Syncer
 
-Handles data that might be a value and might be a `Promise`
+Handle pulling and pushing a value to and from a replication source
+| Name | Replication source |
+| -------------------- | ----------------------- |
+| LocalStorageSyncer | `window.localStorage` |
+| SessionStorageSyncer | `window.sessionStorage` |
+| CookieSyncer | `document.cookie` |
 
--   value
--   refresh
--   silentRefresh
--   setPromise
--   setAndInvoke
--   setAndSilentInvoke
--   catch
+## Scenarios
 
-## Builder branches
+Examples on how you can employ these components in different scenarios:
 
-### historyBuilder
+1. [`MaybePromise` dependent on a value synced to sessionStorage](./src/routes/scenario/0/%2Bpage.svelte)
+2. [`MaybePromise` dependent on `MaybePromise` that automatically re-invokes](./src/routes/scenario/1/%2Bpage.svelte)
+3. [String synced to cookie writable](./src/routes/scenario/2/%2Bpage.svelte)
+4. [Server loaded data with refresh and history](./src/routes/scenario/3/%2Bpage.svelte)
 
-Converts the builder into one that can manage change history
-
--   history
--   index
--   undo
--   redo
-
-### storageBuilder
-
-Converts the builder into one that can sync data to some storage, like cookie, localStorage, sessionStorage and indexedDB
-
-## Result
-
-### asObject
-
-Returns an object that can be used in a single Svelte component
-
-### asWritable
-
-Returns a svelte `Writable` store
-
-### asReadable
-
-Returns a ssvelte `Readable` store
-
-# Examples
-
-## `Writable` from `Promise` with history Management
-
-### Common use case
-
-1. You need to fetch data from a server
-2. Multiple Svelte components needs access to this data
-3. User must be able to edit the data
-4. User should be able to undo, redo and reset their changes
-
-### Sample code
-
-The commonality of this store constitutes it's own wrapper:
-
-```ts
-import type { AsyncState } from "@maal/svelte-stores-plus";
-import { writable, type Readable, type Updater, type Writable } from "svelte/store";
-import { AsyncData, stateIsResolved, HistoryManager } from "@maal/svelte-stores-plus";
-
-export type WritableAsyncHistoric<T> = Writable<AsyncState<T>> & {
-	refresh: (silent?: boolean) => void;
-	redo: () => void;
-	undo: () => void;
-};
-
-export type WritableAsyncHistoricBundle<T> = {
-	value: WritableAsyncHistoric<T>;
-	index: Readable<number>;
-	history: Readable<T[]>;
-};
-
-export function writableAsyncHistoric<T>(promise: () => Promise<T>): WritableAsyncHistoricBundle<T> {
-	const { set: _set, update: _update, subscribe } = writable<AsyncState<T>>(void 0);
-
-	const index = writable<number>(-1);
-	const history = writable<T[]>([]);
-
-	const manager = new HistoryManager<T>({
-		cap: 10,
-		setValue: (value) => set(value),
-		setIndex: (i) => index.set(i),
-		setHistory: (value) => history.set(value),
-		ensureT(value): value is T {
-			return stateIsResolved(value);
-		}
-	});
-
-	function set(value: AsyncState<T>): void {
-		_set(value);
-		manager.addEntry(value);
-		// You can also add syncing to a store here using something like LocalStorageSyncer
-	}
-
-	function update(updater: Updater<AsyncState<T>>): void {
-		_update((prev) => {
-			if (stateIsResolved(prev)) {
-				const val = updater(prev);
-				manager.addEntry(val);
-				return val;
-			}
-			return prev;
-		});
-	}
-
-	const data = new AsyncData<T>(promise, {
-		browserOnly: true,
-		setValue: (value) => set(value)
-	});
-
-	return {
-		value: {
-			set,
-			update,
-			subscribe,
-			refresh: data.refresh.bind(data),
-			redo: manager.redo.bind(manager),
-			undo: manager.undo.bind(manager)
-		},
-		index: { subscribe: index.subscribe },
-		history: { subscribe: history.subscribe }
-	};
-}
-```
-
-```ts
-import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
-import { testClient } from "$sandbox/services/testClient";
-import { writableAsyncHistoric } from "$sandbox/example/WritableAsyncHistoric";
-
-export const {
-	history: forecastHistory, // Providing histry and index stores as separate objects are more convenient,
-	index: forecastIndex, // allowing you to use Svelte's auto-subscribe ('$')
-	value: forecasts
-} = writableAsyncHistoric<WeatherForecast[]>(testClient.getForecasts.bind(testClient));
-```
-
-```svelte
-<script lang="ts">
-	import { forecasts, forecastIndex, forecastHistory } from "$sandbox/stores/writableAsyncHistoric";
-</script>
-
-{#if typeof $forecasts === "undefined"}
-	<p>Loading...</p>
-{:else if $forecasts instanceof Error}
-	<p style="color: crimson">{$forecasts.message}</p>
-	<p>{$forecasts.stack}</p>
-{:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th>TemperatureC</th>
-				<th>TemperatureF</th>
-				<th>Summary</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each $forecasts as forecast}
-				<tr>
-					<td>{forecast.date}</td>
-					<td>{forecast.temperatureC}</td>
-					<td>{forecast.temperatureF}</td>
-					<td>{forecast.summary}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-	<input type="text" bind:value={$forecasts[0].summary} />
-	<button on:click={() => forecasts.undo()}>undo</button>
-	<button on:click={() => forecasts.redo()}>redo</button>
-	<button on:click={() => forecasts.refresh()}>refresh</button>
-	<button on:click={() => forecasts.refresh(true)}>silent refresh</button>
-	<p>Index: {$forecastIndex}</p>
-	<ul>
-		{#each $forecastHistory as item, i}
-			<li style={i === $forecastIndex ? "color: crimson;" : ""}>{item[0].summary}</li>
-		{/each}
-	</ul>
-{/if}
-```
-
-## Variable with `localStorage` sync
-
-### Common use case
-
-1. You need a persistant variable but don't want to store it in a database
-
-### Sample code
-
-```svelte
-<script lang="ts">
-	// String storage provides the simplest serialization/deserialization of strings
-	import { LocalStorageSyncer, stringStorage } from "@maal/svelte-stores-plus";
-
-	const syncer = new LocalStorageSyncer<string>("example", stringStorage("display this when server-rendering"));
-
-	let val = syncer.get("Initial value");
-	$: syncer.sync(val) || val;
-</script>
-
-<p>Value: {val}</p>
-<input type="text" bind:value={val} />
-```
-
-## Variable from `Promise`
-
-### Common use case
-
-1. You need to fetch data from a server
-2. User must be able to edit the data _(Svelte's #await blocks are immutable)_
-
-### Sample code
-
-```svelte
-<script lang="ts">
-	import { AsyncData } from "@maal/svelte-stores-plus";
-	import type { WeatherForecast } from "$sandbox/models/WeatherForecast";
-	import { testClient } from "$sandbox/services/testClient";
-
-	let forecasts: WeatherForecast[] | Error | undefined = void 0;
-	// Remember that if passing in a method, this has to be bound or wrapped in a lambda
-	const data = new AsyncData<WeatherForecast[]>(testClient.getForecasts.bind(testClient), { setValue: (value) => (forecasts = value) });
-</script>
-
-<h1>Svelte.StoresPlus</h1>
-
-<h2>local variable with async data</h2>
-
-{#if typeof forecasts === "undefined"}
-	<p>Loading...</p>
-{:else if forecasts instanceof Error}
-	<p style="color: crimson">{forecasts.message}</p>
-	<p>{forecasts.stack}</p>
-{:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Date</th>
-				<th>TemperatureC</th>
-				<th>TemperatureF</th>
-				<th>Summary</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each forecasts as forecast}
-				<tr>
-					<td>{forecast.date}</td>
-					<td>{forecast.temperatureC}</td>
-					<td>{forecast.temperatureF}</td>
-					<td>{forecast.summary}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-	<input type="text" bind:value={forecasts[0].summary} />
-	<button on:click={() => data.refresh()}>refresh</button>
-	<button on:click={() => data.refresh(true)}>silent refresh</button>
-{/if}
-```
-
-`getForecasts` is just a wrapper around a simple `fetch`
-
-```ts
-import { ensureArray } from "@maal/svelte-stores-plus";
-import { WeatherForecast } from "$sandbox/models/WeatherForecast";
-
-export class TestClient {
-	public async getForecasts(): Promise<WeatherForecast[]> {
-		const res = await fetch("http://localhost:5000/WeatherForecast");
-		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
-	}
-}
-```
-
-_See recommendation at the bottom for more info_
-
-## `Writable` from `Promise` with `indexedDB` sync
-
-### Common use case
-
-1. You need to fetch a lot of data from a server
-2. Holding all data in memory is unappealing
-
-### Sample code
-
-```ts
-// TODO
-```
-
-```svelte
-<!-- TODO -->
-```
-
-## Recommendations for serialization/deserialization
+## Recommendations for handling remote data
 
 **Recommendation**: For models, use classes. **Not** interfaces.  
 **Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
-But when dealing with data stored at various locations, we **don't** have that guarantee.  
-Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code has not accounted for?  
+This is fine at build-time, but when dealing with data stored at various locations at runtime, we **cant't** guarantee that.
+
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code has not accounted for?
+
 All of these problems are dealt with when doing the following:
 
 ### 1. Make sure the `Response` is what you expect it to be
 
 ```ts
-import { ensureArray } from "@maal/svelte-stores-plus";
+import { ensureArray } from "@maal/svelte-data/types";
 
 Response.prototype.ensureSuccess = function (): Response {
 	if (!this.ok) {
@@ -339,7 +60,7 @@ Response.prototype.ensureSuccess = function (): Response {
 
 export class TestClient {
 	public async getForecasts(): Promise<WeatherForecast[]> {
-		const res = await this.get("WeatherForecast");
+		const res = await fetch("http://localhost:5173/api/weatherforecast");
 		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
 	}
 }
@@ -348,7 +69,7 @@ export class TestClient {
 ### 2. Make sure the JSON is what you expect it to be
 
 ```ts
-import { ensureObject, ensureDateString, ensureNumber, ensureString } from "@maal/svelte-stores-plus";
+import { ensureObject, ensureDateString, ensureNumber, ensureString } from "@maal/svelte-data";
 
 export class WeatherForecast {
 	date: Date;
@@ -362,6 +83,29 @@ export class WeatherForecast {
 		this.temperatureC = ensureNumber(o.temperatureC);
 		this.temperatureF = ensureNumber(o.temperatureF);
 		this.summary = ensureString(o.summary);
+	}
+}
+```
+
+### HTTPClient
+
+Using `HTTPClient` does these things for you:
+
+```ts
+import { HTTPClient } from "@maal/svelte-data/http";
+import { WeatherForecast } from "$lib/models/WeatherForecast.js";
+
+/** @static */
+export class TestClient {
+	/** */
+	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
+
+	/** @param fetch This is only needed for SSR */
+	public static async getForecasts(fetch?: typeof window.fetch): Promise<WeatherForecast[]> {
+		return await this.client
+			.get("weatherforecast")
+			.withFetch(fetch) // If you are fetching server-side in SvelteKit's `load` function
+			.fromJSONArray((something) => new WeatherForecast(something));
 	}
 }
 ```

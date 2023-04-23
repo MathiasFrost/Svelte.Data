@@ -101,6 +101,6 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** @inheritdoc */
 	public override clear(): void {
 		if (typeof document === "undefined") return;
-		document.cookie = `${this.key}=; Max-Age=0`;
+		document.cookie = `${this.key}=; SameSite=Strict; Max-Age=0`;
 	}
 }
