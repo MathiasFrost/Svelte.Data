@@ -21,11 +21,11 @@ Manages change history with undo and redo
 ### Syncer
 
 Handle pulling and pushing a value to and from a replication source
-| Name | Replication source |
+| Name                 | Replication source      |
 | -------------------- | ----------------------- |
-| LocalStorageSyncer | `window.localStorage` |
+| LocalStorageSyncer   | `window.localStorage`   |
 | SessionStorageSyncer | `window.sessionStorage` |
-| CookieSyncer | `document.cookie` |
+| CookieSyncer         | `document.cookie`       |
 
 ## Scenarios
 
