@@ -4,7 +4,7 @@
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
 
 	/** */
-	const session = new SessionStorageSyncer("test", "", stringTransformer()).deconstruct();
+	const session = new SessionStorageSyncer("test", "", stringTransformer());
 
 	const testPromise = (str?: string) =>
 		new Promise<string>((resolve, reject) => {

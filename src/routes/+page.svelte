@@ -1,7 +1,7 @@
 <script lang="ts">
 </script>
 
-<h1>Svelte.StoresPlus</h1>
+<h1>Svelte.Data</h1>
 
 <h2>Welcome to your library project</h2>
 

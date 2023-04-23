@@ -89,14 +89,15 @@ export class HistoryManager<T> {
 	}
 
 	/** */
-	public deserialize(json: string): void {
+	public deserialize(json: string): T | undefined {
 		const o = JSON.parse(json);
 		this.history = o.history;
 		this.index = o.index;
 
-		if (this.history.length) {
-			this.onChange?.(this.transformer.deserialize(this.history[this.index]));
-			this.onHistoryChange?.(this.history, this.index);
-		}
+		const string = this.history[this.index];
+		if (typeof string === "undefined") return undefined;
+
+		this.ignoreNext = true;
+		return this.transformer.deserialize(string);
 	}
 }

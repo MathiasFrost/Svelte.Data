@@ -10,7 +10,7 @@
 
 <input type="text" bind:value={$store} />
 
-<button on:click={() => ($store = store.pull())}> pull </button>
-<button on:click={store.clear}> reset </button>
+<button on:click={() => ($store = store.cookie.pull())}> pull </button>
+<button on:click={store.cookie.clear}> reset </button>
 
 <TestComponent />

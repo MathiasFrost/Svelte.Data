@@ -1,14 +1,8 @@
 import type { ITransformer } from "$lib/types/ITransformer.js";
 import { anyTransformer } from "$lib/types/transformers.js";
 
-export interface ISyncer<T> {
-	pull(): T;
-	push(value: T): void;
-	clear(): void;
-}
-
 /** Base class for replicating data */
-export abstract class Syncer<T> implements ISyncer<T> {
+export abstract class Syncer<T> {
 	/** Functions to convert value to and from it's string representation */
 	public transformer: ITransformer<T>;
 
@@ -37,14 +31,5 @@ export abstract class Syncer<T> implements ISyncer<T> {
 		this.key = key;
 		this.fallback = fallback;
 		this.transformer = transformer;
-	}
-
-	/** Deconstruct the syncer class into just the syncing methods. Useful for combining with Svelte stores */
-	public deconstruct(): ISyncer<T> {
-		return {
-			push: (something: T) => this.push(something),
-			pull: () => this.pull(),
-			clear: () => this.clear()
-		};
 	}
 }
