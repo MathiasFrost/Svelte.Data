@@ -44,11 +44,6 @@ export class HTTPClient {
 	/** @see Postprocess */
 	private readonly postprocess?: Postprocess;
 
-	/** */
-	public static setFetch(fetch: typeof window.fetch): void {
-		HTTPRequestBuilder.setFetch(fetch);
-	}
-
 	/** Default RequestInit for use agaist backend for this frontend.
 	 * We use manual redirect to detect when auth challenge results in redirect (needs user interaction) */
 	public static backendInit: () => RequestInit = () => ({ credentials: "include", redirect: "manual" });

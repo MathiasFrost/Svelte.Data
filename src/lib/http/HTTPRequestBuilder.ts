@@ -1,4 +1,4 @@
-import { ensureArray, ensureBigint, ensureBoolean, ensureDateString, ensureNumber } from "$lib/shared/UnknownObject.js";
+import { ensureArray, ensureBigint, ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 
@@ -45,19 +45,18 @@ export class HTTPRequestBuilder {
 	/** Status codes to ignore from ensureing success when calling `from{Type}Nullable` */
 	private nullStatusCodes: number[] | null = null;
 
-	/** */
-	private static __fetch: typeof window.fetch | null = null;
+	/** Commonly set by `withFetch` when calling server-side */
+	public __fetch?: typeof window.fetch;
 
-	/** */
-	private static get _fetch(): typeof window.fetch {
-		if (typeof window !== "undefined") return window.fetch;
-		if (this.__fetch === null) throw new Error("Attempting to use HTTPClient server-side without calling setFetch with the fetch passed from load");
-		return this.__fetch;
+	/** Get the server-side `load` `fetch` or cleint-side `window.fetch` */
+	private get _fetch(): typeof window.fetch {
+		return this.__fetch ?? window.fetch;
 	}
 
-	/** @internal */
-	public static setFetch(fetch: typeof window.fetch): void {
+	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
+	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
 		this.__fetch = fetch;
+		return this;
 	}
 
 	/** */
@@ -177,7 +176,7 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await HTTPRequestBuilder._fetch(this.requestUri, this.requestInit);
+		const response = await this._fetch(this.requestUri, this.requestInit);
 		if (this.ensureSuccess) response.ensureSuccess();
 
 		if (typeof this.postprocess === "function") await this.postprocess(response);
@@ -189,7 +188,7 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await HTTPRequestBuilder._fetch(this.requestUri, this.requestInit);
+		const response = await this._fetch(this.requestUri, this.requestInit);
 
 		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
 		if (!isNull && this.ensureSuccess) response.ensureSuccess();

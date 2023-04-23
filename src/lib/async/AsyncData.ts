@@ -1,160 +1,102 @@
-import type { MaybePromise } from "$app/forms";
-
-/** Optional parameters */
 export interface IAsyncDataOptions<T> {
-	/** Called when there has been a change to `AsyncState` */
-	setter?: (promise: Promise<T>) => void;
+	/** Function that returns the promise */
+	promiseFactory: () => Promise<T>;
 
-	/** Refresh cooldown in milliseconds */
-	cooldown?: number;
+	/** Milliseconds required to pass before allowed to re-invoke promise */
+	cooldown: number;
 
-	/** Refetch interval in milliseconds */
-	interval?: number;
+	/** Milliseconds between each automatic re-invocation */
+	milliseconds: number;
 
-	/** This will be called instead of default logic when promise is rejected */
-	handleError?: (e: Error) => void;
+	/** @inheritdoc */
+	onInvoked: (e: Promise<T>) => void;
+
+	/** @inheritdoc */
+	onResolved: (e: T) => void;
+
+	/** @inheritdoc */
+	onReject: (e: Error) => void;
 }
 
-/** Manage async data */
-export class AsyncData<T> implements IAsyncDataOptions<T> {
-	/** @inheritdoc */
-	public setter?: (promsie: Promise<T>) => void;
+/** Manage refreshing of async data */
+export class AsyncData<T> {
+	/** Function that returns the promise */
+	public promiseFactory?: () => Promise<T>;
 
-	/** Promise used to fetch the data */
-	public promise: () => Promise<T>;
-
-	/** @inheritdoc */
+	/** Milliseconds required to pass before allowed to re-invoke promise */
 	public cooldown: number;
 
-	/** When refresh was last called */
-	public lastFetched?: Date;
+	/** When promise was last invoked */
+	public lastInvoked?: Date;
 
-	/** @inheritdoc */
-	public interval?: number;
+	/** Milliseconds between each automatic re-invocation */
+	public get milliseconds(): number {
+		return this._milliseconds;
+	}
 
-	/** @inheritdoc */
-	public handleError?: (e: Error) => void;
-
-	/** */
-	private _interval = 0;
-
-	/** Manage async data
-	 * @param promise The promise returning the data
-	 * @param options Optional parameters */
-	public constructor(promise: () => Promise<T>, options?: IAsyncDataOptions<T>) {
-		this.promise = promise;
-		this.setter = options?.setter;
-		this.cooldown = options?.cooldown ?? 0;
-		this.interval = options?.interval;
-		this.handleError = options?.handleError;
-		if (typeof window !== "undefined" && typeof this.interval === "number") {
-			this._interval = window.setInterval(() => this.refresh(true), this.interval);
+	/** Milliseconds between each automatic re-invocation */
+	public set milliseconds(value: number) {
+		this._milliseconds = value < 0 ? 0 : value; // Clamp to min 0
+		if (this._milliseconds === 0) {
+			this.stop();
+		} else {
+			this.start();
 		}
 	}
 
-	/** Call to invoke or re-invoke promise
-	 * @param silent Set to true if we should not call `setter` with placeholder before invoking promise */
-	public async refresh(silent?: boolean): Promise<void> {
-		if (typeof window === "undefined") {
-			return;
-		}
-		if (this.cooldown > 0 && this.lastFetched) {
-			const diff = new Date().getTime() - this.lastFetched.getTime();
+	/** @inheritdoc */
+	public onInvoked?: (e: Promise<T>) => void;
+
+	/** @inheritdoc */
+	public onResolved?: (e: T) => void;
+
+	/** @inheritdoc */
+	public onReject?: (e: Error) => void;
+
+	/** Milliseconds between each automatic re-invocation */
+	private _milliseconds: number;
+
+	/** */
+	private interval = 0;
+
+	/** */
+	public constructor(options: Partial<IAsyncDataOptions<T>> = {}) {
+		this._milliseconds = options.milliseconds ?? 0;
+		this.cooldown = options.cooldown ?? 0;
+		this.promiseFactory = options.promiseFactory;
+		this.onInvoked = options.onInvoked;
+		this.onResolved = options.onResolved;
+		this.onReject = options.onReject;
+	}
+
+	/** */
+	public stop(): void {
+		if (typeof window !== "undefined") window.clearInterval(this.interval);
+		this.interval = 0;
+	}
+
+	/** */
+	public start(): void {
+		if (typeof window === "undefined" || this.milliseconds <= 0) return;
+		if (this.interval !== 0) window.clearInterval(this.interval);
+		this.interval = window.setInterval(() => this.invoke(), this.milliseconds);
+	}
+
+	/** Call to re-invoke promise */
+	public invoke(): void {
+		if (typeof window === "undefined" || typeof this.promiseFactory === "undefined") return;
+		if (this.cooldown > 0 && this.lastInvoked) {
+			const diff = new Date().getTime() - this.lastInvoked.getTime();
 			if (diff < this.cooldown) {
 				console.info(`Refresh on cooldown (${this.cooldown - diff}ms)`);
 				return;
 			}
 		}
-		const promise = silent ? Promise.resolve(await this.promise()) : this.promise();
-		this.setter?.(promise);
-		this.lastFetched = new Date();
-	}
 
-	/** If `interval` is set, this should preferrably be called `onDestroy` */
-	public clearInterval(): void {
-		if (typeof window !== "undefined") window.clearInterval(this._interval);
-	}
-}
+		const promise = this.promiseFactory();
+		this.onInvoked?.(promise);
+		promise.then((res) => this.onResolved?.(res)).catch((e) => this.onReject?.(e));
 
-/** */
-export type AsyncObject<T> = {
-	get value(): MaybePromise<T>;
-	set value(promise: MaybePromise<T>);
-	refresh: () => void;
-	silentRefresh: () => void;
-	setPromise: (promise: () => Promise<T>) => void;
-	setAndInvoke: (promise: () => Promise<T>) => void;
-	setAndInvokeSilent: (promise: () => Promise<T>) => void;
-};
-
-/** */
-export class AsyncBuilder<T> {
-	/** */
-	private promise?: () => Promise<T>;
-
-	/** */
-	private initialValue?: T;
-
-	/** */
-	private setter?: (promise: Promise<T>) => void;
-
-	/** The promise */
-	public fromPromise(promise: () => Promise<T>): AsyncBuilder<T> {
-		this.promise = promise;
-		return this;
-	}
-
-	/** Adding this will prevent promise from being called immediately.
-	 *
-	 * Useful for providing a server value if promise uses browser APIs */
-	public withInitialValue(value: T): AsyncBuilder<T> {
-		this.initialValue = value;
-		return this;
-	}
-
-	/** Set the value when it changes, like updateing the initial promise from `asObject` */
-	public withSetter(setter: (this: void, value: Promise<T>) => void): AsyncBuilder<T> {
-		this.setter = setter;
-		return this;
-	}
-
-	/** */
-	public asObject(): AsyncObject<T> {
-		const _refresh: (silent: boolean) => void = async (silent) => {
-			if (typeof this.promise === "undefined") return;
-			const value = silent ? Promise.resolve(await this.promise()) : this.promise();
-			this.setter?.(value);
-		};
-
-		const _setPromise: (promise: () => Promise<T>, silent?: boolean) => void = (promise, silent) => {
-			this.promise = promise;
-			if (typeof silent === "boolean") _refresh(silent);
-		};
-
-		let _value: MaybePromise<T>;
-		if (typeof this.initialValue !== "undefined") _value = this.initialValue;
-		else if (typeof this.promise !== "undefined") _value = this.promise();
-		else throw new Error("Neither promise nor initialValue was set");
-
-		const refresh = () => _refresh(false);
-		const silentRefresh = () => _refresh(true);
-		const setPromise = (promise: () => Promise<T>) => _setPromise(promise);
-		const setAndInvoke = (promise: () => Promise<T>) => _setPromise(promise, false);
-		const setAndInvokeSilent = (promise: () => Promise<T>) => _setPromise(promise, true);
-
-		return {
-			get value() {
-				return _value;
-			},
-			set value(promise) {
-				console.log(promise);
-				_value = promise;
-			},
-			refresh,
-			silentRefresh,
-			setPromise,
-			setAndInvoke,
-			setAndInvokeSilent
-		};
+		this.lastInvoked = new Date();
 	}
 }

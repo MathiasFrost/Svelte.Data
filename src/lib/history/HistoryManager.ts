@@ -1,88 +1,76 @@
-import { deepCopy } from "$lib/shared/deepCopy.js";
+import type { ITransformer } from "$lib/types/ITransformer.js";
+import { anyTransformer } from "$lib/types/transformers.js";
 
-/** Optional parameters */
+/** Options */
 export interface IHistoryManagerOptions<T> {
 	/** Called when manager wants to set the value we are tracking */
-	setValue?: (value: T) => void;
+	onChange: (value: T) => void;
 
-	/** Called when manager has changed history index */
-	setIndex?: (index: number) => void;
+	/** Called when manager wants to set the value we are tracking */
+	onHistoryChange: (history: string[], index: number) => void;
 
-	/** Called when manager has changed history array */
-	setHistory?: (value: T[]) => void;
-
-	/** Called before manager adds value to history */
-	ensureT?: (value: unknown) => value is T;
+	/** For converting value to and from its string representation */
+	transformer: ITransformer<T>;
 
 	/** Limit how many changes can be stored */
-	cap?: number;
-}
-
-/** @internal */
-function defaultEnsureT<T>(_value: unknown): _value is T {
-	return true;
+	cap: number;
 }
 
 /** Keep track of changes to a variable */
-export class HistoryManager<T> implements IHistoryManagerOptions<T> {
+export class HistoryManager<T> {
 	/** Keep track of changes to a variable
 	 * @param options Optional parameters */
-	public constructor(options?: IHistoryManagerOptions<T>) {
-		this.cap = options?.cap;
-		this.ensureT = options?.ensureT ?? defaultEnsureT;
-		this.setValue = options?.setValue;
-		this.setIndex = options?.setIndex;
-		this.setHistory = options?.setHistory;
+	public constructor(options: Partial<IHistoryManagerOptions<T>> = {}) {
+		this.cap = options.cap ?? 10;
+		this.onChange = options.onChange;
+		this.onHistoryChange = options.onHistoryChange;
+		this.transformer = options.transformer ?? anyTransformer();
 	}
 
 	/** Array of stored changes */
-	public history: T[] = [];
+	public history: string[] = [];
 
 	/** Current element of `history` we are at */
 	public index = -1;
 
 	/** Limit how many changes can be stored */
-	public cap?: number = 10;
+	public cap: number;
 
 	/** Called when manager wants to set the value we are tracking */
-	public setValue?: (value: T) => void;
+	public onChange?: (value: T) => void;
 
-	/** Called when manager has changed history index */
-	public setIndex?: (index: number) => void;
+	/** Called when manager wants to set the value we are tracking */
+	public onHistoryChange?: (history: string[], index: number) => void;
 
-	/** Called when manager has changed history array */
-	public setHistory?: (value: T[]) => void;
-
-	/** Called before manager adds value to history */
-	public ensureT: (value: unknown) => value is T;
+	/** */
+	public transformer: ITransformer<T>;
 
 	/** Set to true when we want manager to ignore next change and not add it to history */
 	public ignoreNext = false;
 
 	/** Add an entry to history */
-	public addEntry(value: unknown): boolean {
-		if (this.ignoreNext || !this.ensureT(value)) {
+	public addEntry(value: T): void {
+		if (this.ignoreNext) {
 			this.ignoreNext = false;
-			return false;
+			return;
 		}
-		const copy = deepCopy<T>(value);
+
 		const len = this.history.length;
 		if (typeof this.cap === "number" && len >= this.cap && this.index === len - 1) {
 			this.history.splice(0, 1);
 			this.index = this.history.length - 1;
 		}
-		this.history = [...this.history.slice(0, ++this.index), copy];
-		this.setHistory?.(this.history);
-		this.setIndex?.(this.index);
-		return false;
+
+		this.history = [...this.history.slice(0, ++this.index), this.transformer.serialize(value)];
+		this.onHistoryChange?.(this.history, this.index);
 	}
 
 	/** Set value to it's previous state */
 	public undo(): void {
 		if (this.index > 0) {
 			this.ignoreNext = true;
-			this.setValue?.(deepCopy<T>(this.history[--this.index]));
-			this.setIndex?.(this.index);
+			this.onChange?.(this.transformer.deserialize(this.history[--this.index]));
+			this.onHistoryChange?.(this.history, this.index);
 		}
 	}
 
@@ -90,8 +78,25 @@ export class HistoryManager<T> implements IHistoryManagerOptions<T> {
 	public redo(): void {
 		if (this.index < this.history.length - 1) {
 			this.ignoreNext = true;
-			this.setValue?.(deepCopy<T>(this.history[++this.index]));
-			this.setIndex?.(this.index);
+			this.onChange?.(this.transformer.deserialize(this.history[++this.index]));
+			this.onHistoryChange?.(this.history, this.index);
+		}
+	}
+
+	/** Serialize history data to string. Useful for storing history in something like `localStorage` */
+	public serialize(): string {
+		return JSON.stringify({ history: this.history, index: this.index });
+	}
+
+	/** */
+	public deserialize(json: string): void {
+		const o = JSON.parse(json);
+		this.history = o.history;
+		this.index = o.index;
+
+		if (this.history.length) {
+			this.onChange?.(this.transformer.deserialize(this.history[this.index]));
+			this.onHistoryChange?.(this.history, this.index);
 		}
 	}
 }

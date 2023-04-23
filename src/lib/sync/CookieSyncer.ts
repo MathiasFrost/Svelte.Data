@@ -1,7 +1,8 @@
-import { Syncer, type ISyncerOptions } from "./Syncer.js";
+import type { ITransformer } from "$lib/types/ITransformer.js";
+import { Syncer } from "./Syncer.js";
 
-/** Optional parameters */
-export interface ICookieSyncerOptions<T> extends ISyncerOptions<T> {
+/** Cookie options */
+export interface ICookieOptions {
 	/** Domain to set on cookie */
 	domain?: string;
 
@@ -25,19 +26,11 @@ export interface ICookieSyncerOptions<T> extends ISyncerOptions<T> {
 }
 
 /** Replicate data to `cookie` */
-export class CookieSyncer<T> extends Syncer<T> implements ICookieSyncerOptions<T> {
-	/** @inheritdoc */
-	protected get storageKey(): string {
-		return this.name;
-	}
-
+export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** @inheritdoc */
 	protected get storageName(): string {
 		return "cookies";
 	}
-
-	/** Name of `cookie` */
-	public name: string;
 
 	/** Domain to set on cookie */
 	public domain?: string;
@@ -62,64 +55,52 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieSyncerOptions<T
 
 	/** Replicate data to `cookie`
 	 * @param name Name of `cookie`
+	 * @param fallback Value used when we are unable to retrieve value from cookies
 	 * @param options Optional parameters */
-	public constructor(name: string, options?: ICookieSyncerOptions<T>) {
-		super(options);
-		this.name = name;
+	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, transformer?: ITransformer<T>) {
+		super(name, fallback, transformer);
 		this.domain = options?.domain;
 		this.expires = options?.expires;
 		this.hostOnly = options?.hostOnly;
 		this.httpOnly = options?.httpOnly;
 		this.path = options?.path;
-		this.sameSite = options?.sameSite ?? "None";
-		this.secure = options?.secure ?? true;
-
-		// Set key to initialValue if set
-		if (typeof options?.initialValue === "undefined") {
-			return;
-		}
-		const cookies = typeof document === "undefined" ? null : document.cookie;
-		if (!cookies) {
-			return;
-		}
-		const exists = document.cookie.split("; ").some((row) => row.startsWith(`${this.name}=`));
-		if (!exists) {
-			this.sync(options.initialValue);
-		}
+		this.sameSite = options?.sameSite;
+		this.secure = options?.secure;
 	}
 
 	/** @inheritdoc */
-	public tryGet(): T | undefined {
-		try {
-			const str = document.cookie
-				.split("; ")
-				.find((row) => row.startsWith(`${this.name}=`))
-				?.split("=")[1];
+	public override pull(): T {
+		if (typeof document === "undefined") return this.fallback;
 
-			if (typeof str !== "undefined") {
-				return this.deserializer?.(str) ?? JSON.parse(str);
-			}
-		} catch (e) {
-			console.error(e);
-		}
-		return undefined;
+		const str = document.cookie
+			.split("; ")
+			.find((row) => row.startsWith(`${this.key}=`))
+			?.split("=")[1];
+		if (typeof str === "undefined") return this.fallback;
+
+		return this.transformer.deserialize(str);
 	}
 
-	/** Store value in `cookie` */
-	public override sync(value: T): boolean {
-		const cookies = typeof document === "undefined" ? null : document.cookie;
-		if (cookies !== null) {
-			const str = this.serializer?.(value) ?? JSON.stringify(value);
-			const cookieComponents: string[] = [`${encodeURI(str)}`, `SameSite=${this.sameSite}`];
-			if (this.domain) cookieComponents.push(`Domain=${this.domain}`);
-			if (this.secure) cookieComponents.push("Secure");
-			if (this.expires) cookieComponents.push(`Expires=${this.expires.toUTCString()}`);
-			if (this.hostOnly) cookieComponents.push("HostOnly");
-			if (this.httpOnly) cookieComponents.push("HttpOnly");
-			if (this.path) cookieComponents.push(`Path=${this.path}`);
+	/** @inheritdoc */
+	public override push(value: T): void {
+		if (typeof document === "undefined") return;
 
-			document.cookie = `${this.name}=${cookieComponents.join("; ")}`;
-		}
-		return false;
+		const str = this.transformer.serialize(value);
+		const cookieComponents: string[] = [`${encodeURI(str)}`];
+		if (this.sameSite) cookieComponents.push(`SameSite=${this.sameSite}`);
+		if (this.domain) cookieComponents.push(`Domain=${this.domain}`);
+		if (this.secure) cookieComponents.push("Secure");
+		if (this.expires) cookieComponents.push(`Expires=${this.expires.toUTCString()}`);
+		if (this.hostOnly) cookieComponents.push("HostOnly");
+		if (this.httpOnly) cookieComponents.push("HttpOnly");
+		if (this.path) cookieComponents.push(`Path=${this.path}`);
+
+		document.cookie = `${this.key}=${cookieComponents.join("; ")}`;
+	}
+
+	/** @inheritdoc */
+	public override clear(): void {
+		if (typeof document === "undefined") return;
+		document.cookie = `${this.key}=; Max-Age=0`;
 	}
 }

@@ -1,26 +1,16 @@
-import { ensureArray } from "$lib";
-import { HTTPClient } from "$lib/http/HTTPClient";
-import { WeatherForecast } from "$sandbox/models/WeatherForecast";
+import { HTTPClient } from "$lib/http/HTTPClient.js";
+import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 
 /** @static */
 export class TestClient {
 	/** */
-	private static client = new HTTPClient("http://localhost:5000/", HTTPClient.backendInit());
+	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
 
 	/** */
-	public static async getForecasts(): Promise<WeatherForecast[]> {
-		console.log("invoked");
-		return await this.client.get("WeatherForecast").fromJSONArray((something) => new WeatherForecast(something));
-	}
-
-	/** */
-	public static async getServerForecasts(fetch: typeof window.fetch): Promise<WeatherForecast[]> {
-		console.log("invoked");
-		return ensureArray(await (await fetch("http://localhost:5000/WeatherForecast")).json()).map((something) => new WeatherForecast(something));
-	}
-
-	/** */
-	public static async getTest(): Promise<string | null> {
-		return await this.client.get("WeatherForecast/Test").withNullStatus(404).fromStringNullable();
+	public static async getForecasts(fetch?: typeof window.fetch): Promise<WeatherForecast[]> {
+		return await this.client
+			.get("weatherforecast")
+			.withFetch(fetch)
+			.fromJSONArray((something) => new WeatherForecast(something));
 	}
 }

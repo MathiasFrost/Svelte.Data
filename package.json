@@ -22,6 +22,30 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"svelte": "./dist/index.js"
+		},
+		"./async": {
+			"types": "./dist/async/index.d.ts",
+			"svelte": "./dist/async/index.js"
+		},
+		"./async/AsyncDataComponent.svelte": {
+			"types": "./dist/async/AsyncDataComponent.svelte.d.ts",
+			"svelte": "./dist/async/AsyncDataComponent.svelte"
+		},
+		"./history": {
+			"types": "./dist/history/index.d.ts",
+			"svelte": "./dist/history/index.js"
+		},
+		"./http": {
+			"types": "./dist/http/index.d.ts",
+			"svelte": "./dist/http/index.js"
+		},
+		"./sync": {
+			"types": "./dist/sync/index.d.ts",
+			"svelte": "./dist/sync/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts",
+			"svelte": "./dist/types/index.js"
 		}
 	},
 	"files": [
@@ -52,7 +76,5 @@
 		"typescript": "^5.0.4",
 		"vite": "^4.3.1"
 	},
-	"svelte": "./dist/index.js",
-	"types": "./dist/index.d.ts",
 	"type": "module"
 }

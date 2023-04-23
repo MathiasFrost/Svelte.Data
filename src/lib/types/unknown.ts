@@ -1,7 +1,4 @@
-/** An object with unknown properties with unknown value */
-export type UnknownObject = {
-	[k: string]: unknown;
-};
+import type { UnknownObject } from "./UnknownObject.js";
 
 /** Make sure that something is an array (not null) */
 export function ensureArray(something: unknown): unknown[] {

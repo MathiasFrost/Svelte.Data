@@ -1,58 +1,33 @@
-import { Syncer, type ISyncerOptions } from "./Syncer.js";
+import type { ITransformer } from "$lib/types/ITransformer.js";
+import { Syncer } from "./Syncer.js";
 
-/** @internal Base class for `localStorage` and `sessionStorage` */
+/** @internal */
 export abstract class StorageSyncer<T> extends Syncer<T> {
-	/** Key for `Storage` */
-	public readonly key: string;
+	/** */
+	protected abstract get storage(): Storage | null;
 
 	/** @inheritdoc */
-	protected get storageKey(): string {
-		return this.key;
-	}
+	public override pull(): T {
+		if (this.storage === null) return this.fallback;
 
-	/** @internal */
-	protected abstract getStorage(): Storage | null;
+		const string = this.storage.getItem(this.key);
+		if (string === null) return this.fallback;
 
-	/** Create a new instance
-	 * @param options Optional parameters */
-	public constructor(key: string, options?: ISyncerOptions<T>) {
-		super(options);
-		this.key = key;
-
-		// Set key to initialValue if set
-		if (typeof options?.initialValue === "undefined") {
-			return;
-		}
-		const storage = this.getStorage();
-		if (storage && !(this.key in storage)) {
-			this.sync(options.initialValue);
-		}
+		return this.transformer.deserialize(string);
 	}
 
 	/** @inheritdoc */
-	public tryGet(): T | undefined {
-		try {
-			const storage = this.getStorage();
-			if (storage) {
-				const str = storage.getItem(this.key);
-				if (str !== null) {
-					return this.deserializer?.(str) ?? JSON.parse(str);
-				}
-			} else if (typeof this.serverValue !== "undefined") {
-				return this.serverValue;
-			}
-		} catch (e) {
-			console.error(e);
-		}
-		return undefined;
+	public override push(something: T): void {
+		this.storage?.setItem(this.key, this.transformer.serialize(something));
 	}
 
-	/** Store value in `Storage` */
-	public override sync(value: T): boolean {
-		const storage = this.getStorage();
-		if (storage) {
-			storage.setItem(this.key, this.serializer?.(value) ?? JSON.stringify(value));
-		}
-		return false;
+	/** @inheritdoc */
+	public override clear(): void {
+		this.storage?.removeItem(this.key);
+	}
+
+	/** @inheritdoc */
+	protected constructor(key: string, fallback: T, transformer?: ITransformer<T>) {
+		super(key, fallback, transformer);
 	}
 }
