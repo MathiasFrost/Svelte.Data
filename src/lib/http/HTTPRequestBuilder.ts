@@ -1,4 +1,4 @@
-import { ensureArray, ensureBigint, ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
+import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateString, ensureNumberString } from "$lib/types/unknown.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 
@@ -46,7 +46,7 @@ export class HTTPRequestBuilder {
 	private nullStatusCodes: number[] | null = null;
 
 	/** Commonly set by `withFetch` when calling server-side */
-	public __fetch?: typeof window.fetch;
+	private __fetch?: typeof window.fetch;
 
 	/** Get the server-side `load` `fetch` or cleint-side `window.fetch` */
 	private get _fetch(): typeof window.fetch {
@@ -258,40 +258,40 @@ export class HTTPRequestBuilder {
 	/** The request body deserialized as number */
 	public async fromNumber(signal?: AbortSignal): Promise<number> {
 		const content = await this.fromString(signal);
-		return ensureNumber(content);
+		return ensureNumberString(content);
 	}
 
 	/** The request body deserialized as number or null if 204 */
 	public async fromNumberNullable(signal?: AbortSignal): Promise<number | null> {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
-		return ensureNumber(content);
+		return ensureNumberString(content);
 	}
 
 	/** The request body deserialized as bigint */
 	public async fromBigint(signal?: AbortSignal): Promise<bigint> {
 		const content = await this.fromString(signal);
-		return ensureBigint(content);
+		return ensureBigIntString(content);
 	}
 
 	/** The request body deserialized as number or null if 204 */
 	public async fromBigintNullable(signal?: AbortSignal): Promise<bigint | null> {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
-		return ensureBigint(content);
+		return ensureBigIntString(content);
 	}
 
 	/** The request body deserialized as boolean */
 	public async fromBoolean(signal?: AbortSignal): Promise<boolean> {
 		const content = await this.fromString(signal);
-		return ensureBoolean(content);
+		return ensureBooleanString(content);
 	}
 
 	/** The request body deserialized as boolean or null if 204 */
 	public async fromBooleanNullable(signal?: AbortSignal): Promise<boolean | null> {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
-		return ensureBoolean(content);
+		return ensureBooleanString(content);
 	}
 
 	/** The request body deserialized as Date */

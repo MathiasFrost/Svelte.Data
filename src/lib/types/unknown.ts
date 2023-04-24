@@ -89,6 +89,29 @@ export function ensureDateStringNullable(something: unknown): Date | null {
 	return date;
 }
 
+/** Make sure that something is a Boolean parsable string (not null) */
+export function ensureBooleanString(something: unknown): boolean {
+	if (typeof something !== "string") throw new Error(`Expected Boolean parsable string, found ${typeof something}`);
+	if (something === "true") return true;
+	if (something === "false") return false;
+	throw new Error(`Expected Boolean parsable string, found ${typeof something}`);
+}
+
+/** Make sure that something is a BigInt parsable string (not null) */
+export function ensureBigIntString(something: unknown): bigint {
+	if (typeof something !== "string") throw new Error(`Expected BigInt parsable string, found ${typeof something}`);
+	if (!something) throw new Error(`Expected BigInt parsable string, found ${typeof something}`);
+	return BigInt(something);
+}
+
+/** Make sure that something is a Number parsable string (not null) */
+export function ensureNumberString(something: unknown): number {
+	if (typeof something !== "string") throw new Error(`Expected Number parsable string, found ${typeof something}`);
+	const number = Number(something);
+	if (!something || isNaN(number)) throw new Error(`Expected Number parsable string, found ${typeof something}`);
+	return number;
+}
+
 /** Make sure that something is an instance of something */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function ensureInstanceOf<T>(something: unknown, t: Function): T {
