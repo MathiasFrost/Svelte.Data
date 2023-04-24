@@ -15,7 +15,7 @@
 	data.onReject = (e) => dispatch("rejected", e);
 
 	/** Function that returns the promise */
-	export let promiseFactory: () => Promise<T>;
+	export let promiseFactory: (() => Promise<T>) | undefined = undefined;
 	$: data.promiseFactory = promiseFactory;
 
 	/** Milliseconds between each invocation. Setting to 0 suspends invocation indefinately */
