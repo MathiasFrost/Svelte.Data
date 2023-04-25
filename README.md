@@ -42,7 +42,8 @@ Examples on how you can employ these components in different scenarios:
 **Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
 This is fine at build-time, but when dealing with data stored at various locations at runtime, we **cant't** guarantee that.
 
-Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code has not accounted for?
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code
+has not accounted for?
 
 All of these problems are dealt with when doing the following:
 
@@ -51,7 +52,7 @@ All of these problems are dealt with when doing the following:
 ```ts
 import { ensureArray } from "@maal/svelte-data/types";
 
-Response.prototype.ensureSuccess = function (): Response {
+Response.prototype.ensureSuccess = function(): Response {
 	if (!this.ok) {
 		throw new Error(`Expected status code indicating success, got: ${this.status} ${this.statusText}`);
 	}

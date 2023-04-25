@@ -13,15 +13,21 @@
 	export let data: PageData;
 
 	/** Example data */
-	type T = WeatherForecast[];
+	type WeatherForecastObject<T = WeatherForecast[]> = {
+		value: T;
+		promise: MaybePromise<T>;
+		async: AsyncData<T>;
+		history: HistoryManager<T>;
+		historyStorage: LocalStorageSyncer<string>;
+	};
 	let forecasts = initForecasts();
-	function initForecasts(): { value: MaybePromise<T>; async: AsyncData<T>; history: HistoryManager<T>; historyStorage: LocalStorageSyncer<string> } {
+	function initForecasts(): WeatherForecastObject {
 		/** Wrapper for promise to enable easy refreshing */
 		const async = new AsyncData({
 			promiseFactory: () => TestClient.getForecasts(),
 			cooldown: 2_000,
 			onResolved: (res) => (forecasts.value = res),
-			onReject: (e) => (forecasts.value = Promise.reject(e))
+			onReject: (e) => (forecasts.promise = Promise.reject(e))
 		});
 
 		/** Manage history for `forecasts` */
@@ -39,6 +45,7 @@
 		return {
 			// Deserialize stored history to history manager. If any, we use current entry instead of data from load.
 			value: history.deserialize(localStorage.pull()) ?? data.forecasts,
+			promise: [],
 			async,
 			history,
 			historyStorage: localStorage
@@ -72,12 +79,12 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#await forecasts.value}
+		{#await forecasts.promise}
 			<tr>
 				<td colspan="4">Loading...</td>
 			</tr>
-		{:then res}
-			{#each res as forecast}
+		{:then}
+			{#each forecasts.value as forecast}
 				<tr>
 					<td><input type="text" bind:value={forecast.summary} /></td>
 					<td>{forecast.date}</td>

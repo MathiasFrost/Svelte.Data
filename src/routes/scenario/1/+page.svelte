@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { MaybePromise } from "$app/forms";
 	import AsyncDataComponent from "$lib/async/AsyncDataComponent.svelte";
 
 	const testPromise = (str?: string) =>
@@ -12,10 +11,21 @@
 				}, 1_000);
 		});
 
-	let str: MaybePromise<string> = testPromise();
+	let str = "";
+	let strPromise = initStr();
+	function initStr(): Promise<string> {
+		const promise = testPromise();
+		promise.then((res) => (str = res));
+		return promise;
+	}
 
-	let secondStr: MaybePromise<string> = Promise.resolve("");
-	$: Promise.resolve(str).then((res) => (secondStr = testPromise(res)));
+	let secondStr = "";
+	$: secondStrPromise = initSecondString(str);
+	function initSecondString(str: string): Promise<string> {
+		const promise = testPromise(str);
+		promise.then((res) => (secondStr = res));
+		return promise;
+	}
 
 	let ms = 0;
 </script>
@@ -28,22 +38,22 @@
 <input type="range" min="0" max="20000" step="1000" bind:value={ms} />
 {ms}
 
-{#await str}
+{#await strPromise}
 	<p>Laoding...</p>
-{:then s}
-	<p>{s}</p>
-	<input type="text" value={s} on:input={(e) => (str = e.currentTarget.value)} />
+{:then}
+	<p>{str}</p>
+	<input type="text" bind:value={str} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-{#await secondStr}
+{#await secondStrPromise}
 	<p>Laoding...</p>
-{:then s}
-	<p>{s}</p>
-	<input type="text" value={s} on:input={(e) => (secondStr = e.currentTarget.value)} />
+{:then}
+	<p>{secondStr}</p>
+	<input type="text" bind:value={secondStr} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-<AsyncDataComponent milliseconds={ms} promiseFactory={() => testPromise()} on:invoked={(e) => (str = e.detail)} />
+<AsyncDataComponent milliseconds={ms} promiseFactory={() => initStr()} on:invoked={(e) => (strPromise = e.detail)} />
