@@ -56,7 +56,7 @@ export class HistoryManager<T> {
 		}
 
 		const len = this.history.length;
-		if (typeof this.cap === "number" && len >= this.cap && this.index === len - 1) {
+		if (this.cap > 0 && len >= this.cap && this.index === len - 1) {
 			this.history.splice(0, 1);
 			this.index = this.history.length - 1;
 		}
@@ -65,7 +65,7 @@ export class HistoryManager<T> {
 		this.onHistoryChange?.(this.history, this.index);
 	}
 
-	/** Set value to it's previous state */
+	/** Set value to its previous state */
 	public undo(): void {
 		if (this.index > 0) {
 			this.ignoreNext = true;

@@ -39,7 +39,7 @@
 {ms}
 
 {#await strPromise}
-	<p>Laoding...</p>
+	<p>Loading...</p>
 {:then}
 	<p>{str}</p>
 	<input type="text" bind:value={str} />
@@ -48,7 +48,7 @@
 {/await}
 
 {#await secondStrPromise}
-	<p>Laoding...</p>
+	<p>Loading...</p>
 {:then}
 	<p>{secondStr}</p>
 	<input type="text" bind:value={secondStr} />

@@ -42,7 +42,7 @@ export class HTTPRequestBuilder {
 	/** */
 	private optional: unknown | null = null;
 
-	/** Status codes to ignore from ensureing success when calling `from{Type}Nullable` */
+	/** Status codes to ignore from ensuring success when calling `from{Type}Nullable` */
 	private nullStatusCodes: number[] | null = null;
 
 	/** */
