@@ -2,7 +2,7 @@ import { HTTPClient } from "$lib/http/HTTPClient.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 
 /** @static */
-export class TestClient {
+export class TestHTTP {
 	/** */
 	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
 

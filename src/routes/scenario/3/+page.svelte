@@ -5,7 +5,7 @@
 	import { LocalStorageSyncer } from "$lib/sync/LocalStorageSyncer.js";
 	import { anyTransformer, stringTransformer } from "$lib/types/transformers.js";
 	import { ensureArray } from "$lib/types/unknown.js";
-	import { TestClient } from "$sandbox/http/TestClient.js";
+	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import type { PageData } from "./$types.js";
 
@@ -24,7 +24,7 @@
 	function initForecasts(): WeatherForecastObject {
 		/** Wrapper for promise to enable easy refreshing */
 		const async = new AsyncData({
-			promiseFactory: () => TestClient.getForecasts(),
+			promiseFactory: () => TestHTTP.getForecasts(),
 			cooldown: 2_000,
 			onResolved: (res) => (forecasts.value = res),
 			onReject: (e) => (forecasts.promise = Promise.reject(e))

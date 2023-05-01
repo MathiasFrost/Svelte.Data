@@ -52,7 +52,7 @@ All of these problems are dealt with when doing the following:
 ```ts
 import { ensureArray } from "@maal/svelte-data/types";
 
-Response.prototype.ensureSuccess = function(): Response {
+Response.prototype.ensureSuccess = function (): Response {
 	if (!this.ok) {
 		throw new Error(`Expected status code indicating success, got: ${this.status} ${this.statusText}`);
 	}
