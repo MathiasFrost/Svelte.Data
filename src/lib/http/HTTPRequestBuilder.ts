@@ -42,22 +42,8 @@ export class HTTPRequestBuilder {
 	/** */
 	private optional: unknown | null = null;
 
-	/** Status codes to ignore from ensureing success when calling `from{Type}Nullable` */
+	/** Status codes to ignore from ensuring success when calling `from{Type}Nullable` */
 	private nullStatusCodes: number[] | null = null;
-
-	/** Commonly set by `withFetch` when calling server-side */
-	private __fetch?: typeof window.fetch;
-
-	/** Get the server-side `load` `fetch` or cleint-side `window.fetch` */
-	private get _fetch(): typeof window.fetch {
-		return this.__fetch ?? window.fetch;
-	}
-
-	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
-	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
-		this.__fetch = fetch;
-		return this;
-	}
 
 	/** */
 	constructor(
@@ -79,15 +65,21 @@ export class HTTPRequestBuilder {
 		this.postprocess = postprocess;
 	}
 
+	/** Commonly set by `withFetch` when calling server-side */
+	private __fetch?: typeof window.fetch;
+
+	/** Get the server-side `load` `fetch` or client-side `window.fetch` */
+	private get _fetch(): typeof window.fetch {
+		return this.__fetch ?? window.fetch;
+	}
+
 	/** */
 	private get requestUri(): string {
 		let requestUri = "";
 		if (this.baseAddress === null) {
 			if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
-			throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
-		}
-
-		if (this.baseAddress.href.endsWith("/")) {
+			else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
+		} else if (this.baseAddress.href.endsWith("/")) {
 			if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
 			else requestUri = this.baseAddress.href + this._requestUri;
 		} else {
@@ -108,6 +100,12 @@ export class HTTPRequestBuilder {
 		return requestUri;
 	}
 
+	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
+	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
+		this.__fetch = fetch;
+		return this;
+	}
+
 	/** Add query parameters to request URI */
 	public withQuery(query: Dictionary | URLSearchParams): HTTPRequestBuilder {
 		this.query = new URLSearchParams(query);
@@ -120,7 +118,7 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** Add a optional route/path parameter to request URI
+	/** Add an optional route/path parameter to request URI
 	 *
 	 * This will be appended at the end of the path with `encodeURIComponent` and can only be one */
 	public withOptional(param: unknown): HTTPRequestBuilder {
@@ -181,20 +179,6 @@ export class HTTPRequestBuilder {
 
 		if (typeof this.postprocess === "function") await this.postprocess(response);
 		return response;
-	}
-
-	/** @returns The raw request result */
-	private async fetchNullable(signal?: AbortSignal): Promise<[Response, boolean]> {
-		this.requestInit.signal = signal;
-		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
-
-		const response = await this._fetch(this.requestUri, this.requestInit);
-
-		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
-		if (!isNull && this.ensureSuccess) response.ensureSuccess();
-
-		if (typeof this.postprocess === "function") await this.postprocess(response);
-		return [response, isNull];
 	}
 
 	/** @returns The XMLHttpRequest */
@@ -305,5 +289,19 @@ export class HTTPRequestBuilder {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
 		return ensureDateString(content);
+	}
+
+	/** @returns The raw request result */
+	private async fetchNullable(signal?: AbortSignal): Promise<[Response, boolean]> {
+		this.requestInit.signal = signal;
+		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+
+		const response = await this._fetch(this.requestUri, this.requestInit);
+
+		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
+		if (!isNull && this.ensureSuccess) response.ensureSuccess();
+
+		if (typeof this.postprocess === "function") await this.postprocess(response);
+		return [response, isNull];
 	}
 }

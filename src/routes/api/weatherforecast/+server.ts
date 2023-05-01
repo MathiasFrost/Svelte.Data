@@ -23,7 +23,6 @@ const promise = () =>
 
 /** */
 export const GET: RequestHandler = async () => {
-	console.log("get");
 	await promise();
 	return json(
 		Array.from({ length: 10 }, (_, i) => {

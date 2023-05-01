@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { MaybePromise } from "$app/forms";
 	import { stringTransformer } from "$lib/types/transformers.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
 
@@ -25,8 +24,13 @@
 	}
 	$: session.push(str);
 
-	let secondStr: MaybePromise<string>;
-	$: secondStr = testPromise(str);
+	let secondStr = "";
+	$: secondStrPromise = initSecondString(str);
+	function initSecondString(str: string): Promise<string> {
+		const promise = testPromise(str);
+		promise.then((res) => (secondStr = res));
+		return promise;
+	}
 </script>
 
 <h1>Svelte.Data</h1>
@@ -36,14 +40,14 @@
 
 <input type="text" bind:value={str} />
 
-{#await secondStr}
-	<p>Laoding...</p>
-{:then s}
-	<p>{s}</p>
-	<input type="text" value={s} on:input={(e) => (secondStr = e.currentTarget.value)} />
+{#await secondStrPromise}
+	<p>Loading...</p>
+{:then}
+	<p>{secondStr}</p>
+	<input type="text" bind:value={secondStr} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
 <button on:click={() => (str = session.pull())}> pull </button>
-<button on:click={session.clear}> reset </button>
+<button on:click={() => session.clear()}> reset </button>

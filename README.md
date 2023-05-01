@@ -40,9 +40,10 @@ Examples on how you can employ these components in different scenarios:
 
 **Recommendation**: For models, use classes. **Not** interfaces.  
 **Reason**: interfaces exist to tell TypeScript that "this object is guaranteed to have these members".  
-This is fine at build-time, but when dealing with data stored at various locations at runtime, we **cant't** guarantee that.
+This is fine at build-time, but when dealing with data stored at various locations at runtime, we **can't** guarantee that.
 
-Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code has not accounted for?
+Did the REST endpoint you are calling change? Did the user modify the data stored in localStorage? Was there a JSON property that could be null that your code
+has not accounted for?
 
 All of these problems are dealt with when doing the following:
 

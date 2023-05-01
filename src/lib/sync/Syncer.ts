@@ -3,7 +3,7 @@ import { anyTransformer } from "$lib/types/transformers.js";
 
 /** Base class for replicating data */
 export abstract class Syncer<T> {
-	/** Functions to convert value to and from it's string representation */
+	/** Functions to convert value to and from its string representation */
 	public transformer: ITransformer<T>;
 
 	/** */
@@ -20,7 +20,7 @@ export abstract class Syncer<T> {
 	 * Will return fallback value when unable */
 	public abstract pull(): T;
 
-	/** Store value in replication sourc */
+	/** Store value in replication source */
 	public abstract push(value: T): void;
 
 	/** */

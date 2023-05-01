@@ -18,7 +18,7 @@
 	export let promiseFactory: (() => Promise<T>) | undefined = undefined;
 	$: data.promiseFactory = promiseFactory;
 
-	/** Milliseconds between each invocation. Setting to 0 suspends invocation indefinately */
+	/** Milliseconds between each invocation. Setting to 0 suspends invocation indefinitely */
 	export let milliseconds = 0;
 	$: data.milliseconds = milliseconds;
 
