@@ -1,4 +1,3 @@
-export { type UnknownObject } from "$lib/types/UnknownObject.js";
 export {
 	isObjectNullable,
 	isObject,
