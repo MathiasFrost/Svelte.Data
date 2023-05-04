@@ -1,5 +1,3 @@
-import type { UnknownObject } from "./UnknownObject.js";
-
 /** Make sure that something is an array (not null) */
 export function ensureArray(something: unknown): unknown[] {
 	if (Array.isArray(something)) return something;
@@ -13,14 +11,14 @@ export function ensureArrayNullable(something: unknown): unknown[] | null {
 }
 
 /** Make sure that something is an object (not null) */
-export function ensureObject(something: unknown): UnknownObject {
-	if (something !== null && typeof something === "object") return something as UnknownObject;
+export function ensureObject(something: unknown): Record<string, unknown> {
+	if (something !== null && typeof something === "object") return something as Record<string, unknown>;
 	throw new Error(`Expected object, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (may be null) */
-export function ensureObjectNullable(something: unknown): UnknownObject | null {
-	if (typeof something === "object") return something as UnknownObject | null;
+export function ensureObjectNullable(something: unknown): Record<string, unknown> | null {
+	if (typeof something === "object") return something as Record<string, unknown> | null;
 	throw new Error(`Expected object | null, found ${typeof something}`);
 }
 
@@ -128,11 +126,11 @@ export function ensureInstanceOfNullable<T>(something: unknown, t: Function): T 
 }
 
 /** Tells TypeScript that something is an unknown object (not null) */
-export function isObject(something: unknown): something is UnknownObject {
+export function isObject(something: unknown): something is Record<string, unknown> {
 	return something !== null && typeof something === "object";
 }
 
 /** Tells TypeScript that something is an unknown object (may be null) */
-export function isObjectNullable(something: unknown): something is UnknownObject | null {
+export function isObjectNullable(something: unknown): something is Record<string, unknown> | null {
 	return typeof something === "object";
 }

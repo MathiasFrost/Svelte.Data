@@ -9,11 +9,6 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type Deserialize<TResult> = (something?: unknown) => TResult;
 
 /** */
-export type Dictionary = {
-	[k: string]: string;
-};
-
-/** */
 export class HTTPRequestBuilder {
 	/** */
 	private readonly baseAddress: URL | null = null;
@@ -107,7 +102,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Add query parameters to request URI */
-	public withQuery(query: Dictionary | URLSearchParams): HTTPRequestBuilder {
+	public withQuery(query: string | URLSearchParams | Record<string, string> | string[][] | undefined): HTTPRequestBuilder {
 		this.query = new URLSearchParams(query);
 		return this;
 	}
@@ -133,7 +128,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Add headers to content */
-	public withHeaders(headers: Dictionary): HTTPRequestBuilder {
+	public withHeaders(headers: Record<string, string>): HTTPRequestBuilder {
 		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
 		for (const key of Object.keys(headers)) {
 			this.requestInit.headers.append(key, headers[key]);
@@ -150,7 +145,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** HTTP request with multipart/formdata content */
-	public asForm(content: Dictionary): HTTPRequestBuilder {
+	public asForm(content: Record<string, string>): HTTPRequestBuilder {
 		const formData = new FormData();
 		Object.keys(content).forEach((k) => formData.append(k, content[k]));
 		this.requestInit.body = formData;
@@ -158,14 +153,14 @@ export class HTTPRequestBuilder {
 	}
 
 	/** HTTP request with application/x-www-form-urlencoded content */
-	public asQuery(content: Dictionary): HTTPRequestBuilder {
+	public asQuery(content: string | URLSearchParams | Record<string, string> | string[][] | undefined): HTTPRequestBuilder {
 		this.requestInit.body = new URLSearchParams(content);
 		return this;
 	}
 
-	/** HTTP request with text/plain content */
-	public asText(content: string): HTTPRequestBuilder {
-		this.requestInit.body = content;
+	/** HTTP request with any body init */
+	public withBody(body: BodyInit | null | undefined): HTTPRequestBuilder {
+		this.requestInit.body = body;
 		return this;
 	}
 
