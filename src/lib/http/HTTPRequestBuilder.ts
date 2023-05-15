@@ -27,7 +27,7 @@ export class HTTPRequestBuilder {
 
 	/** @see Postprocess */
 	private postprocess?: Postprocess;
-	
+
 	/** @see XMLHttpRequest */
 	private xmlHttpRequest?: XMLHttpRequest;
 
