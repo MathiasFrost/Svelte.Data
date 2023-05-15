@@ -116,7 +116,7 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** Add preprocessor to this XML request. Overrides the one from HTTPClient */
+	/** Make request use the supplied `XMLHttpRequest` instead of creating a new one */
 	public withXMLHttpRequest(xmlHttpRequest: XMLHttpRequest): HTTPRequestBuilder {
 		this.xmlHttpRequest = xmlHttpRequest;
 		return this;
