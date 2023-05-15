@@ -200,7 +200,7 @@ export class HTTPRequestBuilder {
 	/** @returns The XMLHttpRequest */
 	public send(): XMLHttpRequest {
 		const request = this.xmlHttpRequest ?? new XMLHttpRequest();
-	
+
 		if (!this.requestInit.method) throw new Error("Request method must be set");
 		request.open(this.requestInit.method, this.requestUri, true);
 
