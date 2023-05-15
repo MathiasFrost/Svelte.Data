@@ -8,16 +8,13 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** */
 export type Deserialize<TResult> = (something?: unknown) => TResult;
 
+/** Modify request before it is `send` is callsed */
+export type XMLPostprocess = (xmlHttpRequest: XMLHttpRequest) => Promise<void>;
+
 /** */
 export class HTTPRequestBuilder {
 	/** */
 	private readonly baseAddress: URL | null = null;
-
-	/** @see Preprocess */
-	private readonly preprocess?: Preprocess;
-
-	/** @see Postprocess */
-	private readonly postprocess?: Postprocess;
 
 	/** */
 	private readonly _requestUri: string;
@@ -27,6 +24,15 @@ export class HTTPRequestBuilder {
 
 	/** */
 	private readonly requestInit: RequestInit;
+
+	/** @see Preprocess */
+	private preprocess?: Preprocess;
+
+	/** @see Postprocess */
+	private postprocess?: Postprocess;
+
+	/** @see Postprocess */
+	private xmlPostprocess?: XMLPostprocess;
 
 	/** */
 	private query: URLSearchParams | null = null;
@@ -98,6 +104,24 @@ export class HTTPRequestBuilder {
 	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
 	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
 		this.__fetch = fetch;
+		return this;
+	}
+
+	/** Add preprocessor to this request. Overrides the one from HTTPClient */
+	public withPreprocessor(preprocess: Preprocess): HTTPRequestBuilder {
+		this.preprocess = preprocess;
+		return this;
+	}
+
+	/** Add preprocessor to this request. Overrides the one from HTTPClient */
+	public withPostprocess(postprocess: Postprocess): HTTPRequestBuilder {
+		this.postprocess = postprocess;
+		return this;
+	}
+
+	/** Add preprocessor to this XML request. Overrides the one from HTTPClient */
+	public withXMLPostprocess(xmlPostprocess: XMLPostprocess): HTTPRequestBuilder {
+		this.xmlPostprocess = xmlPostprocess;
 		return this;
 	}
 
@@ -179,12 +203,15 @@ export class HTTPRequestBuilder {
 	/** @returns The XMLHttpRequest */
 	public send(): XMLHttpRequest {
 		const request = new XMLHttpRequest();
+		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+	
 		if (!this.requestInit.method) throw new Error("Request method must be set");
 		request.open(this.requestInit.method, this.requestUri, true);
 
 		if (this.requestInit.credentials === "include") request.withCredentials = true;
 		if (this.requestInit.body instanceof ReadableStream) throw new Error("Request body cannot be ReadableStream when using XHR");
 
+		if (typeof this.xmlPostprocess === "function") await this.xmlPostprocess(request);
 		request.send(this.requestInit.body);
 		return request;
 	}
