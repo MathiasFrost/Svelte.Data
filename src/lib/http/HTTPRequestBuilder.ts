@@ -13,12 +13,6 @@ export class HTTPRequestBuilder {
 	/** */
 	private readonly baseAddress: URL | null = null;
 
-	/** @see Preprocess */
-	private readonly preprocess?: Preprocess;
-
-	/** @see Postprocess */
-	private readonly postprocess?: Postprocess;
-
 	/** */
 	private readonly _requestUri: string;
 
@@ -27,6 +21,15 @@ export class HTTPRequestBuilder {
 
 	/** */
 	private readonly requestInit: RequestInit;
+
+	/** @see Preprocess */
+	private preprocess?: Preprocess;
+
+	/** @see Postprocess */
+	private postprocess?: Postprocess;
+
+	/** @see XMLHttpRequest */
+	private xmlHttpRequest?: XMLHttpRequest;
 
 	/** */
 	private query: URLSearchParams | null = null;
@@ -98,6 +101,24 @@ export class HTTPRequestBuilder {
 	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
 	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
 		this.__fetch = fetch;
+		return this;
+	}
+
+	/** Add preprocessor to this request. Overrides the one from HTTPClient */
+	public withPreprocessor(preprocess: Preprocess): HTTPRequestBuilder {
+		this.preprocess = preprocess;
+		return this;
+	}
+
+	/** Add preprocessor to this request. Overrides the one from HTTPClient */
+	public withPostprocess(postprocess: Postprocess): HTTPRequestBuilder {
+		this.postprocess = postprocess;
+		return this;
+	}
+
+	/** Make request use the supplied `XMLHttpRequest` instead of creating a new one */
+	public withXMLHttpRequest(xmlHttpRequest: XMLHttpRequest): HTTPRequestBuilder {
+		this.xmlHttpRequest = xmlHttpRequest;
 		return this;
 	}
 
@@ -178,7 +199,8 @@ export class HTTPRequestBuilder {
 
 	/** @returns The XMLHttpRequest */
 	public send(): XMLHttpRequest {
-		const request = new XMLHttpRequest();
+		const request = this.xmlHttpRequest ?? new XMLHttpRequest();
+
 		if (!this.requestInit.method) throw new Error("Request method must be set");
 		request.open(this.requestInit.method, this.requestUri, true);
 
