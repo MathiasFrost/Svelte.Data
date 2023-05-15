@@ -8,9 +8,6 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** */
 export type Deserialize<TResult> = (something?: unknown) => TResult;
 
-/** Modify request before it is `send` is callsed */
-export type XMLPostprocess = (xmlHttpRequest: XMLHttpRequest) => Promise<void>;
-
 /** */
 export class HTTPRequestBuilder {
 	/** */
@@ -30,9 +27,9 @@ export class HTTPRequestBuilder {
 
 	/** @see Postprocess */
 	private postprocess?: Postprocess;
-
-	/** @see Postprocess */
-	private xmlPostprocess?: XMLPostprocess;
+	
+	/** @see XMLHttpRequest */
+	private xmlHttpRequest?: XMLHttpRequest;
 
 	/** */
 	private query: URLSearchParams | null = null;
@@ -120,8 +117,8 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Add preprocessor to this XML request. Overrides the one from HTTPClient */
-	public withXMLPostprocess(xmlPostprocess: XMLPostprocess): HTTPRequestBuilder {
-		this.xmlPostprocess = xmlPostprocess;
+	public withXMLHttpRequest(xmlHttpRequest: XMLHttpRequest): HTTPRequestBuilder {
+		this.xmlHttpRequest = xmlHttpRequest;
 		return this;
 	}
 
@@ -202,8 +199,7 @@ export class HTTPRequestBuilder {
 
 	/** @returns The XMLHttpRequest */
 	public send(): XMLHttpRequest {
-		const request = new XMLHttpRequest();
-		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+		const request = this.xmlHttpRequest ?? new XMLHttpRequest();
 	
 		if (!this.requestInit.method) throw new Error("Request method must be set");
 		request.open(this.requestInit.method, this.requestUri, true);
@@ -211,7 +207,6 @@ export class HTTPRequestBuilder {
 		if (this.requestInit.credentials === "include") request.withCredentials = true;
 		if (this.requestInit.body instanceof ReadableStream) throw new Error("Request body cannot be ReadableStream when using XHR");
 
-		if (typeof this.xmlPostprocess === "function") await this.xmlPostprocess(request);
 		request.send(this.requestInit.body);
 		return request;
 	}
