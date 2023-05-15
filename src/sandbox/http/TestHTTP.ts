@@ -1,3 +1,4 @@
+import type { Fetch } from "$lib/http/Fetch.js";
 import { HTTPClient } from "$lib/http/HTTPClient.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 
@@ -7,7 +8,7 @@ export class TestHTTP {
 	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
 
 	/** */
-	public static async getForecasts(fetch?: typeof window.fetch): Promise<WeatherForecast[]> {
+	public static async getForecasts(fetch?: Fetch): Promise<WeatherForecast[]> {
 		return await this.client
 			.get("weatherforecast")
 			.withFetch(fetch)
