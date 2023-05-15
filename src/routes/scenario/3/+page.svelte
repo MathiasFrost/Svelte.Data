@@ -12,6 +12,13 @@
 	/** @inheritdoc */
 	export let data: PageData;
 
+	// Testing AsyncData features
+	// const testData = new AsyncData({ milliseconds: 2_000 }).start();
+	// let test = new AsyncData({ promiseFactory: () => TestHTTP.getForecasts() }).start().invoke();
+	// const test2 = test.copyPromise([]);
+	// const test3 = testData.withPromiseFactory(() => TestHTTP.getForecasts()).invoke();
+	// Testing AsyncData features
+
 	/** Example data */
 	type WeatherForecastObject<T = WeatherForecast[]> = {
 		value: T;

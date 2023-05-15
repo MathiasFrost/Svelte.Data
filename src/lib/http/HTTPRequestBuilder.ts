@@ -1,4 +1,5 @@
 import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateString, ensureNumberString } from "$lib/types/unknown.js";
+import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 
@@ -64,10 +65,10 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Commonly set by `withFetch` when calling server-side */
-	private __fetch?: typeof window.fetch;
+	private __fetch?: Fetch;
 
 	/** Get the server-side `load` `fetch` or client-side `window.fetch` */
-	private get _fetch(): typeof window.fetch {
+	private get _fetch(): Fetch {
 		return this.__fetch ?? window.fetch;
 	}
 
@@ -99,7 +100,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
-	public withFetch(fetch?: typeof window.fetch): HTTPRequestBuilder {
+	public withFetch(fetch?: Fetch): HTTPRequestBuilder {
 		this.__fetch = fetch;
 		return this;
 	}

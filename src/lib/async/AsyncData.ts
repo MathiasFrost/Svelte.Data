@@ -16,6 +16,9 @@ export interface IAsyncDataOptions<T> {
 
 	/** @inheritdoc */
 	onReject: (e: Error) => void;
+
+	/** @param remaining remaining milliseconds */
+	onBlockedByCooldown: (remaining: number) => void;
 }
 
 /** Manage refreshing of async data */
@@ -53,6 +56,9 @@ export class AsyncData<T> {
 	/** @inheritdoc */
 	public onReject?: (e: Error) => void;
 
+	/** */
+	public onBlockedByCooldown?: (remaining: number) => void;
+
 	/** Milliseconds between each automatic re-invocation */
 	private _milliseconds: number;
 
@@ -67,36 +73,60 @@ export class AsyncData<T> {
 		this.onInvoked = options.onInvoked;
 		this.onResolved = options.onResolved;
 		this.onReject = options.onReject;
+		this.onBlockedByCooldown = options.onBlockedByCooldown;
 	}
 
 	/** */
-	public stop(): void {
+	public stop(): AsyncData<T> {
 		if (typeof window !== "undefined") window.clearInterval(this.interval);
 		this.interval = 0;
+		return this;
 	}
 
 	/** */
-	public start(): void {
-		if (typeof window === "undefined" || this.milliseconds <= 0) return;
+	public start(): AsyncData<T> {
+		if (typeof window === "undefined" || this.milliseconds <= 0) return this;
+
 		if (this.interval !== 0) window.clearInterval(this.interval);
 		this.interval = window.setInterval(() => this.invoke(), this.milliseconds);
+		return this;
 	}
 
-	/** Call to re-invoke promise */
-	public invoke(): void {
-		if (typeof window === "undefined" || typeof this.promiseFactory === "undefined") return;
+	/** Call to re-invoke promise
+	 * @param skipOnInvoked Set to true to skip calling `onInvoked` */
+	public invoke(skipOnInvoked = false): AsyncData<T> {
+		if (typeof window === "undefined" || typeof this.promiseFactory === "undefined") return this;
 		if (this.cooldown > 0 && this.lastInvoked) {
 			const diff = new Date().getTime() - this.lastInvoked.getTime();
 			if (diff < this.cooldown) {
-				console.info(`Refresh on cooldown (${this.cooldown - diff}ms)`);
-				return;
+				if (typeof this.onBlockedByCooldown === "function") this.onBlockedByCooldown(this.cooldown - diff);
+				else console.info(`Refresh on cooldown (${this.cooldown - diff}ms)`);
+				return this;
 			}
 		}
 
 		const promise = this.promiseFactory();
-		this.onInvoked?.(promise);
+		if (!skipOnInvoked) this.onInvoked?.(promise);
 		promise.then((res) => this.onResolved?.(res)).catch((e) => this.onReject?.(e));
 
 		this.lastInvoked = new Date();
+		return this;
+	}
+
+	/** */
+	public withPromiseFactory(promiseFactory?: () => Promise<T>): AsyncData<T> {
+		this.promiseFactory = promiseFactory;
+		return this;
+	}
+
+	/**
+	 * @param fallback The value to return resolved if `promiseFactory` is unavailable
+	 * @returns The promise from `promiseFactory` if available. If unavailable and no fallback is provided, rejected promise is returned. */
+	public copyPromise(fallback?: T): Promise<T> {
+		if (typeof this.promiseFactory !== "function" || typeof window === "undefined") {
+			if (typeof fallback === "undefined") return Promise.reject("No fallback provided");
+			return Promise.resolve(fallback);
+		}
+		return this.promiseFactory();
 	}
 }
