@@ -9,5 +9,6 @@
 	"singleAttributePerLine": false,
 	"plugins": ["prettier-plugin-svelte"],
 	"pluginSearchDirs": ["."],
+	"endOfLine": "crlf",
 	"overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }

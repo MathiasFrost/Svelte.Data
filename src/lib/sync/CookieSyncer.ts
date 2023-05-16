@@ -56,6 +56,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** Replicate data to `cookie`
 	 * @param name Name of `cookie`
 	 * @param fallback Value used when we are unable to retrieve value from cookies
+	 * @param transformer TODOC
 	 * @param options Optional parameters */
 	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, transformer?: ITransformer<T>) {
 		super(name, fallback, transformer);

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { stringTransformer } from "$lib/types/transformers.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
+	import { Awaitable } from "$lib/async/Awaitable.js";
 
 	/** */
 	const session = new SessionStorageSyncer("test", "", stringTransformer());
@@ -16,20 +17,15 @@
 		});
 
 	/** */
-	let str = initStr();
-	function initStr(): string {
-		const res = session.pull();
-		if (!res) testPromise().then((s) => (str = s));
-		return res;
-	}
-	$: session.push(str);
+	const str = new Awaitable<string>(testPromise(), session.pull());
+	$: session.push(str.value);
 
-	let secondStr = "";
-	$: secondStrPromise = initSecondString(str);
-	function initSecondString(str: string): Promise<string> {
-		const promise = testPromise(str);
-		promise.then((res) => (secondStr = res));
-		return promise;
+	/** */
+	const secondStr = new Awaitable<string>(testPromise(str.value), "");
+	$: update(str.value);
+	function update(val: string) {
+		console.log(val);
+		secondStr.promise = testPromise(val);
 	}
 </script>
 
@@ -38,16 +34,20 @@
 <h2>Scenario 0</h2>
 <p>MaybePromise dependent on str value synced to sessionStorage</p>
 
-<input type="text" bind:value={str} />
+<input type="text" bind:value={str.value} />
 
-{#await secondStrPromise}
+{#await str.promise then res}
+	{res}
+{/await}
+
+{#await secondStr.promise}
 	<p>Loading...</p>
-{:then}
-	<p>{secondStr}</p>
-	<input type="text" bind:value={secondStr} />
+{:then res}
+	<p>{res}</p>
+	<input type="text" bind:value={secondStr.value} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-<button on:click={() => (str = session.pull())}> pull </button>
+<button on:click={() => (str.value = session.pull())}> pull </button>
 <button on:click={() => session.clear()}> reset </button>
