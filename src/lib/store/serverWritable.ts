@@ -1,5 +1,5 @@
-import type { StartStopNotifier, Updater, Writable } from "svelte/store";
-import { writable } from "svelte/store";
+import type { Readable, StartStopNotifier, Updater, Writable } from "svelte/store";
+import { readonly, writable } from "svelte/store";
 
 /** @see writable
  * `Writable` that ignores `set`/`update` client-side */
@@ -17,4 +17,9 @@ export function serverWritable<T>(value?: T, start?: StartStopNotifier<T>): Writ
 	}
 
 	return { set, update, subscribe };
+}
+
+/** @see browserWritable */
+export function serverReadable<T>(value?: T, start?: StartStopNotifier<T>): Readable<T> {
+	return readonly(serverWritable<T>(value, start));
 }

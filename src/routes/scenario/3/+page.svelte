@@ -12,58 +12,34 @@
 	/** @inheritdoc */
 	export let data: PageData;
 
-	// Testing AsyncData features
-	// const testData = new AsyncData({ milliseconds: 2_000 }).start();
-	// let test = new AsyncData({ promiseFactory: () => TestHTTP.getForecasts() }).start().invoke();
-	// const test2 = test.copyPromise([]);
-	// const test3 = testData.withPromiseFactory(() => TestHTTP.getForecasts()).invoke();
-	// Testing AsyncData features
+	/** Manage history for `forecasts` */
+	const history = new HistoryManager<WeatherForecast[]>({
+		onChange: (val) => (forecasts = val),
+		transformer: {
+			...anyTransformer(),
+			deserialize: (string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something))
+		}
+	});
+	/** Store history in local storage */
+	const local = new LocalStorageSyncer<string>("history", history.serialize(), stringTransformer());
 
-	/** Example data */
-	type WeatherForecastObject<T = WeatherForecast[]> = {
-		value: T;
-		promise: MaybePromise<T>;
-		async: AsyncData<T>;
-		history: HistoryManager<T>;
-		historyStorage: LocalStorageSyncer<string>;
-	};
-	let forecasts = initForecasts();
-	function initForecasts(): WeatherForecastObject {
-		/** Wrapper for promise to enable easy refreshing */
-		const async = new AsyncData({
-			promiseFactory: () => TestHTTP.getForecasts(),
-			cooldown: 2_000,
-			onResolved: (res) => (forecasts.value = res),
-			onReject: (e) => (forecasts.promise = Promise.reject(e))
-		});
+	let forecasts: WeatherForecast[] = history.deserialize(local.pull()) ?? data.forecasts;
+	let forecastPromise: MaybePromise<WeatherForecast[]> = forecasts;
 
-		/** Manage history for `forecasts` */
-		const history = new HistoryManager<WeatherForecast[]>({
-			onChange: (val) => (forecasts.value = val),
-			transformer: {
-				...anyTransformer(),
-				deserialize: (string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something))
-			}
-		});
-
-		/** Store history in local storage */
-		const localStorage = new LocalStorageSyncer<string>("history", history.serialize(), stringTransformer());
-
-		return {
-			// Deserialize stored history to history manager. If any, we use current entry instead of data from load.
-			value: history.deserialize(localStorage.pull()) ?? data.forecasts,
-			promise: [],
-			async,
-			history,
-			historyStorage: localStorage
-		};
-	}
+	/** Wrapper for promise to enable easy refreshing */
+	const async = new AsyncData<WeatherForecast[]>({
+		promiseFactory: () => TestHTTP.getForecasts(),
+		cooldown: 2_000,
+		onInvoked: (promise) => (forecastPromise = promise),
+		onResolved: (res) => (forecasts = res)
+	});
 
 	// Add changes to `forecasts` to history
-	$: Promise.resolve(forecasts.value).then((res) => {
-		forecasts.history.addEntry(res);
-		forecasts.historyStorage.push(forecasts.history.serialize());
-	});
+	$: {
+		history.addEntry(forecasts);
+		console.log(history.history);
+		local.push(history.serialize());
+	}
 </script>
 
 <h1>Svelte.Data</h1>
@@ -71,10 +47,10 @@
 <h2>Scenario 3</h2>
 <p>Server loaded data with refresh and history</p>
 
-<button on:click={() => forecasts.async.invoke()}> Refresh </button>
-<button on:click={() => forecasts.history.undo()}> undo </button>
-<button on:click={() => forecasts.history.redo()}> redo </button>
-<button on:click={() => forecasts.historyStorage.clear()}> clear history </button>
+<button on:click={() => async.invoke()}> Refresh </button>
+<button on:click={() => history.undo()}> undo </button>
+<button on:click={() => history.redo()}> redo </button>
+<button on:click={() => local.clear()}> clear history </button>
 
 <table>
 	<thead>
@@ -86,12 +62,12 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#await forecasts.promise}
+		{#await forecastPromise}
 			<tr>
 				<td colspan="4">Loading...</td>
 			</tr>
 		{:then}
-			{#each forecasts.value as forecast}
+			{#each forecasts as forecast}
 				<tr>
 					<td><input type="text" bind:value={forecast.summary} /></td>
 					<td>{forecast.date}</td>

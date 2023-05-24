@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { stringTransformer } from "$lib/types/transformers.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
-	import { Awaitable } from "$lib/async/Awaitable.js";
+	import { browser } from "$app/environment";
+	import { onMount } from "svelte";
 
 	/** */
 	const session = new SessionStorageSyncer("test", "", stringTransformer());
@@ -17,16 +18,22 @@
 		});
 
 	/** */
-	const str = new Awaitable<string>(testPromise(), session.pull());
-	$: session.push(str.value);
+	let str = session.pull();
+	$: session.push(str);
 
 	/** */
-	const secondStr = new Awaitable<string>(testPromise(str.value), "");
-	$: update(str.value);
-	function update(val: string) {
-		console.log(val);
-		secondStr.promise = testPromise(val);
+	let secondStr = "";
+	let secondStrPromise = Promise.resolve("");
+	$: updateSecondStr(str);
+	function updateSecondStr(str: string): void {
+		if (!browser) return;
+		secondStrPromise = testPromise(str);
+		secondStrPromise.then((res) => (secondStr = res));
 	}
+
+	onMount(() => {
+		if (!str) testPromise().then((res) => (str = res));
+	});
 </script>
 
 <h1>Svelte.Data</h1>
@@ -34,20 +41,16 @@
 <h2>Scenario 0</h2>
 <p>MaybePromise dependent on str value synced to sessionStorage</p>
 
-<input type="text" bind:value={str.value} />
+<input type="text" bind:value={str} />
 
-{#await str.promise then res}
-	{res}
-{/await}
-
-{#await secondStr.promise}
+{#await secondStrPromise}
 	<p>Loading...</p>
 {:then res}
 	<p>{res}</p>
-	<input type="text" bind:value={secondStr.value} />
+	<input type="text" bind:value={secondStr} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-<button on:click={() => (str.value = session.pull())}> pull </button>
+<button on:click={() => (str = session.pull())}> pull </button>
 <button on:click={() => session.clear()}> reset </button>

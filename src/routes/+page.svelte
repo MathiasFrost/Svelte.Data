@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { Awaitable } from "$lib/async/Awaitable.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
 
 	/** */
-	let forecasts = new Awaitable<WeatherForecast[]>();
+	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
 	$: console.log(forecasts);
 
 	onMount(async () => {
-		forecasts.value = await TestHTTP.getForecasts();
+		forecasts = TestHTTP.getForecasts();
 		// window.setTimeout(() => (forecasts.error = new Error("a")), 1000);
 
 		// for (let i = 1; i < 6; i++) {
@@ -38,7 +37,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#await forecasts.promise}
+		{#await forecasts}
 			<tr>
 				<td colspan="4">Loading...</td>
 			</tr>

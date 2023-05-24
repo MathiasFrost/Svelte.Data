@@ -1,2 +1,2 @@
-export { serverWritable } from "$lib/store/serverWritable.js";
-export { browserWritable } from "$lib/store/browserWritable.js";
+export { serverWritable, serverReadable } from "$lib/store/serverWritable.js";
+export { browserWritable, browserReadable } from "$lib/store/browserWritable.js";

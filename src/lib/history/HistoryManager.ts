@@ -85,7 +85,8 @@ export class HistoryManager<T> {
 
 	/** Serialize history data to string. Useful for storing history in something like `localStorage` */
 	public serialize(): string {
-		return JSON.stringify({ history: this.history, index: this.index });
+		console.log(JSON.stringify(this.history.map((h) => this.transformer.deserialize(h))));
+		return JSON.stringify({ history: this.history.map((h) => this.transformer.deserialize(h)), index: this.index });
 	}
 
 	/** */
