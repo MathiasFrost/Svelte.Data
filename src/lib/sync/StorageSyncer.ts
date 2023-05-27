@@ -1,4 +1,4 @@
-import type { ITransformer } from "$lib/types/ITransformer.js";
+import type { Transformer } from "$lib/types/Transformer.js";
 import { Syncer } from "./Syncer.js";
 
 /** @internal */
@@ -13,7 +13,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 		const string = this.storage.getItem(this.key);
 		if (string === null) return this.fallback;
 
-		return this.transformer.deserialize(string);
+		return this.deserialize(string);
 	}
 
 	/** @inheritdoc */
@@ -27,7 +27,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 	}
 
 	/** @inheritdoc */
-	protected constructor(key: string, fallback: T, transformer?: ITransformer<T>) {
+	protected constructor(key: string, fallback: T, transformer?: Transformer<T>) {
 		super(key, fallback, transformer);
 	}
 }

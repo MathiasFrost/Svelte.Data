@@ -1,4 +1,4 @@
-import type { ITransformer } from "$lib/types/ITransformer.js";
+import type { Transformer } from "$lib/types/Transformer.js";
 import { StorageSyncer } from "./StorageSyncer.js";
 
 /** */
@@ -14,7 +14,7 @@ export class SessionStorageSyncer<T> extends StorageSyncer<T> {
 	}
 
 	/** @inheritdoc */
-	public constructor(key: string, fallback: T, transformer?: ITransformer<T>) {
+	public constructor(key: string, fallback: T, transformer?: Transformer<T>) {
 		super(key, fallback, transformer);
 	}
 }

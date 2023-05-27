@@ -1,9 +1,18 @@
 <script lang="ts">
 	import { stringTransformer } from "$lib/types/transformers.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
+	import { browser } from "$app/environment";
+	import { onMount } from "svelte";
 
 	/** */
-	const session = new SessionStorageSyncer("test", "", stringTransformer());
+	const session = new SessionStorageSyncer(
+		"test",
+		"",
+		stringTransformer((string) => {
+			if (string.startsWith('"')) throw new Error("Invalid");
+			return string;
+		})
+	);
 
 	const testPromise = (str?: string) =>
 		new Promise<string>((resolve, reject) => {
@@ -16,20 +25,21 @@
 		});
 
 	/** */
-	let str = initStr();
-	function initStr(): string {
-		const res = session.pull();
-		if (!res) testPromise().then((s) => (str = s));
-		return res;
-	}
+	let str = session.pull();
+	onMount(() => {
+		if (!str) testPromise().then((res) => (str = res));
+	});
 	$: session.push(str);
 
+	/** */
 	let secondStr = "";
-	$: secondStrPromise = initSecondString(str);
-	function initSecondString(str: string): Promise<string> {
-		const promise = testPromise(str);
-		promise.then((res) => (secondStr = res));
-		return promise;
+	let secondStrPromise = Promise.resolve("");
+	$: updateSecondStr(str);
+
+	function updateSecondStr(str: string): void {
+		if (!browser) return;
+		secondStrPromise = testPromise(str);
+		secondStrPromise.then((res) => (secondStr = res));
 	}
 </script>
 
@@ -42,12 +52,12 @@
 
 {#await secondStrPromise}
 	<p>Loading...</p>
-{:then}
-	<p>{secondStr}</p>
+{:then res}
+	<p>{res}</p>
 	<input type="text" bind:value={secondStr} />
 {:catch e}
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-<button on:click={() => (str = session.pull())}> pull </button>
-<button on:click={() => session.clear()}> reset </button>
+<button on:click={() => (str = session.pull())}> pull</button>
+<button on:click={() => session.clear()}> reset</button>

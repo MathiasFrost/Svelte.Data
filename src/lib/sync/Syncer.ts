@@ -1,16 +1,21 @@
-import type { ITransformer } from "$lib/types/ITransformer.js";
-import { anyTransformer } from "$lib/types/transformers.js";
+import type { Transformer } from "$lib/types/Transformer.js";
+import { jsonTransformer } from "$lib/types/transformers.js";
 
 /** Base class for replicating data */
 export abstract class Syncer<T> {
 	/** Functions to convert value to and from its string representation */
-	public transformer: ITransformer<T>;
-
+	public transformer: Transformer<T>;
+	/** Used when we are inevitably unable to retrieve value from replication source */
+	public fallback: T;
 	/** */
 	protected key: string;
 
-	/** Used when we are inevitably unable to retrieve value from replication source */
-	public fallback: T;
+	/** */
+	protected constructor(key: string, fallback: T, transformer: Transformer<T> = jsonTransformer<T>()) {
+		this.key = key;
+		this.fallback = fallback;
+		this.transformer = transformer;
+	}
 
 	/** Type of storage, i.e.: sessionStorage. Used for logging */
 	protected abstract get storageName(): string;
@@ -27,9 +32,12 @@ export abstract class Syncer<T> {
 	public abstract clear(): void;
 
 	/** */
-	protected constructor(key: string, fallback: T, transformer: ITransformer<T> = anyTransformer()) {
-		this.key = key;
-		this.fallback = fallback;
-		this.transformer = transformer;
+	protected deserialize(string: string): T {
+		try {
+			return this.transformer.deserialize(string);
+		} catch (e) {
+			console.warn("Unable to deserialize store value properly...\n", e);
+			return this.fallback;
+		}
 	}
 }

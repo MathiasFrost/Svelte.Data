@@ -60,7 +60,7 @@ Response.prototype.ensureSuccess = function (): Response {
 	return this;
 };
 
-export class TestClient {
+export class TestHTTP {
 	public async getForecasts(): Promise<WeatherForecast[]> {
 		const res = await fetch("http://localhost:5173/api/weatherforecast");
 		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
@@ -98,13 +98,13 @@ import { HTTPClient } from "@maal/svelte-data/http";
 import { WeatherForecast } from "$lib/models/WeatherForecast.js";
 
 /** @static */
-export class TestClient {
+export class TestHTTP {
 	/** */
-	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
+	private static httpClient = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
 
 	/** @param fetch This is only needed for SSR */
 	public static async getForecasts(fetch?: typeof window.fetch): Promise<WeatherForecast[]> {
-		return await this.client
+		return await this.httpClient
 			.get("weatherforecast")
 			.withFetch(fetch) // If you are fetching server-side in SvelteKit's `load` function
 			.fromJSONArray((something) => new WeatherForecast(something));

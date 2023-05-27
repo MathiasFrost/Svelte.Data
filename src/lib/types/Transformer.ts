@@ -1,5 +1,5 @@
 /** */
-export interface ITransformer<T> {
+export interface Transformer<T> {
 	serialize: (something: T) => string;
 	deserialize: (string: string) => T;
 }

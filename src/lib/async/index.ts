@@ -1,2 +1,2 @@
-export { AsyncData, type IAsyncDataOptions } from "$lib/async/AsyncData.js";
-export { type ValuePromise } from "$lib/async/ValuePromise.js";
+export { AsyncData, type AsyncDataOptions } from "$lib/async/AsyncData.js";
+export { browserPromise, indefinitePromise, type ValuePromise } from "$lib/async/utility.js";

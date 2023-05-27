@@ -1,11 +1,11 @@
-import type { ITransformer } from "./ITransformer.js";
+import type { Transformer } from "$lib/types/Transformer.js";
+import { ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
 
 /** */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function anyTransformer(): ITransformer<any> {
+export function jsonTransformer<T>(deserializer?: (string: string) => T): Transformer<T> {
 	return {
 		deserialize(string) {
-			return JSON.parse(string);
+			return typeof deserializer !== "undefined" ? deserializer(string) : JSON.parse(string);
 		},
 		serialize(something) {
 			return JSON.stringify(something);
@@ -14,13 +14,49 @@ export function anyTransformer(): ITransformer<any> {
 }
 
 /** */
-export function stringTransformer(): ITransformer<string> {
+export function stringTransformer(deserializer?: (string: string) => string): Transformer<string> {
 	return {
 		deserialize(string) {
-			return string;
+			return typeof deserializer !== "undefined" ? deserializer(string) : string;
 		},
 		serialize(something) {
 			return something;
+		}
+	};
+}
+
+/** */
+export function numberTransformer(deserializer?: (string: string) => number): Transformer<number> {
+	return {
+		deserialize(string) {
+			return typeof deserializer !== "undefined" ? deserializer(string) : ensureNumber(string);
+		},
+		serialize(something) {
+			return something.toString();
+		}
+	};
+}
+
+/** */
+export function booleanTransformer(deserializer?: (string: string) => boolean): Transformer<boolean> {
+	return {
+		deserialize(string) {
+			return typeof deserializer !== "undefined" ? deserializer(string) : ensureBoolean(string);
+		},
+		serialize(something) {
+			return something.toString();
+		}
+	};
+}
+
+/** */
+export function dateTransformer(deserializer?: (string: string) => Date): Transformer<Date> {
+	return {
+		deserialize(string) {
+			return typeof deserializer !== "undefined" ? deserializer(string) : ensureDateString(string);
+		},
+		serialize(something) {
+			return something.toISOString();
 		}
 	};
 }

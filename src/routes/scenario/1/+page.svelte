@@ -1,5 +1,7 @@
 <script lang="ts">
 	import AsyncDataComponent from "$lib/async/AsyncDataComponent.svelte";
+	import { indefinitePromise } from "$lib/async/index.js";
+	import { onMount } from "svelte";
 
 	const testPromise = (str?: string) =>
 		new Promise<string>((resolve, reject) => {
@@ -12,22 +14,26 @@
 		});
 
 	let str = "";
-	let strPromise = initStr();
-	function initStr(): Promise<string> {
-		const promise = testPromise();
-		promise.then((res) => (str = res));
-		return promise;
-	}
+	let strPromise = indefinitePromise();
 
 	let secondStr = "";
-	$: secondStrPromise = initSecondString(str);
-	function initSecondString(str: string): Promise<string> {
-		const promise = testPromise(str);
-		promise.then((res) => (secondStr = res));
+	let secondStrPromise: Promise<string> = indefinitePromise();
+
+	function initStr(): Promise<string> {
+		const promise = testPromise();
+		promise.then((res) => {
+			str = res;
+			secondStrPromise = testPromise(str);
+			secondStrPromise.then((res) => (secondStr = res));
+		});
 		return promise;
 	}
 
 	let ms = 0;
+
+	onMount(() => {
+		strPromise = initStr();
+	});
 </script>
 
 <h1>Svelte.Data</h1>

@@ -1,4 +1,4 @@
-import type { ITransformer } from "$lib/types/ITransformer.js";
+import type { Transformer } from "$lib/types/Transformer.js";
 import { Syncer } from "./Syncer.js";
 
 /** Cookie options */
@@ -27,37 +27,27 @@ export interface ICookieOptions {
 
 /** Replicate data to `cookie` */
 export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
-	/** @inheritdoc */
-	protected get storageName(): string {
-		return "cookies";
-	}
-
 	/** Domain to set on cookie */
 	public domain?: string;
-
 	/** Expire time to set on cookie. Leave empty for session cookies */
 	public expires?: Date;
-
 	/** Set cookie to HostOnly */
 	public hostOnly?: boolean;
-
 	/** Set cookie to HttpOnly */
 	public httpOnly?: boolean;
-
 	/** Set cookie to HttpOnly */
 	public path?: string;
-
 	/** Cookie SameSite policy. Default = 'None' */
 	public sameSite?: "Lax" | "Strict" | "None";
-
 	/** Set cookie to secure. Default true */
 	public secure?: boolean;
 
 	/** Replicate data to `cookie`
 	 * @param name Name of `cookie`
 	 * @param fallback Value used when we are unable to retrieve value from cookies
+	 * @param transformer TODOC
 	 * @param options Optional parameters */
-	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, transformer?: ITransformer<T>) {
+	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, transformer?: Transformer<T>) {
 		super(name, fallback, transformer);
 		this.domain = options?.domain;
 		this.expires = options?.expires;
@@ -66,6 +56,11 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 		this.path = options?.path;
 		this.sameSite = options?.sameSite;
 		this.secure = options?.secure;
+	}
+
+	/** @inheritdoc */
+	protected get storageName(): string {
+		return "cookies";
 	}
 
 	/** @inheritdoc */
@@ -78,7 +73,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 			?.split("=")[1];
 		if (typeof str === "undefined") return this.fallback;
 
-		return this.transformer.deserialize(str);
+		return this.deserialize(str);
 	}
 
 	/** @inheritdoc */

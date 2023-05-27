@@ -180,7 +180,7 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** HTTP request with any body init */
+	/** HTTP request with any `BodyInit` */
 	public withBody(body: BodyInit | null | undefined): HTTPRequestBuilder {
 		this.requestInit.body = body;
 		return this;

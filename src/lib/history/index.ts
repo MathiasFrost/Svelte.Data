@@ -1,1 +1,1 @@
-export { HistoryManager, type IHistoryManagerOptions } from "$lib/history/HistoryManager.js";
+export { HistoryManager, type HistoryManagerOptions } from "$lib/history/HistoryManager.js";
