@@ -19,6 +19,9 @@
 
 	/** */
 	let str = session.pull();
+	onMount(() => {
+		if (!str) testPromise().then((res) => (str = res));
+	});
 	$: session.push(str);
 
 	/** */
@@ -30,10 +33,6 @@
 		secondStrPromise = testPromise(str);
 		secondStrPromise.then((res) => (secondStr = res));
 	}
-
-	onMount(() => {
-		if (!str) testPromise().then((res) => (str = res));
-	});
 </script>
 
 <h1>Svelte.Data</h1>

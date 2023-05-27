@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { MaybePromise } from "$app/forms";
 	import { AsyncData } from "$lib/async/AsyncData.js";
 	import { HistoryManager } from "$lib/history/HistoryManager.js";
 	import { LocalStorageSyncer } from "$lib/sync/LocalStorageSyncer.js";
@@ -7,6 +6,7 @@
 	import { ensureArray } from "$lib/types/unknown.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
+	import type { MaybePromise } from "@sveltejs/kit";
 	import type { PageData } from "./$types.js";
 
 	/** @inheritdoc */
