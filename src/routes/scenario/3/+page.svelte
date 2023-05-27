@@ -2,7 +2,7 @@
 	import { AsyncData } from "$lib/async/AsyncData.js";
 	import { HistoryManager } from "$lib/history/HistoryManager.js";
 	import { LocalStorageSyncer } from "$lib/sync/LocalStorageSyncer.js";
-	import { anyTransformer, stringTransformer } from "$lib/types/transformers.js";
+	import { jsonTransformer, stringTransformer } from "$lib/types/transformers.js";
 	import { ensureArray } from "$lib/types/unknown.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
@@ -15,10 +15,7 @@
 	/** Manage history for `forecasts` */
 	const history = new HistoryManager<WeatherForecast[]>({
 		onChange: (val) => (forecasts = val),
-		transformer: {
-			...anyTransformer(),
-			deserialize: (string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something))
-		}
+		transformer: jsonTransformer((string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something)))
 	});
 	/** Store history in local storage */
 	const local = new LocalStorageSyncer<string>("history", history.serialize(), stringTransformer());
@@ -37,7 +34,6 @@
 	// Add changes to `forecasts` to history
 	$: {
 		history.addEntry(forecasts);
-		console.log(history.history);
 		local.push(history.serialize());
 	}
 </script>
@@ -47,10 +43,10 @@
 <h2>Scenario 3</h2>
 <p>Server loaded data with refresh and history</p>
 
-<button on:click={() => async.invoke()}> Refresh </button>
-<button on:click={() => history.undo()}> undo </button>
-<button on:click={() => history.redo()}> redo </button>
-<button on:click={() => local.clear()}> clear history </button>
+<button on:click={() => async.invoke()}> Refresh</button>
+<button on:click={() => history.undo()}> undo</button>
+<button on:click={() => history.redo()}> redo</button>
+<button on:click={() => local.clear()}> clear history</button>
 
 <table>
 	<thead>
@@ -70,7 +66,7 @@
 			{#each forecasts as forecast}
 				<tr>
 					<td><input type="text" bind:value={forecast.summary} /></td>
-					<td>{forecast.date}</td>
+					<td>{forecast.date.toLocaleString()}</td>
 					<td>{forecast.temperatureC}</td>
 					<td>{forecast.temperatureF}</td>
 				</tr>

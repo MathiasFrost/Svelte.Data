@@ -1,8 +1,9 @@
-import type { ITransformer } from "$lib/types/ITransformer.js";
-import { anyTransformer } from "$lib/types/transformers.js";
+import type { Transformer } from "$lib/types/Transformer.js";
+import { jsonTransformer } from "$lib/types/transformers.js";
+import { ensureArray } from "$lib/types/index.js";
 
 /** Options */
-export interface IHistoryManagerOptions<T> {
+export interface HistoryManagerOptions<T> {
 	/** Called when manager wants to set the value we are tracking */
 	onChange: (value: T) => void;
 
@@ -10,7 +11,7 @@ export interface IHistoryManagerOptions<T> {
 	onHistoryChange: (history: string[], index: number) => void;
 
 	/** For converting value to and from its string representation */
-	transformer: ITransformer<T>;
+	transformer: Transformer<T>;
 
 	/** Limit how many changes can be stored */
 	cap: number;
@@ -18,15 +19,6 @@ export interface IHistoryManagerOptions<T> {
 
 /** Keep track of changes to a variable */
 export class HistoryManager<T> {
-	/** Keep track of changes to a variable
-	 * @param options Optional parameters */
-	public constructor(options: Partial<IHistoryManagerOptions<T>> = {}) {
-		this.cap = options.cap ?? 10;
-		this.onChange = options.onChange;
-		this.onHistoryChange = options.onHistoryChange;
-		this.transformer = options.transformer ?? anyTransformer();
-	}
-
 	/** Array of stored changes */
 	public history: string[] = [];
 
@@ -43,10 +35,19 @@ export class HistoryManager<T> {
 	public onHistoryChange?: (history: string[], index: number) => void;
 
 	/** */
-	public transformer: ITransformer<T>;
+	public transformer: Transformer<T>;
 
 	/** Set to true when we want manager to ignore next change and not add it to history */
 	public ignoreNext = false;
+
+	/** Keep track of changes to a variable
+	 * @param options Optional parameters */
+	public constructor(options: Partial<HistoryManagerOptions<T>> = {}) {
+		this.cap = options.cap ?? 10;
+		this.onChange = options.onChange;
+		this.onHistoryChange = options.onHistoryChange;
+		this.transformer = options.transformer ?? jsonTransformer();
+	}
 
 	/** Add an entry to history */
 	public addEntry(value: T): void {
@@ -85,14 +86,13 @@ export class HistoryManager<T> {
 
 	/** Serialize history data to string. Useful for storing history in something like `localStorage` */
 	public serialize(): string {
-		console.log(JSON.stringify(this.history.map((h) => this.transformer.deserialize(h))));
 		return JSON.stringify({ history: this.history.map((h) => this.transformer.deserialize(h)), index: this.index });
 	}
 
 	/** */
 	public deserialize(json: string): T | undefined {
 		const o = JSON.parse(json);
-		this.history = o.history;
+		this.history = ensureArray(o.history).map((something) => JSON.stringify(something));
 		this.index = o.index;
 
 		const string = this.history[this.index];

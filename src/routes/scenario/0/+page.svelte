@@ -5,7 +5,14 @@
 	import { onMount } from "svelte";
 
 	/** */
-	const session = new SessionStorageSyncer("test", "", stringTransformer());
+	const session = new SessionStorageSyncer(
+		"test",
+		"",
+		stringTransformer((string) => {
+			if (string.startsWith('"')) throw new Error("Invalid");
+			return string;
+		})
+	);
 
 	const testPromise = (str?: string) =>
 		new Promise<string>((resolve, reject) => {
@@ -28,6 +35,7 @@
 	let secondStr = "";
 	let secondStrPromise = Promise.resolve("");
 	$: updateSecondStr(str);
+
 	function updateSecondStr(str: string): void {
 		if (!browser) return;
 		secondStrPromise = testPromise(str);
@@ -51,5 +59,5 @@
 	<p style="color:crimson;">{e}</p>
 {/await}
 
-<button on:click={() => (str = session.pull())}> pull </button>
-<button on:click={() => session.clear()}> reset </button>
+<button on:click={() => (str = session.pull())}> pull</button>
+<button on:click={() => session.clear()}> reset</button>

@@ -1,4 +1,4 @@
-export interface IAsyncDataOptions<T> {
+export interface AsyncDataOptions<T> {
 	/** Function that returns the promise */
 	promiseFactory: () => Promise<T>;
 
@@ -66,7 +66,7 @@ export class AsyncData<T> {
 	private interval = 0;
 
 	/** */
-	public constructor(options: Partial<IAsyncDataOptions<T>> = {}) {
+	public constructor(options: Partial<AsyncDataOptions<T>> = {}) {
 		this._milliseconds = options.milliseconds ?? 0;
 		this.cooldown = options.cooldown ?? 0;
 		this.promiseFactory = options.promiseFactory;
