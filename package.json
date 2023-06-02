@@ -5,7 +5,7 @@
 	"author": "Mathias Amandus Andvik Løken",
 	"license": "MIT",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev -- Development",
 		"build": "svelte-kit sync && svelte-package",
 		"build:sandbox": "vite build",
 		"preview": "vite preview",
@@ -22,6 +22,10 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"svelte": "./dist/index.js"
+		},
+		"./env": {
+			"types": "./dist/env/index.d.ts",
+			"svelte": "./dist/env/index.js"
 		},
 		"./async": {
 			"types": "./dist/async/index.d.ts",

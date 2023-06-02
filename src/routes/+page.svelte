@@ -17,6 +17,16 @@
 		// 		forecasts.promise = TestHTTP.getForecasts();
 		// 	}, 500 * i);
 		// }
+
+		window.addEventListener(
+			"storage",
+			(e) => {
+				console.log(e);
+			},
+			false
+		);
+		window.addEventListener("focus", () => console.log("focused"));
+		window.addEventListener("blur", () => console.log("inactive"));
 	});
 </script>
 
@@ -26,6 +36,8 @@
 
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+
+<button on:click={() => window.localStorage.setItem("test", "hey")}> Test </button>
 
 <table>
 	<thead>
