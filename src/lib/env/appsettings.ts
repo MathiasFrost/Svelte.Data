@@ -17,7 +17,6 @@ export function loadAppsettings(): void {
 
 	/** Read file and return a JsonObject. If it doesn't exist return en empty JsonObject */
 	const parseJsonFile = (filename: string) => {
-		console.log(filename, fs.existsSync(filename));
 		if (fs.existsSync(filename)) return JSON.parse(fs.readFileSync(filename, "utf-8"));
 		else return {};
 	};
@@ -38,16 +37,16 @@ export function loadAppsettings(): void {
 	};
 
 	/** Try to find the value of a key */
-	const TryFind = (key: string, env: Record<string, unknown>) => (key in env ? env[key] : null);
+	const tryFind = (key: string, env: Record<string, unknown>) => (key in env ? env[key] : null);
 
 	/** Check if JsonArray array contains a JsonNode */
-	const Exists = (arr: Record<string, unknown>[], node: Record<string, unknown>) => arr.some((x) => JSON.stringify(x) === JSON.stringify(node));
+	const exists = (arr: Record<string, unknown>[], node: Record<string, unknown>) => arr.some((x) => JSON.stringify(x) === JSON.stringify(node));
 
 	/** Add array elements from a that does not exist in b */
-	function MergeArray(a: Record<string, unknown>[], b: Record<string, unknown>[]) {
+	function mergeArray(a: Record<string, unknown>[], b: Record<string, unknown>[]) {
 		for (const itemA of a) {
 			const copyA = cloneViaSerialization(itemA);
-			if (Exists(b, copyA)) continue;
+			if (exists(b, copyA)) continue;
 			b.push(copyA);
 		}
 	}
@@ -56,7 +55,7 @@ export function loadAppsettings(): void {
 	function merge(a: Record<string, unknown>, b: Record<string, unknown>): void {
 		for (const keyA of Object.keys(a)) {
 			const propA = a[keyA];
-			const propB = TryFind(keyA, b);
+			const propB = tryFind(keyA, b);
 			switch (jsonType(propA)) {
 				case JsonType.value:
 					if (propB !== null) b[keyA] = cloneViaSerialization(propA);
@@ -81,7 +80,7 @@ export function loadAppsettings(): void {
 						case JsonType.value:
 							break;
 						case JsonType.object:
-							MergeArray(propA as Record<string, unknown>[], propB as Record<string, unknown>[]);
+							mergeArray(propA as Record<string, unknown>[], propB as Record<string, unknown>[]);
 							break;
 						case JsonType.array:
 							break;
@@ -99,7 +98,6 @@ export function loadAppsettings(): void {
 	const svelteKitEnv =
 		process.env["SVELTEKIT_ENVIRONMENT"] ?? (process.argv[process.argv.length - 2] === "--" ? process.argv[process.argv.length - 1] : null);
 
-	console.log(svelteKitEnv);
 	const rootJson = parseJsonFile("appsettings.json");
 	const envJson = typeof svelteKitEnv === "string" ? parseJsonFile(`appsettings.${svelteKitEnv}.json`) : {};
 	const localRootJson = parseJsonFile("appsettings.local.json");
@@ -109,5 +107,27 @@ export function loadAppsettings(): void {
 	merge(rootJson, localRootJson);
 	merge(rootJson, localEnvJson);
 
-	console.log(rootJson);
+	function flatten(parent: string, o: Record<string, unknown>): void {
+		for (const key of Object.keys(o)) {
+			switch (jsonType(o[key])) {
+				case JsonType.value:
+					console.log(`${parent}__${key}: ${o[key]}`);
+					process.env[`${parent}__${key}`] = `${o[key]}`;
+					break;
+				case JsonType.object:
+					flatten(key, o[key] as Record<string, unknown>);
+					break;
+				case JsonType.array:
+					for (let i = 0; i < (o[key] as Record<string, unknown>[]).length; i++) {
+						const el = (o[key] as Record<string, unknown>[])[i];
+						flatten(`${key}__0`, el);
+					}
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
+	flatten("", rootJson);
 }
