@@ -44,10 +44,6 @@ export class HTTPClient {
 	/** @see Postprocess */
 	private readonly postprocess?: Postprocess;
 
-	/** Default RequestInit for use against backend for this frontend.
-	 * We use manual redirect to detect when auth challenge results in redirect (needs user interaction) */
-	public static backendInit: () => RequestInit = () => ({ credentials: "include", redirect: "manual" });
-
 	/** TODOC */
 	public constructor(baseAddress = "", defaultRequestInit?: RequestInit, preprocess?: Preprocess, postprocess?: Postprocess) {
 		try {

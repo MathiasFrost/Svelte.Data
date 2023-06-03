@@ -1,6 +1,5 @@
 import { error, json, text } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
-import { get } from "svelte/store";
 import { unauthorized } from "$sandbox/user/unauthorized.js";
 
 const promise = () =>
@@ -9,9 +8,10 @@ const promise = () =>
 	});
 
 /** TODOC */
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ request }) => {
 	await promise();
-	if (get(unauthorized)) throw error(401);
+	const parts = request.headers.get("Authorization")?.split(" ");
+	if (!parts?.[1].startsWith("ey")) throw error(401);
 	return json({ name: "Me" });
 };
 

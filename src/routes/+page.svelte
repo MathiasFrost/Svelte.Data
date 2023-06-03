@@ -2,32 +2,26 @@
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
+	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
-	$: console.log(forecasts);
 
 	onMount(async () => {
 		forecasts = TestHTTP.getForecasts();
-		// window.setTimeout(() => (forecasts.error = new Error("a")), 1000);
-
-		// for (let i = 1; i < 6; i++) {
-		// 	window.setTimeout(() => {
-		// 		forecastsPromise.promise = TestHTTP.getForecasts();
-		// 		forecasts.promise = TestHTTP.getForecasts();
-		// 	}, 500 * i);
-		// }
-
-		window.addEventListener(
-			"storage",
-			(e) => {
-				console.log(e);
-			},
-			false
-		);
-		window.addEventListener("focus", () => console.log("focused"));
-		window.addEventListener("blur", () => console.log("inactive"));
 	});
+
+	let url: string | null = null;
+
+	async function getProfile(): Promise<void> {
+		const json = JSON.parse(window.localStorage.getItem("OIDC_MS.Graph") ?? "");
+		const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+			headers: {
+				Authorization: "Bearer " + json["access_token"]
+			}
+		});
+		url = URL.createObjectURL(await res.blob());
+	}
 </script>
 
 <h1>Svelte.Data</h1>
@@ -37,7 +31,15 @@
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-<button on:click={() => window.localStorage.setItem("test", "hey")}> Test </button>
+<button on:click={() => getProfile()}> Get profile pic </button>
+
+{#if $signInPrompt}
+	<button on:click={() => oidcManager.signIn($signInPrompt)}>Sing in to access {$signInPrompt}</button>
+{/if}
+
+{#if url}
+	<img src={url} alt="xd" />
+{/if}
 
 <table>
 	<thead>

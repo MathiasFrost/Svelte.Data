@@ -196,8 +196,14 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await this._fetch(this.requestUri, this.requestInit);
-		if (typeof this.postprocess === "function") await this.postprocess(response, false);
+		let retryCount = -1;
+		const retry = async () => {
+			retryCount++;
+			return await this._fetch(this.requestUri, this.requestInit);
+		};
+		const response = await retry();
+
+		if (typeof this.postprocess === "function") await this.postprocess(response, false, retry, retryCount);
 		if (this.ensureSuccess) response.ensureSuccess();
 
 		return response;
@@ -332,10 +338,15 @@ export class HTTPRequestBuilder {
 		this.requestInit.signal = signal;
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
-		const response = await this._fetch(this.requestUri, this.requestInit);
+		let retryCount = -1;
+		const retry = async () => {
+			retryCount++;
+			return await this._fetch(this.requestUri, this.requestInit);
+		};
+		const response = await retry();
 
 		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
-		if (typeof this.postprocess === "function") await this.postprocess(response, isNull);
+		if (typeof this.postprocess === "function") await this.postprocess(response, isNull, retry, retryCount);
 		if (!isNull && this.ensureSuccess) response.ensureSuccess();
 
 		return [response, isNull];
