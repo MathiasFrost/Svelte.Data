@@ -1,4 +1,4 @@
-import { json } from "@sveltejs/kit";
+import { error, json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
 
 /** */
@@ -21,8 +21,15 @@ const promise = () =>
 		setTimeout(() => resolve(), 1_000);
 	});
 
+let retries = 3;
+
 /** */
 export const GET: RequestHandler = async () => {
+	if (retries < 3) {
+		retries++;
+		throw error(500, { message: "Nope", errorId: "123" });
+	}
+
 	await promise();
 	return json(
 		Array.from({ length: 10 }, (_, i) => {
