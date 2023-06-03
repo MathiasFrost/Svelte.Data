@@ -113,7 +113,6 @@ export function loadAppsettings(): void {
 		for (const key of Object.keys(o)) {
 			switch (jsonType(o[key])) {
 				case "value":
-					console.log(`${parent}${key}: ${o[key]}`);
 					process.env[`${parent}${key}`] = `${o[key]}`;
 					break;
 				case "object":
