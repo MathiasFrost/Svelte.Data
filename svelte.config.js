@@ -1,7 +1,7 @@
 import adapter from "@sveltejs/adapter-auto";
 import preprocess from "svelte-preprocess";
 // import { loadAppsettings } from "./dist/env/appsettings.js";
-
+//
 // loadAppsettings();
 
 /** @type {import('@sveltejs/kit').Config} */
