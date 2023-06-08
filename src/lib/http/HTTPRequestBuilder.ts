@@ -192,9 +192,9 @@ export class HTTPRequestBuilder {
 		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
 
 		const response = await this._fetch(this.requestUri, this.requestInit);
+		if (typeof this.postprocess === "function") await this.postprocess(response, false);
 		if (this.ensureSuccess) response.ensureSuccess();
 
-		if (typeof this.postprocess === "function") await this.postprocess(response);
 		return response;
 	}
 
@@ -317,9 +317,9 @@ export class HTTPRequestBuilder {
 		const response = await this._fetch(this.requestUri, this.requestInit);
 
 		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
+		if (typeof this.postprocess === "function") await this.postprocess(response, isNull);
 		if (!isNull && this.ensureSuccess) response.ensureSuccess();
 
-		if (typeof this.postprocess === "function") await this.postprocess(response);
 		return [response, isNull];
 	}
 }
