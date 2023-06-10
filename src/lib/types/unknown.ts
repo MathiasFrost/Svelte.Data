@@ -1,3 +1,5 @@
+import { DateOnly } from "$lib/date/DateOnly.js";
+
 /** Make sure that something is an array (not null) */
 export function ensureArray(something: unknown): unknown[] {
 	if (Array.isArray(something)) return something;
@@ -70,10 +72,16 @@ export function ensureBooleanNullable(something: unknown): boolean | null {
 	throw new Error(`Expected boolean | null, found ${typeof something}`);
 }
 
+/** */
+export function stripQuoutes(string: string): string {
+	if (string.startsWith('"') && string.endsWith('"')) return string.substring(1, string.length - 1);
+	return string;
+}
+
 /** Make sure that something is a valid Date parsable string (not null) */
 export function ensureDateString(something: unknown): Date {
 	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(something);
+	const date = new Date(stripQuoutes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
 	return date;
 }
@@ -82,8 +90,25 @@ export function ensureDateString(something: unknown): Date {
 export function ensureDateStringNullable(something: unknown): Date | null {
 	if (something === null) return something;
 	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(something);
+	const date = new Date(stripQuoutes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
+	return date;
+}
+
+/** Make sure that something is a valid DateOnly parsable string (not null) */
+export function ensureDateOnlyString(something: unknown): DateOnly {
+	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
+	const date = new DateOnly(stripQuoutes(something));
+	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
+	return date;
+}
+
+/** Make sure that something is a valid DateOnly parsable string (may be null) */
+export function ensureDateOnlyStringNullable(something: unknown): DateOnly | null {
+	if (something === null) return something;
+	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
+	const date = new DateOnly(stripQuoutes(something));
+	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
 	return date;
 }
 

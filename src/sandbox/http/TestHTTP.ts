@@ -3,12 +3,12 @@ import { HTTPClient } from "$lib/http/HTTPClient.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 import { indefinitePromise } from "$lib/async/index.js";
 import { ensureObject, ensureString } from "$lib/types/index.js";
+import type { DateOnly } from "$lib/date/DateOnly.js";
 
 /** @static */
 export class TestHTTP {
 	/** */
 	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit(), void 0, async (response, nullable) => {
-		console.log(response.status);
 		if (!nullable && response.status === 401) {
 			if (typeof window !== "undefined") {
 				window.location.reload();
@@ -38,5 +38,9 @@ export class TestHTTP {
 
 	public static async postUseR(): Promise<void> {
 		await this.client.post("user").fetch();
+	}
+
+	public static async getDateOnly(dateOnly: DateOnly): Promise<string> {
+		return await this.client.get("http://localhost:5043/WeatherForecast/DateOnly").withQuery({ dateOnly: dateOnly.toJSON() }).fromString();
 	}
 }

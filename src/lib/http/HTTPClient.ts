@@ -33,7 +33,7 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
 export class HTTPClient {
 	/** */
-	private readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | null = null;
 
 	/** @see RequestInit */
 	private readonly defaultRequestInit: RequestInit;
