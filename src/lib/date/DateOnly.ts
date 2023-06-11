@@ -2,10 +2,10 @@
  * @see DateOnly.parse */
 export enum DateKind {
 	/** Date is assumed to denote UTC */
-	universal,
+	utc,
 
 	/** Date should be adjusted for current culture's time zone offset */
-	currentCulture
+	local
 }
 
 /** An extension of JS `Date` with only the year/month/date parts following the ISO standard */
@@ -28,7 +28,7 @@ export class DateOnly extends Date {
 			arg1 = arg1 ?? 0;
 			date = date ?? 1;
 		} else if (typeof arg0 === "string") {
-			const kind: DateKind = arg1 ?? DateKind.universal;
+			const kind: DateKind = arg1 ?? DateKind.utc;
 
 			const parts = arg0.split("-");
 			year = Number(parts[0]);
@@ -36,12 +36,12 @@ export class DateOnly extends Date {
 			date = Number(parts[2]);
 
 			switch (kind) {
-				case DateKind.currentCulture:
+				case DateKind.local:
 					// 2023-06-13 in GMT+3 is 3 hours ahead of an ISO 2023-06-13
 					// Add the offset when constructing from a culture's perspective
 					// [hoursOffset, minutesOffset] = DateOnly.currentOffset();
 					break;
-				case DateKind.universal:
+				case DateKind.utc:
 					{
 						// 2023-06-13 in GMT+2 is 2 hours ahead of a UTC 2023-06-13
 						// Add the hours that was lost when deserializing (when subtracting the offset and truncating the time part)
@@ -106,14 +106,17 @@ export class DateOnly extends Date {
 
 	/** @inheritdoc */
 	public override toISOString(): string {
+		return super.toISOString()?.substring(0, 10) ?? null;
+	}
+
+	public toLocaleISOString(): string {
 		const [hoursOffset, minutesOffset] = DateOnly.currentOffset();
 
 		// 2023-06-13 in GMT+2 is 2 hours ahead of a UTC 2023-06-13
-		// Subtract the offset when serializing to convert to UTC
-		// SOFTTODO: Round to nearest day to give more intuative values for the culture's perspective
+		// toISOString will convert to UTC; Add the offset when serializing to convert to local
 		const copy = new Date(this);
-		copy.setHours(copy.getHours() - hoursOffset);
-		copy.setMinutes(copy.getMinutes() - minutesOffset);
+		copy.setHours(copy.getHours() + hoursOffset);
+		copy.setMinutes(copy.getMinutes() + minutesOffset);
 
 		return copy.toISOString()?.substring(0, 10) ?? null;
 	}

@@ -6,14 +6,28 @@
 
 	let today = new DateOnly();
 
-	let date: string = new DateOnly().toISOString();
+	/** The date from the perspective of the current culture */
+	let date: string = new DateOnly().toLocaleISOString();
 
-	let roundTripped: string = new DateOnly(date).toISOString();
+	/** The date after serialization */
+	let roundTripped: string = new DateOnly().toISOString();
+
+	let http = false;
 
 	async function roundTrip(str: string): Promise<void> {
 		date = str;
-		const trip = await TestHTTP.getDateOnly(new DateOnly(str, DateKind.currentCulture));
-		roundTripped = stripQuoutes(trip);
+		if (http) {
+			const trip = await TestHTTP.getDateOnly(new DateOnly(str, DateKind.local));
+			roundTripped = stripQuoutes(trip);
+		} else {
+			roundTripped = new DateOnly(str, DateKind.local).toISOString();
+		}
+	}
+
+	function addDays(date: DateOnly, days: number): DateOnly {
+		const copy = new DateOnly(date);
+		copy.setDate(copy.getDate() + days);
+		return copy;
 	}
 
 	let timeSpan = new TimeSpan(0, 0, 1, 1, 1, 1);
@@ -21,26 +35,33 @@
 
 <section>
 	<h1>Date</h1>
+	<input type="checkbox" bind:checked={http} />
 	<input type="date" on:change={(e) => roundTrip(e.currentTarget.value)} />
 	<pre style="font-family: 'JetBrains Mono', monospace">
 Offset:                     {DateOnly.currentOffset()}
+Now:                        {new Date()}
+DateOnly now:               {new DateOnly()}
 Normal Date:                {new Date(date)}
 
 Raw:                        {date}
-Date:                       {new DateOnly(date, DateKind.currentCulture)}
-JS Date:                    {new DateOnly(date, DateKind.currentCulture).toDate()}
-Day:                        {new DateOnly(date, DateKind.currentCulture).getDate()}
-JSON:                       {new DateOnly(date, DateKind.currentCulture).toJSON()}
+Date:                       {new DateOnly(date, DateKind.local)}
+JS Date:                    {new DateOnly(date, DateKind.local).toDate()}
+Day:                        {new DateOnly(date, DateKind.local).getDate()}
+JSON:                       {new DateOnly(date, DateKind.local).toJSON()}
+Value:                      {new DateOnly(date, DateKind.local).getTime()}
 
 Round-trip Raw:             {roundTripped}
 Round-trip Date:            {new DateOnly(roundTripped)}
 Round-trip JS Date:         {new DateOnly(roundTripped).toDate()}
 Round-trip Day:             {new DateOnly(roundTripped).getDate()}
 Round-trip JSON:            {new DateOnly(roundTripped).toJSON()}
-<!-- Round-trip JS Date + 1 day: {roundTripped.addDays(1).jsDate} -->
-<!-- Round-trip JS Date + 1 day: {roundTripped.addDays(1).date} -->
-<!-- Round-trip === date:        {roundTripped.getTime() === new DateOnly(date).getTime()} -->
-{new DateOnly(date)} &lt; {today}: {new DateOnly(date) < today}
+Value:                      {new DateOnly(roundTripped).getTime()}
+
+Round-trip JS Date + 1:     {addDays(new DateOnly(roundTripped), 1).toDate()}
+Round-trip JS Date + 1 day: {addDays(new DateOnly(roundTripped), 1).getDate()}
+Round-trip === date:        {new DateOnly(roundTripped).getTime() === new DateOnly(date, DateKind.local).getTime()}
+
+{new DateOnly(date, DateKind.local)} &lt;= {today}: {new DateOnly(date, DateKind.local) <= today}
 	</pre>
 
 	<h1>TimeSpan</h1>
