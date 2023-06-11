@@ -1,4 +1,5 @@
-import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateString, ensureNumberString } from "$lib/types/unknown.js";
+import type { DateOnly } from "$lib/date/DateOnly.js";
+import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateOnlyString, ensureDateString, ensureNumberString } from "$lib/types/unknown.js";
 import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
@@ -75,15 +76,18 @@ export class HTTPRequestBuilder {
 	/** */
 	private get requestUri(): string {
 		let requestUri = "";
-		if (this.baseAddress === null) {
-			if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
-			else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
-		} else if (this.baseAddress.href.endsWith("/")) {
-			if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
-			else requestUri = this.baseAddress.href + this._requestUri;
-		} else {
-			if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
-			else requestUri = this.baseAddress.host + "/" + this._requestUri;
+		if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
+		else {
+			if (this.baseAddress === null) {
+				if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
+				else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
+			} else if (this.baseAddress.href.endsWith("/")) {
+				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
+				else requestUri = this.baseAddress.href + this._requestUri;
+			} else {
+				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
+				else requestUri = this.baseAddress.host + "/" + this._requestUri;
+			}
 		}
 
 		if (this.params !== null) {
@@ -307,6 +311,19 @@ export class HTTPRequestBuilder {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
 		return ensureDateString(content);
+	}
+
+	/** The request body deserialized as DateOnly */
+	public async fromDateOnlyString(signal?: AbortSignal): Promise<DateOnly> {
+		const content = await this.fromString(signal);
+		return ensureDateOnlyString(content);
+	}
+
+	/** The request body deserialized as DateOnly or null if 204 */
+	public async fromDateOnlyStringNullable(signal?: AbortSignal): Promise<DateOnly | null> {
+		const content = await this.fromStringNullable(signal);
+		if (!content) return null;
+		return ensureDateOnlyString(content);
 	}
 
 	/** @returns The raw request result */
