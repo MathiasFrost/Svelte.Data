@@ -8,7 +8,7 @@ export enum DateKind {
 	local
 }
 
-/** An extension of JS `Date` with only the year/month/date parts following the ISO standard */
+/** An extension of JS `Date` with only the year/month/date and still following the ISO standard */
 export class DateOnly extends Date {
 	/** New `DateOnly` with either an ISO string, year/month/date values, JS `Date` or nothing for today */
 	public constructor();
@@ -37,14 +37,13 @@ export class DateOnly extends Date {
 
 			switch (kind) {
 				case DateKind.local:
-					// 2023-06-13 in GMT+3 is 3 hours ahead of an ISO 2023-06-13
-					// Add the offset when constructing from a culture's perspective
-					// [hoursOffset, minutesOffset] = DateOnly.currentOffset();
+					// Constructors with individual values will be converted to local at ctor
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date
 					break;
 				case DateKind.utc:
 					{
 						// 2023-06-13 in GMT+2 is 2 hours ahead of a UTC 2023-06-13
-						// Add the hours that was lost when deserializing (when subtracting the offset and truncating the time part)
+						// Add the hours that would have been lost when deserializing (when subtracting the offset and truncating the time part)
 						const [_hoursOffset, _minutesOffset] = DateOnly.currentOffset();
 
 						const a = new Date(year, arg1, date, 0, 0, 0);
@@ -52,19 +51,15 @@ export class DateOnly extends Date {
 						a.setMinutes(a.getMinutes() - _minutesOffset);
 						a.setHours(0);
 						a.setMinutes(0);
-						console.log(a);
 
 						const b = new Date(year, arg1, date, 0, 0, 0);
-						console.log(b);
 
 						const hoursTruncated = (b.getTime() - a.getTime()) / 1_000 / 60;
 						const hours = Math.round(hoursTruncated / 60);
 						const minutes = Math.round(hoursTruncated % 60);
-						console.log("Diff: " + hoursTruncated + " " + hours + ":" + minutes);
 
 						hoursOffset = hours;
 						minutesOffset = minutes;
-						console.log("Res: " + new Date(year, arg1, date, hoursOffset, minutesOffset));
 					}
 					break;
 				default:

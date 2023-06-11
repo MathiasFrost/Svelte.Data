@@ -61,7 +61,10 @@ Round-trip JS Date + 1:     {addDays(new DateOnly(roundTripped), 1).toDate()}
 Round-trip JS Date + 1 day: {addDays(new DateOnly(roundTripped), 1).getDate()}
 Round-trip === date:        {new DateOnly(roundTripped).getTime() === new DateOnly(date, DateKind.local).getTime()}
 
-{new DateOnly(date, DateKind.local)} &lt;= {today}: {new DateOnly(date, DateKind.local) <= today}
+date &lt;= today:              {new DateOnly(date, DateKind.local) <= today}
+
+new DateOnly("2023-06-11"): {new DateOnly("2023-06-11", DateKind.local)}
+new DateOnly(2023, 5, 11):  {new DateOnly(2023, 5, 11)}
 	</pre>
 
 	<h1>TimeSpan</h1>
