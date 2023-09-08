@@ -1,7 +1,7 @@
 import type { Transformer } from "$lib/types/Transformer.js";
-import { ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
+import { ensureBoolean, ensureDateString, ensureNumber, ensureString } from "$lib/types/unknown.js";
 
-/** */
+/** TODOC */
 export function jsonTransformer<T>(deserializer?: (string: string) => T): Transformer<T> {
 	return {
 		deserialize(string) {
@@ -13,11 +13,11 @@ export function jsonTransformer<T>(deserializer?: (string: string) => T): Transf
 	};
 }
 
-/** */
-export function stringTransformer(deserializer?: (string: string) => string): Transformer<string> {
+/** TODOC */
+export function stringTransformer<T extends string = string>(deserializer?: (string: string) => T): Transformer<T> {
 	return {
 		deserialize(string) {
-			return typeof deserializer !== "undefined" ? deserializer(string) : string;
+			return typeof deserializer !== "undefined" ? deserializer(string) : ensureString(string);
 		},
 		serialize(something) {
 			return something;
@@ -25,8 +25,8 @@ export function stringTransformer(deserializer?: (string: string) => string): Tr
 	};
 }
 
-/** */
-export function numberTransformer(deserializer?: (string: string) => number): Transformer<number> {
+/** TODOC */
+export function numberTransformer<T extends number = number>(deserializer?: (string: string) => T): Transformer<T> {
 	return {
 		deserialize(string) {
 			return typeof deserializer !== "undefined" ? deserializer(string) : ensureNumber(string);
@@ -37,7 +37,7 @@ export function numberTransformer(deserializer?: (string: string) => number): Tr
 	};
 }
 
-/** */
+/** TODOC */
 export function booleanTransformer(deserializer?: (string: string) => boolean): Transformer<boolean> {
 	return {
 		deserialize(string) {
@@ -49,7 +49,7 @@ export function booleanTransformer(deserializer?: (string: string) => boolean): 
 	};
 }
 
-/** */
+/** TODOC */
 export function dateTransformer(deserializer?: (string: string) => Date): Transformer<Date> {
 	return {
 		deserialize(string) {

@@ -1,6 +1,6 @@
 import fs from "fs";
 
-/** */
+/** TODOC */
 type JsonType = "null" | "value" | "object" | "array";
 
 /** Find out which prop type the JsonNode is */

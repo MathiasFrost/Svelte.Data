@@ -7,10 +7,10 @@ export abstract class Syncer<T> {
 	public transformer: Transformer<T>;
 	/** Used when we are inevitably unable to retrieve value from replication source */
 	public fallback: T;
-	/** */
+	/** TODOC */
 	protected key: string;
 
-	/** */
+	/** TODOC */
 	protected constructor(key: string, fallback: T, transformer: Transformer<T> = jsonTransformer<T>()) {
 		this.key = key;
 		this.fallback = fallback;
@@ -28,10 +28,10 @@ export abstract class Syncer<T> {
 	/** Store value in replication source */
 	public abstract push(value: T): void;
 
-	/** */
+	/** TODOC */
 	public abstract clear(): void;
 
-	/** */
+	/** TODOC */
 	protected deserialize(string: string): T {
 		try {
 			return this.transformer.deserialize(string);

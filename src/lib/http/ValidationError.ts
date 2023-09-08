@@ -12,7 +12,7 @@ export class ValidationError extends Error {
 		return "An unspecified validation error occurred.";
 	}
 
-	/** */
+	/** TODOC */
 	public constructor(errors: { [k: string]: string[] }) {
 		super("One or more validation errors occurred.");
 		this.name = "ValidationError";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DateKind, DateOnly } from "$lib/date/DateOnly.js";
 	import { TimeSpan } from "$lib/date/TimeSpan.js";
-	import { stripQuoutes } from "$lib/types/unknown.js";
+	import { stripQuotes } from "$lib/types/unknown.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 
 	let today = new DateOnly();
@@ -18,7 +18,7 @@
 		date = str;
 		if (http) {
 			const trip = await TestHTTP.getDateOnly(new DateOnly(str, DateKind.local));
-			roundTripped = stripQuoutes(trip);
+			roundTripped = stripQuotes(trip);
 		} else {
 			roundTripped = new DateOnly(str, DateKind.local).toISOString();
 		}

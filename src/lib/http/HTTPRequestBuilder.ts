@@ -4,24 +4,24 @@ import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 
-/** */
+/** TODOC */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-/** */
+/** TODOC */
 export type Deserialize<TResult> = (something?: unknown) => TResult;
 
-/** */
+/** TODOC */
 export class HTTPRequestBuilder {
-	/** */
+	/** TODOC */
 	private readonly baseAddress: URL | null = null;
 
-	/** */
+	/** TODOC */
 	private readonly _requestUri: string;
 
-	/** */
+	/** TODOC */
 	private readonly ensureSuccess: boolean;
 
-	/** */
+	/** TODOC */
 	private readonly requestInit: RequestInit;
 
 	/** @see Preprocess */
@@ -33,19 +33,19 @@ export class HTTPRequestBuilder {
 	/** @see XMLHttpRequest */
 	private xmlHttpRequest?: XMLHttpRequest;
 
-	/** */
+	/** TODOC */
 	private query: URLSearchParams | null = null;
 
-	/** */
+	/** TODOC */
 	private params: unknown[] | null = null;
 
-	/** */
+	/** TODOC */
 	private optional: unknown | null = null;
 
 	/** Status codes to ignore from ensuring success when calling `from{Type}Nullable` */
 	private nullStatusCodes: number[] | null = null;
 
-	/** */
+	/** TODOC */
 	constructor(
 		baseAddress: URL | null,
 		httpMethod: HTTPMethod,
@@ -73,7 +73,7 @@ export class HTTPRequestBuilder {
 		return this.__fetch ?? window.fetch;
 	}
 
-	/** */
+	/** TODOC */
 	private get requestUri(): string {
 		let requestUri = "";
 		if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;

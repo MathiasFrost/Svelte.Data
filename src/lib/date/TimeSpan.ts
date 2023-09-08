@@ -1,24 +1,24 @@
 /** Class holding values for ISO durations */
 export class TimeSpan {
-	/** */
+	/** TODOC */
 	public readonly days: number;
 
-	/** */
+	/** TODOC */
 	public readonly hours: number;
 
-	/** */
+	/** TODOC */
 	public readonly minutes: number;
 
-	/** */
+	/** TODOC */
 	public readonly seconds: number;
 
-	/** */
+	/** TODOC */
 	public readonly milliseconds: number;
 
-	/** */
+	/** TODOC */
 	public readonly microseconds: number;
 
-	/** */
+	/** TODOC */
 	public constructor();
 	public constructor(days: number, hours: number, minutes: number, seconds: number, milliseconds: number, microseconds: number);
 	public constructor(days?: number, hours?: number, minutes?: number, seconds?: number, milliseconds?: number, microseconds?: number) {

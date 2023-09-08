@@ -14,9 +14,9 @@
 		"prepublishOnly": "pnpm package",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "prettier --plugin-search-dir . --check . && eslint .",
+		"lint": "prettier --check . && eslint .",
 		"inspect": "pnpm check && pnpm lint",
-		"format": "prettier --plugin-search-dir . --write ."
+		"format": "prettier --write ."
 	},
 	"exports": {
 		".": {
@@ -34,10 +34,6 @@
 		"./async": {
 			"types": "./dist/async/index.d.ts",
 			"svelte": "./dist/async/index.js"
-		},
-		"./async/AsyncDataComponent.svelte": {
-			"types": "./dist/async/AsyncDataComponent.svelte.d.ts",
-			"svelte": "./dist/async/AsyncDataComponent.svelte"
 		},
 		"./history": {
 			"types": "./dist/history/index.d.ts",
@@ -66,28 +62,28 @@
 		"!dist/**/*.spec.*"
 	],
 	"peerDependencies": {
-		"svelte": "^3.58.0"
+		"svelte": "^4.2.0"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.35.0",
+		"@playwright/test": "^1.37.1",
 		"@sveltejs/adapter-auto": "^2.1.0",
-		"@sveltejs/kit": "^1.20.2",
-		"@sveltejs/package": "^2.0.2",
-		"@typescript-eslint/eslint-plugin": "^5.59.9",
-		"@typescript-eslint/parser": "^5.59.9",
-		"eslint": "^8.42.0",
-		"eslint-config-prettier": "^8.8.0",
-		"eslint-plugin-svelte": "^2.30.0",
+		"@sveltejs/kit": "^1.24.1",
+		"@sveltejs/package": "^2.2.2",
+		"@typescript-eslint/eslint-plugin": "^6.6.0",
+		"@typescript-eslint/parser": "^6.6.0",
+		"eslint": "^8.48.0",
+		"eslint-config-prettier": "^9.0.0",
+		"eslint-plugin-svelte": "^2.33.0",
 		"eslint-plugin-svelte3": "^4.0.0",
-		"prettier": "^2.8.8",
-		"prettier-plugin-svelte": "^2.10.1",
-		"publint": "^0.1.12",
-		"svelte": "^3.59.1",
-		"svelte-check": "^3.4.3",
+		"prettier": "^3.0.3",
+		"prettier-plugin-svelte": "^3.0.3",
+		"publint": "^0.2.2",
+		"svelte": "^4.2.0",
+		"svelte-check": "^3.5.1",
 		"svelte-preprocess": "^5.0.4",
-		"tslib": "^2.5.3",
-		"typescript": "^5.1.3",
-		"vite": "^4.3.9"
+		"tslib": "^2.6.2",
+		"typescript": "5.1.6",
+		"vite": "^4.4.9"
 	},
 	"type": "module"
 }

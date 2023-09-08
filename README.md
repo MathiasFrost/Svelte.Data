@@ -99,7 +99,7 @@ import { WeatherForecast } from "$lib/models/WeatherForecast.js";
 
 /** @static */
 export class TestHTTP {
-	/** */
+	/** TODOC */
 	private static httpClient = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
 
 	/** @param fetch This is only needed for SSR */

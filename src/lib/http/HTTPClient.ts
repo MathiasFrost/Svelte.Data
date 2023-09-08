@@ -32,7 +32,7 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
 export class HTTPClient {
-	/** */
+	/** TODOC */
 	public readonly baseAddress: URL | null = null;
 
 	/** @see RequestInit */
@@ -48,7 +48,7 @@ export class HTTPClient {
 	 * We use manual redirect to detect when auth challenge results in redirect (needs user interaction) */
 	public static backendInit: () => RequestInit = () => ({ credentials: "include", redirect: "manual" });
 
-	/** */
+	/** TODOC */
 	public constructor(baseAddress = "", defaultRequestInit?: RequestInit, preprocess?: Preprocess, postprocess?: Postprocess) {
 		try {
 			this.baseAddress = new URL(baseAddress);
@@ -60,27 +60,27 @@ export class HTTPClient {
 		this.postprocess = postprocess;
 	}
 
-	/** */
+	/** TODOC */
 	public get(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
 		return new HTTPRequestBuilder(this.baseAddress, "GET", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
-	/** */
+	/** TODOC */
 	public post(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
 		return new HTTPRequestBuilder(this.baseAddress, "POST", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
-	/** */
+	/** TODOC */
 	public put(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
 		return new HTTPRequestBuilder(this.baseAddress, "PUT", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
-	/** */
+	/** TODOC */
 	public patch(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
 		return new HTTPRequestBuilder(this.baseAddress, "PATCH", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}
 
-	/** */
+	/** TODOC */
 	public delete(requestUri: string, ensureSuccess = true): HTTPRequestBuilder {
 		return new HTTPRequestBuilder(this.baseAddress, "DELETE", requestUri, ensureSuccess, this.defaultRequestInit, this.preprocess, this.postprocess);
 	}

@@ -8,7 +8,7 @@ const promise = () =>
 		setTimeout(() => resolve(), 1_000);
 	});
 
-/** */
+/** TODOC */
 export const GET: RequestHandler = async () => {
 	await promise();
 	if (get(unauthorized)) throw error(401);
