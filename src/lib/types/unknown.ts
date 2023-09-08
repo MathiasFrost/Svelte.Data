@@ -26,29 +26,29 @@ export function ensureObjectNullable(something: unknown): Record<string, unknown
 
 /** Make sure that something is a string (not null)
  * @remarks T does not enforce that the string value is not out of range */
-export function ensureString<T extends string = string>(something: unknown): T {
-	if (typeof something === "string") return something as T;
+export function ensureString(something: unknown): string {
+	if (typeof something === "string") return something;
 	throw new Error(`Expected string, found ${typeof something}`);
 }
 
 /** Make sure that something is a string (may be null)
  * @remarks T does not enforce that the string value is not out of range */
-export function ensureStringNullable<T extends string = string>(something: unknown): T | null {
-	if (something === null || typeof something === "string") return something as T;
+export function ensureStringNullable(something: unknown): string | null {
+	if (something === null || typeof something === "string") return something;
 	throw new Error(`Expected string | null, found ${typeof something}`);
 }
 
 /** Make sure that something is a number (not null)
  * @remarks T does not enforce that the number value is not out of range */
-export function ensureNumber<T extends number = number>(something: unknown): T {
-	if (typeof something === "number") return something as T;
+export function ensureNumber(something: unknown): number {
+	if (typeof something === "number") return something;
 	throw new Error(`Expected number, found ${typeof something}`);
 }
 
 /** Make sure that something is a number (may be null)
  * @remarks T does not enforce that the number value is not out of range */
-export function ensureNumberNullable<T extends number = number>(something: unknown): T | null {
-	if (something === null || typeof something === "number") return something as T;
+export function ensureNumberNullable(something: unknown): number | null {
+	if (something === null || typeof something === "number") return something;
 	throw new Error(`Expected number | null, found ${typeof something}`);
 }
 

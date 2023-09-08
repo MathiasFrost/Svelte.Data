@@ -14,7 +14,7 @@ export function jsonTransformer<T>(deserializer?: (string: string) => T): Transf
 }
 
 /** TODOC */
-export function stringTransformer<T extends string = string>(deserializer?: (string: string) => T): Transformer<T> {
+export function stringTransformer(deserializer?: (string: string) => string): Transformer<string> {
 	return {
 		deserialize(string) {
 			return typeof deserializer !== "undefined" ? deserializer(string) : ensureString(string);
@@ -26,7 +26,7 @@ export function stringTransformer<T extends string = string>(deserializer?: (str
 }
 
 /** TODOC */
-export function numberTransformer<T extends number = number>(deserializer?: (string: string) => T): Transformer<T> {
+export function numberTransformer(deserializer?: (string: string) => number): Transformer<number> {
 	return {
 		deserialize(string) {
 			return typeof deserializer !== "undefined" ? deserializer(string) : ensureNumber(string);

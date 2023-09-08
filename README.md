@@ -10,14 +10,6 @@ Your tsconfig.json [must be set](https://kit.svelte.dev/docs/packaging#typescrip
 
 ## Components
 
-### AsyncData
-
-Handles automatic and on-demand re-invocation of promises
-
-### HistoryManager
-
-Manages change history with undo and redo
-
 ### Syncer
 
 Handle pulling and pushing a value to and from a replication source
@@ -32,10 +24,7 @@ Handle pulling and pushing a value to and from a replication source
 
 Examples on how you can employ these components in different scenarios:
 
-1. [`MaybePromise` dependent on a value synced to sessionStorage](./src/routes/scenario/0/%2Bpage.svelte)
-2. [`MaybePromise` dependent on `MaybePromise` that automatically re-invokes](./src/routes/scenario/1/%2Bpage.svelte)
-3. [String synced to cookie writable](./src/routes/scenario/2/%2Bpage.svelte)
-4. [Server loaded data with refresh and history](./src/routes/scenario/3/%2Bpage.svelte)
+TODO
 
 ## Recommendations for handling remote data
 

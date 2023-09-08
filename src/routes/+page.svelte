@@ -2,17 +2,11 @@
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
-	import { ensureDictionary, ensureNumber, ensureString } from "$lib/types/unknown.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
 	$: console.log(forecasts);
-	type TestType = "something" | "haha";
-	const test = { key1: "test" };
-	enum TestEnum {
-		Haha,
-		Mimi
-	}
+
 	onMount(async () => {
 		forecasts = TestHTTP.getForecasts();
 		// window.setTimeout(() => (forecasts.error = new Error("a")), 1000);
@@ -23,14 +17,6 @@
 		// 		forecasts.promise = TestHTTP.getForecasts();
 		// 	}, 500 * i);
 		// }
-		const test4 = ensureNumber<TestEnum>(1);
-		console.log(test4);
-
-		const test3 = ensureString<TestType>("haha");
-		console.log(test3);
-
-		const test2 = ensureDictionary(test, ensureString);
-		console.log(test2);
 
 		window.addEventListener(
 			"storage",
