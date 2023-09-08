@@ -1,5 +1,5 @@
 import type { Transformer } from "$lib/types/Transformer.js";
-import { ensureBoolean, ensureDateString, ensureNumber, ensureString } from "$lib/types/unknown.js";
+import { ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
 
 /** TODOC */
 export function jsonTransformer<T>(deserializer?: (string: string) => T): Transformer<T> {
@@ -17,7 +17,7 @@ export function jsonTransformer<T>(deserializer?: (string: string) => T): Transf
 export function stringTransformer(deserializer?: (string: string) => string): Transformer<string> {
 	return {
 		deserialize(string) {
-			return typeof deserializer !== "undefined" ? deserializer(string) : ensureString(string);
+			return typeof deserializer !== "undefined" ? deserializer(string) : string;
 		},
 		serialize(something) {
 			return something;
