@@ -3,7 +3,7 @@ import { Syncer } from "./Syncer.js";
 
 /** @internal */
 export abstract class StorageSyncer<T> extends Syncer<T> {
-	/** */
+	/** TODOC */
 	protected abstract get storage(): Storage | null;
 
 	/** @inheritdoc */

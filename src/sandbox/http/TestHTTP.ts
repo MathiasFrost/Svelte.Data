@@ -7,7 +7,7 @@ import type { DateOnly } from "$lib/date/DateOnly.js";
 
 /** @static */
 export class TestHTTP {
-	/** */
+	/** TODOC */
 	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit(), void 0, async (response, nullable) => {
 		if (!nullable && response.status === 401) {
 			if (typeof window !== "undefined") {
@@ -17,7 +17,7 @@ export class TestHTTP {
 		}
 	});
 
-	/** */
+	/** TODOC */
 	public static async getForecasts(fetch?: Fetch): Promise<WeatherForecast[]> {
 		return await this.client
 			.get("weatherforecast")

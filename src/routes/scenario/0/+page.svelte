@@ -4,7 +4,7 @@
 	import { browser } from "$app/environment";
 	import { onMount } from "svelte";
 
-	/** */
+	/** TODOC */
 	const session = new SessionStorageSyncer(
 		"test",
 		"",
@@ -24,14 +24,14 @@
 				}, 1_000);
 		});
 
-	/** */
+	/** TODOC */
 	let str = session.pull();
 	onMount(() => {
 		if (!str) testPromise().then((res) => (str = res));
 	});
 	$: session.push(str);
 
-	/** */
+	/** TODOC */
 	let secondStr = "";
 	let secondStrPromise = Promise.resolve("");
 	$: updateSecondStr(str);

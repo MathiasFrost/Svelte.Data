@@ -1,7 +1,7 @@
 import type { Transformer } from "$lib/types/Transformer.js";
 import { ensureBoolean, ensureDateString, ensureNumber } from "$lib/types/unknown.js";
 
-/** */
+/** TODOC */
 export function jsonTransformer<T>(deserializer?: (string: string) => T): Transformer<T> {
 	return {
 		deserialize(string) {
@@ -13,7 +13,7 @@ export function jsonTransformer<T>(deserializer?: (string: string) => T): Transf
 	};
 }
 
-/** */
+/** TODOC */
 export function stringTransformer(deserializer?: (string: string) => string): Transformer<string> {
 	return {
 		deserialize(string) {
@@ -25,7 +25,7 @@ export function stringTransformer(deserializer?: (string: string) => string): Tr
 	};
 }
 
-/** */
+/** TODOC */
 export function numberTransformer(deserializer?: (string: string) => number): Transformer<number> {
 	return {
 		deserialize(string) {
@@ -37,7 +37,7 @@ export function numberTransformer(deserializer?: (string: string) => number): Tr
 	};
 }
 
-/** */
+/** TODOC */
 export function booleanTransformer(deserializer?: (string: string) => boolean): Transformer<boolean> {
 	return {
 		deserialize(string) {
@@ -49,7 +49,7 @@ export function booleanTransformer(deserializer?: (string: string) => boolean): 
 	};
 }
 
-/** */
+/** TODOC */
 export function dateTransformer(deserializer?: (string: string) => Date): Transformer<Date> {
 	return {
 		deserialize(string) {

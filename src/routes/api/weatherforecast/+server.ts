@@ -1,15 +1,15 @@
 import { error, json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
 
-/** */
+/** TODOC */
 const summaries = [null, "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 
-/** */
+/** TODOC */
 function getRandomArbitrary(min: number, max: number): number {
 	return Math.random() * (max - min) + min;
 }
 
-/** */
+/** TODOC */
 function getRandomInt(min: number, max: number): number {
 	min = Math.ceil(min);
 	max = Math.floor(max);
@@ -23,7 +23,7 @@ const promise = () =>
 
 let retries = 3;
 
-/** */
+/** TODOC */
 export const GET: RequestHandler = async () => {
 	if (retries < 3) {
 		retries++;

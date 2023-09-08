@@ -72,8 +72,8 @@ export function ensureBooleanNullable(something: unknown): boolean | null {
 	throw new Error(`Expected boolean | null, found ${typeof something}`);
 }
 
-/** */
-export function stripQuoutes(string: string): string {
+/** TODOC */
+export function stripQuotes(string: string): string {
 	if (string.startsWith('"') && string.endsWith('"')) return string.substring(1, string.length - 1);
 	return string;
 }
@@ -81,7 +81,7 @@ export function stripQuoutes(string: string): string {
 /** Make sure that something is a valid Date parsable string (not null) */
 export function ensureDateString(something: unknown): Date {
 	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(stripQuoutes(something));
+	const date = new Date(stripQuotes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
 	return date;
 }
@@ -90,7 +90,7 @@ export function ensureDateString(something: unknown): Date {
 export function ensureDateStringNullable(something: unknown): Date | null {
 	if (something === null) return something;
 	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(stripQuoutes(something));
+	const date = new Date(stripQuotes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
 	return date;
 }
@@ -98,7 +98,7 @@ export function ensureDateStringNullable(something: unknown): Date | null {
 /** Make sure that something is a valid DateOnly parsable string (not null) */
 export function ensureDateOnlyString(something: unknown): DateOnly {
 	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
-	const date = new DateOnly(stripQuoutes(something));
+	const date = new DateOnly(stripQuotes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
 	return date;
 }
@@ -107,7 +107,7 @@ export function ensureDateOnlyString(something: unknown): DateOnly {
 export function ensureDateOnlyStringNullable(something: unknown): DateOnly | null {
 	if (something === null) return something;
 	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
-	const date = new DateOnly(stripQuoutes(something));
+	const date = new DateOnly(stripQuotes(something));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
 	return date;
 }
@@ -148,6 +148,22 @@ export function ensureInstanceOfNullable<T>(something: unknown, t: Function): T 
 	if (something === null) return null;
 	if (something instanceof t) return something as T;
 	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);
+}
+
+/** Make sure that each key of a dictionary is of type */
+export function ensureDictionary<T>(something: unknown, ensure: (something: unknown) => T): Record<string, T> {
+	const res: Record<string, T> = {};
+	const o = ensureObject(something);
+	for (const key of Object.keys(o)) {
+		res[key] = ensure(o[key]);
+	}
+	return res;
+}
+
+/** Make sure that each key of a dictionary is of type */
+export function ensureDictionaryNullable<T>(something: unknown, ensure: (something: unknown) => T): Record<string, T> | null {
+	if (something === null) return null;
+	return ensureDictionary(something, ensure);
 }
 
 /** Tells TypeScript that something is an unknown object (not null) */

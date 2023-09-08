@@ -34,7 +34,7 @@ export class HistoryManager<T> {
 	/** Called when manager wants to set the value we are tracking */
 	public onHistoryChange?: (history: string[], index: number) => void;
 
-	/** */
+	/** TODOC */
 	public transformer: Transformer<T>;
 
 	/** Set to true when we want manager to ignore next change and not add it to history */
@@ -89,7 +89,7 @@ export class HistoryManager<T> {
 		return JSON.stringify({ history: this.history.map((h) => this.transformer.deserialize(h)), index: this.index });
 	}
 
-	/** */
+	/** TODOC */
 	public deserialize(json: string): T | undefined {
 		const o = JSON.parse(json);
 		this.history = ensureArray(o.history).map((something) => JSON.stringify(something));
