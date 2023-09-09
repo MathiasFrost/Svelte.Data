@@ -1,118 +1,136 @@
-/** Parsing rules
- * @see DateOnly.parse */
-export enum DateKind {
-	/** Date is assumed to denote UTC */
-	utc,
+/** Wrapping rules for `DateOnly`
+ * @see DateOnly */
+export enum DateWrap {
+	/** Apply both floor and ceil rules to the date.
+	 * @see DateWrap.ceil
+	 * @see DateWrap.floor */
+	round,
 
-	/** Date should be adjusted for current culture's time zone offset */
-	local
+	/** Of we run the CRON job at 0 UTC when a user from GMT +12 or more, they experience it as happening 12 or more hours too late.
+	 * If we "floor" the date to the previous, they now experience it as happening 12 or fewer hours too early, which could be preferable for something like a notification CRON job.
+	 * Users in GMT -12 or more would experience it as 12 or more hours too early, so here we do not do anything, hence the "floor" concept. */
+	floor,
+
+	/** If we run the CRON job at 0 UTC when a user from GMT -12 or less, they experience it as happening 12 or more hours too early.
+	 * If we "ceil" the date to the next, they now experience it as happening 12 or fewer hours too late, which could be preferable for something like a deletion CRON job.
+	 * Users in GMT +12 or more would experience it as 12 or more hours too late, so here we do not do anything, hence the "ceil" concept. */
+	ceil
 }
 
 /** An extension of JS `Date` with only the year/month/date and still following the ISO standard */
 export class DateOnly extends Date {
-	/** New `DateOnly` with either an ISO string, year/month/date values, JS `Date` or nothing for today */
-	public constructor();
-	public constructor(year: number, month: number, date: number);
-	public constructor(jsDate: Date);
-	public constructor(isoString: string, kind?: DateKind);
-	public constructor(arg0?: string | Date | number, arg1?: number | DateKind, date?: number) {
-		let year: number;
-		let hoursOffset = 0;
-		let minutesOffset = 0;
-		if (arg0 instanceof Date) {
-			year = arg0.getFullYear();
-			arg1 = arg0.getMonth();
-			date = arg0.getDate();
-		} else if (typeof arg0 === "number") {
-			year = arg0;
-			arg1 = arg1 ?? 0;
-			date = date ?? 1;
-		} else if (typeof arg0 === "string") {
-			const kind: DateKind = arg1 ?? DateKind.utc;
+	/** @see DateWrap */
+	private readonly wrap: DateWrap;
 
-			const parts = arg0.split("-");
-			year = Number(parts[0]);
-			arg1 = Number(parts[1]) - 1;
-			date = Number(parts[2]);
-
-			switch (kind) {
-				case DateKind.local:
-					// Constructors with individual values will be converted to local at ctor
-					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date
+	/** New `DateOnly` with either an ISO string, year/month/date values, JS `Date` or nothing for today
+	 * @param isoString ISO string representing a date. Time will be truncated if present.
+	 * @param wrap How to wrap this date in extreme time-zones
+	 * @param roundTripped Set to true when deserializing from an already wrapped date */
+	public constructor(isoString: string, wrap: DateWrap, roundTripped?: boolean) {
+		const date = new Date(isoString.substring(0, "yyyy-MM-dd".length));
+		if (roundTripped) {
+			switch (wrap) {
+				case DateWrap.round:
+					DateOnly.ceilDate(date, true);
+					DateOnly.floorDate(date, true);
 					break;
-				case DateKind.utc:
-					{
-						// 2023-06-13 in GMT+2 is 2 hours ahead of a UTC 2023-06-13
-						// Add the hours that would have been lost when deserializing (when subtracting the offset and truncating the time part)
-						const [_hoursOffset, _minutesOffset] = DateOnly.currentOffset();
-
-						const a = new Date(year, arg1, date, 0, 0, 0);
-						a.setHours(a.getHours() - _hoursOffset);
-						a.setMinutes(a.getMinutes() - _minutesOffset);
-						a.setHours(0);
-						a.setMinutes(0);
-
-						const b = new Date(year, arg1, date, 0, 0, 0);
-
-						const hoursTruncated = (b.getTime() - a.getTime()) / 1_000 / 60;
-						const hours = Math.round(hoursTruncated / 60);
-						const minutes = Math.round(hoursTruncated % 60);
-
-						hoursOffset = hours;
-						minutesOffset = minutes;
-					}
+				case DateWrap.ceil:
+					DateOnly.ceilDate(date, true);
 					break;
-				default:
-					throw new Error("Out of range");
+				case DateWrap.floor:
+					DateOnly.floorDate(date, true);
+					break;
 			}
-		} else {
-			const now = new Date();
-			year = now.getFullYear();
-			arg1 = now.getMonth();
-			date = now.getDate();
 		}
-
-		super(year, arg1, date, hoursOffset, minutesOffset, 0, 0);
+		super(date);
+		this.wrap = wrap;
 	}
 
-	/** @returns [Hours, Minutes] */
-	public static currentOffset(): [number, number] {
-		const offset = new Date().getTimezoneOffset() * -1;
+	/** @returns DateOnly round-tripped */
+	public static deserialize(isoString: string, wrap: DateWrap = DateWrap.floor): DateOnly {
+		const date = new Date(isoString);
+		switch (wrap) {
+			case DateWrap.round:
+				DateOnly.ceilDate(date, true);
+				DateOnly.floorDate(date, true);
+				break;
+			case DateWrap.ceil:
+				DateOnly.ceilDate(date, true);
+				break;
+			case DateWrap.floor:
+				DateOnly.floorDate(date, true);
+				break;
+		}
+		return new DateOnly(date.toISOString().substring(0, "yyyy-MM-dd".length), wrap);
+	}
 
+	/** @returns ISO string for today */
+	public static today(): string {
+		return new Date().toISOString().substring(0, "yyyy-MM-dd".length);
+	}
+
+	/** TODOC */
+	public static offsetMinutes(date: Date = new Date()): number {
+		return date.getTimezoneOffset() * -1;
+	}
+
+	/** TODOC */
+	public static offsetString(date: Date = new Date()): string {
+		const offset = date.getTimezoneOffset() * -1;
 		const hours = Math.round(offset / 60);
 		const minutes = Math.round(offset % 60);
-		return [hours, minutes];
+		return "GMT+" + hours.toString().padStart(2, "0") + minutes.toString().padStart(2, "0");
 	}
 
-	/** @returns The regular JS `Date` */
-	public toDate(): Date {
-		return new Date(this);
+	/** If we run the CRON job at 0 UTC when a user from GMT -12 or less, they experience it as happening 12 or more hours too early.
+	 * If we "ceil" the date to the next, they now experience it as happening 12 or fewer hours too late, which could be preferable for something like a deletion CRON job.
+	 * Users in GMT +12 or more would experience it as 12 or more hours too late, so here we do not do anything, hence the "ceil" concept. */
+	private static ceilDate(date: Date, reverse: boolean): void {
+		const offsetCeilThreshold = -12 * 60;
+		if (DateOnly.offsetMinutes(date) < offsetCeilThreshold) {
+			if (reverse) date.setDate(date.getDate() - 1);
+			else date.setDate(date.getDate() + 1);
+		}
 	}
 
-	/** @inheritdoc */
-	public override toString(): string {
-		return super.toDateString();
+	/** Of we run the CRON job at 0 UTC when a user from GMT +12 or more, they experience it as happening 12 or more hours too late.
+	 * If we "floor" the date to the previous, they now experience it as happening 12 or fewer hours too early, which could be preferable for something like a notification CRON job.
+	 * Users in GMT -12 or more would experience it as 12 or more hours too early, so here we do not do anything, hence the "floor" concept. */
+	private static floorDate(date: Date, reverse: boolean): void {
+		const offsetFloorThreshold = 12 * 60;
+		if (DateOnly.offsetMinutes(date) > offsetFloorThreshold) {
+			if (reverse) date.setDate(date.getDate() + 1);
+			else date.setDate(date.getDate() - 1);
+		}
 	}
 
-	/** @inheritdoc */
+	/** @inheritDoc */
+	public override toISOString(): string {
+		switch (this.wrap) {
+			case DateWrap.round:
+				DateOnly.ceilDate(this, false);
+				DateOnly.floorDate(this, false);
+				break;
+			case DateWrap.ceil:
+				DateOnly.ceilDate(this, false);
+				break;
+			case DateWrap.floor:
+				DateOnly.floorDate(this, false);
+				break;
+		}
+		return super.toISOString().substring(0, "yyyy-MM-dd".length);
+	}
+
+	/** @inheritDoc */
 	public override toJSON(): string {
 		return this.toISOString();
 	}
 
-	/** @inheritdoc */
-	public override toISOString(): string {
-		return super.toISOString()?.substring(0, 10) ?? null;
-	}
-
-	public toLocaleISOString(): string {
-		const [hoursOffset, minutesOffset] = DateOnly.currentOffset();
-
-		// 2023-06-13 in GMT+2 is 2 hours ahead of a UTC 2023-06-13
-		// toISOString will convert to UTC; Add the offset when serializing to convert to local
-		const copy = new Date(this);
-		copy.setHours(copy.getHours() + hoursOffset);
-		copy.setMinutes(copy.getMinutes() + minutesOffset);
-
-		return copy.toISOString()?.substring(0, 10) ?? null;
+	/** @inheritDoc */
+	public override toString(): string {
+		const str = super.toString();
+		const timeIndex = str.indexOf(":") - 3;
+		const timeIndexEnd = str.lastIndexOf(":") + 3;
+		return str.substring(0, timeIndex) + str.substring(timeIndexEnd);
 	}
 }

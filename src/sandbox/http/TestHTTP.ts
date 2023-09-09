@@ -4,6 +4,7 @@ import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 import { indefinitePromise } from "$lib/async/index.js";
 import { ensureObject, ensureString } from "$lib/types/index.js";
 import type { DateOnly } from "$lib/date/DateOnly.js";
+import type { DateWrap } from "$lib/date/DateOnly.js";
 
 /** @static */
 export class TestHTTP {
@@ -40,7 +41,7 @@ export class TestHTTP {
 		await this.client.post("user").fetch();
 	}
 
-	public static async getDateOnly(dateOnly: DateOnly): Promise<string> {
-		return await this.client.get("http://localhost:5043/WeatherForecast/DateOnly").withQuery({ dateOnly: dateOnly.toJSON() }).fromString();
+	public static async getDateOnly(dateOnly: DateOnly, wrap: DateWrap): Promise<DateOnly> {
+		return await this.client.get("http://localhost:5043/WeatherForecast/DateOnly").withQuery({ dateOnly: dateOnly.toJSON() }).fromDateOnlyString(wrap);
 	}
 }
