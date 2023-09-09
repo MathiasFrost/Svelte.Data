@@ -3,6 +3,7 @@ import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateOnlyStr
 import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
+import type { DateWrap } from "$lib/date/DateOnly.js";
 
 /** TODOC */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -314,16 +315,16 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as DateOnly */
-	public async fromDateOnlyString(signal?: AbortSignal): Promise<DateOnly> {
+	public async fromDateOnlyString(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly> {
 		const content = await this.fromString(signal);
-		return ensureDateOnlyString(content);
+		return ensureDateOnlyString(content, wrap, true);
 	}
 
 	/** The request body deserialized as DateOnly or null if 204 */
-	public async fromDateOnlyStringNullable(signal?: AbortSignal): Promise<DateOnly | null> {
+	public async fromDateOnlyStringNullable(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly | null> {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
-		return ensureDateOnlyString(content);
+		return ensureDateOnlyString(content, wrap, true);
 	}
 
 	/** @returns The raw request result */

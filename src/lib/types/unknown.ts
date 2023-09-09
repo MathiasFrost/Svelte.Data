@@ -1,4 +1,4 @@
-import { DateOnly } from "$lib/date/DateOnly.js";
+import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 
 /** Make sure that something is an array (not null) */
 export function ensureArray(something: unknown): unknown[] {
@@ -96,18 +96,18 @@ export function ensureDateStringNullable(something: unknown): Date | null {
 }
 
 /** Make sure that something is a valid DateOnly parsable string (not null) */
-export function ensureDateOnlyString(something: unknown): DateOnly {
+export function ensureDateOnlyString(something: unknown, wrap: DateWrap, roundTripped?: boolean): DateOnly {
 	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
-	const date = new DateOnly(stripQuotes(something));
+	const date = new DateOnly(stripQuotes(something), wrap, roundTripped);
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
 	return date;
 }
 
 /** Make sure that something is a valid DateOnly parsable string (may be null) */
-export function ensureDateOnlyStringNullable(something: unknown): DateOnly | null {
+export function ensureDateOnlyStringNullable(something: unknown, wrap: DateWrap, roundTripped?: boolean): DateOnly | null {
 	if (something === null) return something;
 	if (typeof something !== "string") throw new Error(`Expected DateOnly parsable string, found ${typeof something}`);
-	const date = new DateOnly(stripQuotes(something));
+	const date = new DateOnly(stripQuotes(something), wrap, roundTripped);
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected DateOnly parsable string, found ${something}`);
 	return date;
 }

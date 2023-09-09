@@ -1,73 +1,49 @@
 <script lang="ts">
-	import { DateKind, DateOnly } from "$lib/date/DateOnly.js";
-	import { TimeSpan } from "$lib/date/TimeSpan.js";
-	import { stripQuotes } from "$lib/types/unknown.js";
+	import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 
-	let today = new DateOnly();
+	/** Initial value - Today */
+	let str = DateOnly.today();
 
-	/** The date from the perspective of the current culture */
-	let date: string = new DateOnly().toLocaleISOString();
-
-	/** The date after serialization */
-	let roundTripped: string = new DateOnly().toISOString();
-
+	/** If we round-trip via HTTP */
 	let http = false;
 
-	async function roundTrip(str: string): Promise<void> {
-		date = str;
+	/** How we wrap */
+	const wrap = DateWrap.ceil;
+
+	async function roundTrip(http: boolean, dateOnly: DateOnly): Promise<DateOnly> {
 		if (http) {
-			const trip = await TestHTTP.getDateOnly(new DateOnly(str, DateKind.local));
-			roundTripped = stripQuotes(trip);
+			return await TestHTTP.getDateOnly(dateOnly, wrap);
 		} else {
-			roundTripped = new DateOnly(str, DateKind.local).toISOString();
+			return new DateOnly(dateOnly.toJSON(), wrap, true);
 		}
 	}
-
-	function addDays(date: DateOnly, days: number): DateOnly {
-		const copy = new DateOnly(date);
-		copy.setDate(copy.getDate() + days);
-		return copy;
-	}
-
-	let timeSpan = new TimeSpan(0, 0, 1, 1, 1, 1);
 </script>
 
 <section>
 	<h1>Date</h1>
 	<input type="checkbox" bind:checked={http} />
-	<input type="date" on:change={(e) => roundTrip(e.currentTarget.value)} />
+	<input type="date" bind:value={str} />
 	<pre style="font-family: 'JetBrains Mono', monospace">
-Offset:                     {DateOnly.currentOffset()}
+Offset:                     {DateOnly.offsetMinutes()} ({DateOnly.offsetString()})
 Now:                        {new Date()}
-DateOnly now:               {new DateOnly()}
-Normal Date:                {new Date(date)}
 
-Raw:                        {date}
-Date:                       {new DateOnly(date, DateKind.local)}
-JS Date:                    {new DateOnly(date, DateKind.local).toDate()}
-Day:                        {new DateOnly(date, DateKind.local).getDate()}
-JSON:                       {new DateOnly(date, DateKind.local).toJSON()}
-Value:                      {new DateOnly(date, DateKind.local).getTime()}
+Normal Date:                {new Date(str)}
+Normal Date JSON:           {new Date(str).toJSON()}
 
-Round-trip Raw:             {roundTripped}
-Round-trip Date:            {new DateOnly(roundTripped)}
-Round-trip JS Date:         {new DateOnly(roundTripped).toDate()}
-Round-trip Day:             {new DateOnly(roundTripped).getDate()}
-Round-trip JSON:            {new DateOnly(roundTripped).toJSON()}
-Value:                      {new DateOnly(roundTripped).getTime()}
+DateOnly:                   {new DateOnly(str, wrap)}
+DateOnly JSON:              {new DateOnly(str, wrap).toJSON()}
+</pre>
 
-Round-trip JS Date + 1:     {addDays(new DateOnly(roundTripped), 1).toDate()}
-Round-trip JS Date + 1 day: {addDays(new DateOnly(roundTripped), 1).getDate()}
-Round-trip === date:        {new DateOnly(roundTripped).getTime() === new DateOnly(date, DateKind.local).getTime()}
-
-date &lt;= today:              {new DateOnly(date, DateKind.local) <= today}
-
-new DateOnly("2023-06-11"): {new DateOnly("2023-06-11", DateKind.local)}
-new DateOnly(2023, 5, 11):  {new DateOnly(2023, 5, 11)}
-	</pre>
-
-	<h1>TimeSpan</h1>
-	<input type="number" placeholder="days" />
-	<p>TimeSpan: {timeSpan}</p>
+	{#await roundTrip(http, new DateOnly(str, wrap))}
+		<pre style="font-family: 'JetBrains Mono', monospace">
+Round-trip:                 Loading...
+Round-trip JSON:            Loading...
+			</pre>
+	{:then res}
+		<pre style="font-family: 'JetBrains Mono', monospace">
+Round-trip:                 {res}
+Round-trip JSON:            {res.toISOString()}
+			</pre>
+	{/await}
 </section>
