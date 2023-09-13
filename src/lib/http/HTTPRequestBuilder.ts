@@ -302,16 +302,16 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as Date */
-	public async fromDateString(signal?: AbortSignal): Promise<Date> {
+	public async fromDateString(utc: boolean, signal?: AbortSignal): Promise<Date> {
 		const content = await this.fromString(signal);
-		return ensureDateString(content);
+		return ensureDateString(content, utc);
 	}
 
 	/** The request body deserialized as Date or null if 204 */
-	public async fromDateStringNullable(signal?: AbortSignal): Promise<Date | null> {
+	public async fromDateStringNullable(utc: boolean, signal?: AbortSignal): Promise<Date | null> {
 		const content = await this.fromStringNullable(signal);
 		if (!content) return null;
-		return ensureDateString(content);
+		return ensureDateString(content, utc);
 	}
 
 	/** The request body deserialized as DateOnly */

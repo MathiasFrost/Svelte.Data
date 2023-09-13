@@ -9,7 +9,7 @@ export class WeatherForecast {
 
 	public constructor(something: unknown) {
 		const o = ensureObject(something);
-		this.date = ensureDateString(o.date);
+		this.date = ensureDateString(o.date, true);
 		this.temperatureC = ensureNumber(o.temperatureC);
 		this.temperatureF = ensureNumber(o.temperatureF);
 		this.summary = ensureStringNullable(o.summary);

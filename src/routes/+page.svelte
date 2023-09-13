@@ -38,7 +38,6 @@
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
 <button on:click={() => window.localStorage.setItem("test", "hey")}> Test </button>
-
 <table>
 	<thead>
 		<tr>

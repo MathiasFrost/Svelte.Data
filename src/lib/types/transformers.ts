@@ -50,10 +50,10 @@ export function booleanTransformer(deserializer?: (string: string) => boolean): 
 }
 
 /** TODOC */
-export function dateTransformer(deserializer?: (string: string) => Date): Transformer<Date> {
+export function dateTransformer(utc: boolean, deserializer?: (string: string) => Date): Transformer<Date> {
 	return {
 		deserialize(string) {
-			return typeof deserializer !== "undefined" ? deserializer(string) : ensureDateString(string);
+			return typeof deserializer !== "undefined" ? deserializer(string) : ensureDateString(string, utc);
 		},
 		serialize(something) {
 			return something.toISOString();

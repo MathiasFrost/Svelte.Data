@@ -78,21 +78,25 @@ export function stripQuotes(string: string): string {
 	return string;
 }
 
+function processDateString(str: string, utc: boolean): string {
+	str = stripQuotes(str);
+	if (utc && !str.endsWith("Z")) str += "Z";
+	else if (!utc && str.endsWith("Z")) str = str.substring(0, str.length - 1);
+	return str;
+}
+
 /** Make sure that something is a valid Date parsable string (not null) */
-export function ensureDateString(something: unknown): Date {
+export function ensureDateString(something: unknown, utc: boolean): Date {
 	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(stripQuotes(something));
+	const date = new Date(processDateString(something, utc));
 	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
 	return date;
 }
 
 /** Make sure that something is a valid Date parsable string (may be null) */
-export function ensureDateStringNullable(something: unknown): Date | null {
+export function ensureDateStringNullable(something: unknown, utc: boolean): Date | null {
 	if (something === null) return something;
-	if (typeof something !== "string") throw new Error(`Expected Date parsable string, found ${typeof something}`);
-	const date = new Date(stripQuotes(something));
-	if (date.getTime() !== date.getTime()) throw new Error(`Expected Date parsable string, found ${something}`);
-	return date;
+	return ensureDateString(something, utc);
 }
 
 /** Make sure that something is a valid DateOnly parsable string (not null) */
