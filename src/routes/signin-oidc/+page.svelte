@@ -4,7 +4,7 @@
 	import { goto } from "$app/navigation";
 
 	onMount(async () => {
-		await oidcManager.signInCallback("MS.Graph");
+		await oidcManager.signInCallback();
 		await goto("/", { replaceState: true });
 	});
 </script>

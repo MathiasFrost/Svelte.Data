@@ -11,7 +11,7 @@ const promise = () =>
 export const GET: RequestHandler = async ({ request }) => {
 	await promise();
 	const parts = request.headers.get("Authorization")?.split(" ");
-	if (!parts?.[1].startsWith("ey")) throw error(401);
+	if (!parts?.[1].startsWith("ey") && !parts?.[1].startsWith("Ew")) throw error(401);
 	return json({ name: "Me" });
 };
 
