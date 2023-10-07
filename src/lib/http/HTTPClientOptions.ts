@@ -2,20 +2,20 @@ import type { Preprocess } from "$lib/http/Preprocess.js";
 import type { Postprocess } from "$lib/http/Postprocess.js";
 import type { Fetch } from "$lib/http/Fetch.js";
 
-/** TODOC */
+/** Options for @see HTTPClient */
 export interface HTTPClientOptions {
-	/** TODOC */
+	/** @see RequestInit */
 	defaultRequestInit?: RequestInit;
 
-	/** TODOC */
+	/** @see Preprocess */
 	preprocess?: Preprocess;
 
-	/** TODOC */
+	/** @see Postprocess */
 	postprocess?: Postprocess;
 
-	/** TODOC */
+	/** How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
 	retries?: number;
 
-	/** TODOC */
+	/** Custom underlying fetch function to use instead of the default `window.fetch` */
 	fetch?: Fetch;
 }

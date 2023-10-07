@@ -6,39 +6,67 @@ import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.j
 
 /** @notes order matters */
 enum AcquisitionMethod {
+	/** Get OIDC object from `window.localStorage` */
 	Storage,
 
+	/** Get OIDC object by exchanging a refresh_token */
 	RefreshToken,
 
+	/** Get OIDC object by signing in through iframe and SSO */
 	IFrame,
 
+	/** Get OIDC object by signing in through standard redirection */
 	UserInteraction
 }
 
+/** Errors thrown inside `signInCallback` */
 class OIDCError extends Error {}
 
-function storagePrefix(audience: string) {
+/** @returns Key to use for audience when interacting with `window.localStorage` */
+function storagePrefix(audience: string): string {
 	return `OIDC_${audience}`;
 }
 
+/** Object to store in `window.sessionStorage` before redirecting to OIDC authorization endpoint */
 interface OIDCStatePayload<TAudience extends string> {
+	/** The OIDC code_verifier generated */
 	readonly codeVerifier: string;
+
+	/** The audience in question */
 	readonly audience: TAudience;
+
+	/** The OIDC nonce generated */
 	readonly nonce: string;
 }
 
+/** Class to manage all OIDC objects for multiple audiences */
 export class OIDCManager<TAudience extends string> {
+	/** @see OIDCConfigurations */
 	public configurations: OIDCConfigurations<TAudience>;
+
+	/** @see OIDCConfigurationProvider */
 	private readonly configProvider = new OIDCConfigurationProvider();
+
+	/** Reference to the currently active iframe sign in process */
 	private currentIFramePromise: Promise<void> | null = null;
+
+	/** Queue of iframe sign in requests */
 	private readonly iFramePromises: { audience: TAudience; promise: Promise<void> }[] = [];
+
+	/** Authorities that has failed iframe sign in */
 	private readonly iFrameRejections: string[] = [];
+
+	/** References to active refresh_tokens exchange requests per refresh_token */
 	private readonly refreshPromises: { [key: string]: Promise<OIDCMessage | null> } = {};
 
+	/** @param configurations Configuration for all audiences the app will use */
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
 	}
 
+	/** Custom fetch that manages attaching access_token to requests.
+	 * @see HTTPClient
+	 * @see HTTPClientOptions */
 	public createFetch(audience: TAudience, retries: number = 0): Fetch {
 		return async (requestInfo, requestInit, nullStatusCodes) => {
 			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
@@ -78,6 +106,9 @@ export class OIDCManager<TAudience extends string> {
 		};
 	}
 
+	/** @returns The OIDC object for the specified audience
+	 * @param audience The audience to get OIDC object for
+	 * @param forceRefresh Set to true if we skip trying to fetch from storage and initiate the process of acquiring a new token */
 	public async getOidcMessage(audience: TAudience, forceRefresh: boolean = false): Promise<OIDCMessage> {
 		if (typeof window === "undefined") throw new Error("Can't call getAccessToken server-side");
 
@@ -97,6 +128,7 @@ export class OIDCManager<TAudience extends string> {
 							document.removeEventListener("visibilitychange", listener);
 						}
 					}
+
 					document.addEventListener("visibilitychange", listener);
 				});
 				await promise;
@@ -166,9 +198,13 @@ export class OIDCManager<TAudience extends string> {
 		throw new Error("Unexpected code path");
 	}
 
+	/** Store resolves from suspending user interaction sign ins from `getOidcMessage` */
 	private resolves: { audience: TAudience; resolve: (oidc: OIDCMessage) => void }[] = [];
+
+	/** Store rejects from suspending user interaction sign ins from `getOidcMessage` */
 	private rejects: { audience: TAudience; reject: () => void }[] = [];
 
+	/** Call to reject the sign in prompt from `getOidcMessage` when user interaction is required */
 	// noinspection JSUnusedGlobalSymbols
 	public rejectPrompt(audience?: TAudience): void {
 		if (audience) {
@@ -182,6 +218,8 @@ export class OIDCManager<TAudience extends string> {
 		}
 	}
 
+	/** Call to resolve the sign in prompt from `getOidcMessage` when user interaction is required
+	 * @notes Probably shouldn't use */
 	// noinspection JSUnusedGlobalSymbols
 	public resolvePrompt(audience: TAudience, oidc: OIDCMessage): void {
 		this.resolves.filter((value) => value.audience === audience).forEach((value) => value.resolve(oidc));
@@ -189,6 +227,7 @@ export class OIDCManager<TAudience extends string> {
 		this.resolves = this.resolves.filter((value) => value.audience !== audience);
 	}
 
+	/** Exchange a refresh_token for a new OIDC object */
 	public async refreshToken(refreshToken: string | null, audience: TAudience): Promise<OIDCMessage | null> {
 		if (!refreshToken) return null;
 
@@ -234,7 +273,8 @@ export class OIDCManager<TAudience extends string> {
 		return await promise;
 	}
 
-	/** TODOC */
+	/** Sign in via iframe.
+	 * @notes For this to be successful the user needs a valid SSO session with the OIDC provider. */
 	private async signInIFrame(audience: TAudience): Promise<void> {
 		// Check if a matching promise is already in the queue
 		const matchingPromiseEntry = this.iFramePromises.find((entry) => entry.audience === audience);
@@ -316,13 +356,15 @@ export class OIDCManager<TAudience extends string> {
 		await promise;
 	}
 
+	/** Redirect to OIDC provider's authorization endpoint */
 	public async signInUserInteraction(audience: TAudience): Promise<never> {
 		const uri = await this.buildAuthorizeUri(audience);
 		window.location.href = uri.toString();
 		return await indefinitePromise<never>(); // Suspend the promise until this window is gone due to redirect
 	}
 
-	/** TODOC */
+	/** Handle the return from an OIDC authorization endpoint
+	 * @notes Should be called `onMount` on the page resolved to the redirect_uri specified in configuration */
 	public async signInCallback(): Promise<void> {
 		let audience: string = "[NOT SET]";
 		try {
@@ -389,20 +431,24 @@ export class OIDCManager<TAudience extends string> {
 		}
 	}
 
+	/** Call the function `onSignInPrompt` supplied in configuration
+	 * @see OIDCConfiguration */
 	public promptSignIn(audience: TAudience): void {
 		this.configurations[audience].onSignInPrompt?.(audience);
 	}
 
+	/** Get the OIDC object stored in `window.localStorage` */
 	public getOidc(audience: TAudience): OIDCMessage {
 		return new OIDCMessage(typeof window === "undefined" ? null : window.localStorage.getItem(storagePrefix(audience)));
 	}
 
+	/** Set the OIDC object in `window.localStorage` */
 	private setOidc(audience: TAudience, oidcMessage: OIDCMessage): void {
 		if (typeof window === "undefined") return;
 		window.localStorage.setItem(storagePrefix(audience), JSON.stringify(oidcMessage));
 	}
 
-	/** TODOC */
+	/** @returns Encoded bytes as base64 to be used in URL */
 	private base64URLEncode(bytes: Uint8Array): string {
 		return btoa(String.fromCharCode.apply(null, Array.from(bytes)))
 			.replace(/\+/g, "-")
@@ -410,7 +456,7 @@ export class OIDCManager<TAudience extends string> {
 			.replace(/=+$/, "");
 	}
 
-	/** TODOC */
+	/** @returns A byte array of a SHA-256 digested string */
 	private async sha256(input: string): Promise<number[]> {
 		// Convert the string to a buffer
 		const msgBuffer = new TextEncoder().encode(input);
@@ -420,6 +466,8 @@ export class OIDCManager<TAudience extends string> {
 		return Array.from(new Uint8Array(hashBuffer));
 	}
 
+	/** @returns The fully qualified URI for the OIDC provider's authorization endpoint
+	 * @notes Will store values that need to be accessed in callback in `window.sessionStorage` */
 	private async buildAuthorizeUri(audience: TAudience): Promise<URL> {
 		const configuration = this.configurations[audience];
 		const document = await this.configProvider.get(configuration.authority, configuration.metadataUri);

@@ -32,13 +32,13 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 // noinspection JSUnusedGlobalSymbols
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
 export class HTTPClient {
-	/** TODOC */
+	/** Base address for requests made with this client */
 	public readonly baseAddress: URL | null = null;
 
 	/** @see HTTPClientOptions */
 	private readonly options: HTTPClientOptions;
 
-	/** TODOC */
+	/** ctor */
 	public constructor(baseAddress = "", options: Partial<HTTPClientOptions> = {}) {
 		try {
 			this.baseAddress = new URL(baseAddress);

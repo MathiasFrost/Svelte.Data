@@ -5,8 +5,10 @@ import { jsonTransformer } from "$lib/types/transformers.js";
 export abstract class Syncer<T> {
 	/** Functions to convert value to and from its string representation */
 	public transformer: Transformer<T>;
+
 	/** Used when we are inevitably unable to retrieve value from replication source */
 	public fallback: T;
+
 	/** TODOC */
 	protected key: string;
 

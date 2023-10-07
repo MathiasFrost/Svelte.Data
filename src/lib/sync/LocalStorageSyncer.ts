@@ -1,7 +1,7 @@
 import type { Transformer } from "$lib/types/Transformer.js";
 import { StorageSyncer } from "./StorageSyncer.js";
 
-/** TODOC */
+/** Sync values to `window.localStorage` */
 export class LocalStorageSyncer<T> extends StorageSyncer<T> {
 	/** @inheritdoc */
 	protected override get storage(): Storage | null {
