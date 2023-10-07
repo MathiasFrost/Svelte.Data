@@ -1,21 +1,16 @@
 import type { Fetch } from "$lib/http/Fetch.js";
-import { HTTPClient } from "$lib/http/HTTPClient.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-import { indefinitePromise } from "$lib/async/index.js";
-import { ensureObject, ensureString } from "$lib/types/index.js";
 import type { DateOnly } from "$lib/date/DateOnly.js";
 import type { DateWrap } from "$lib/date/DateOnly.js";
+import { oidcManager } from "$sandbox/user/oidcConfig.js";
+import { HTTPClient } from "$lib/http/index.js";
 
 /** @static */
 export class TestHTTP {
 	/** TODOC */
-	private static client = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit(), void 0, async (response, nullable) => {
-		if (!nullable && response.status === 401) {
-			if (typeof window !== "undefined") {
-				window.location.reload();
-			}
-			await indefinitePromise();
-		}
+	private static client = new HTTPClient("http://localhost:5173/api/", {
+		defaultRequestInit: { redirect: "manual" },
+		fetch: oidcManager.createFetch("MS.Graph", 3)
 	});
 
 	/** TODOC */
@@ -24,13 +19,6 @@ export class TestHTTP {
 			.get("weatherforecast")
 			.withFetch(fetch)
 			.fromJSONArray((something) => new WeatherForecast(something));
-	}
-
-	public static async getUser(): Promise<{ name: string } | null> {
-		return await this.client
-			.get("user")
-			.withNullStatus(401)
-			.fromJSONObjectNullable<{ name: string }>((something) => ({ name: ensureString(ensureObject(something).name) }));
 	}
 
 	public static async getTest(): Promise<string> {

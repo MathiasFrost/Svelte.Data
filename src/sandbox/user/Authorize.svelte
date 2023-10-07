@@ -2,7 +2,7 @@
 	import { user } from "$sandbox/user/user.js";
 </script>
 
-{#if $user?.name}
+{#if $user["name"]}
 	<slot />
 {:else}
 	<slot name="unauthorized" />

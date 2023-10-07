@@ -4,6 +4,7 @@ import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 import type { DateWrap } from "$lib/date/DateOnly.js";
+import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
 
 /** TODOC */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -11,6 +12,7 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** TODOC */
 export type Deserialize<TResult> = (something?: unknown) => TResult;
 
+// noinspection JSUnusedGlobalSymbols
 /** TODOC */
 export class HTTPRequestBuilder {
 	/** TODOC */
@@ -25,11 +27,8 @@ export class HTTPRequestBuilder {
 	/** TODOC */
 	private readonly requestInit: RequestInit;
 
-	/** @see Preprocess */
-	private preprocess?: Preprocess;
-
-	/** @see Postprocess */
-	private postprocess?: Postprocess;
+	/** @see HTTPClientOptions */
+	private readonly options: HTTPClientOptions;
 
 	/** @see XMLHttpRequest */
 	private xmlHttpRequest?: XMLHttpRequest;
@@ -47,39 +46,29 @@ export class HTTPRequestBuilder {
 	private nullStatusCodes: number[] | null = null;
 
 	/** TODOC */
-	constructor(
-		baseAddress: URL | null,
-		httpMethod: HTTPMethod,
-		requestUri: string,
-		ensureSuccess: boolean,
-		defaultRequestInit: RequestInit,
-		preprocess?: Preprocess,
-		postprocess?: Postprocess
-	) {
+	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, ensureSuccess: boolean, options: HTTPClientOptions) {
 		this.baseAddress = baseAddress;
-		this.requestInit = { ...defaultRequestInit }; // TODO: deep copy this object
+		this.requestInit = { ...(options.defaultRequestInit ?? {}) }; // TODO: deep copy this object
 		this.requestInit.method = httpMethod;
 		this.requestInit.headers = new Headers();
 		this._requestUri = requestUri;
 		this.ensureSuccess = ensureSuccess;
-		this.preprocess = preprocess;
-		this.postprocess = postprocess;
+		this.options = { ...options };
 	}
-
-	/** Commonly set by `withFetch` when calling server-side */
-	private __fetch?: Fetch;
 
 	/** Get the server-side `load` `fetch` or client-side `window.fetch` */
 	private get _fetch(): Fetch {
-		return this.__fetch ?? window.fetch;
+		return this.options.fetch ?? window.fetch;
 	}
 
 	/** TODOC */
 	private get requestUri(): string {
 		let requestUri = "";
+		// noinspection HttpUrlsUsage
 		if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
 		else {
 			if (this.baseAddress === null) {
+				// noinspection HttpUrlsUsage
 				if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
 				else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
 			} else if (this.baseAddress.href.endsWith("/")) {
@@ -106,19 +95,19 @@ export class HTTPRequestBuilder {
 
 	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
 	public withFetch(fetch?: Fetch): HTTPRequestBuilder {
-		this.__fetch = fetch;
+		this.options.fetch = fetch;
 		return this;
 	}
 
 	/** Add preprocessor to this request. Overrides the one from HTTPClient */
 	public withPreprocessor(preprocess: Preprocess): HTTPRequestBuilder {
-		this.preprocess = preprocess;
+		this.options.preprocess = preprocess;
 		return this;
 	}
 
 	/** Add preprocessor to this request. Overrides the one from HTTPClient */
 	public withPostprocess(postprocess: Postprocess): HTTPRequestBuilder {
-		this.postprocess = postprocess;
+		this.options.postprocess = postprocess;
 		return this;
 	}
 
@@ -194,10 +183,11 @@ export class HTTPRequestBuilder {
 	/** @returns The raw request result */
 	public async fetch(signal?: AbortSignal): Promise<Response> {
 		this.requestInit.signal = signal;
-		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit);
 
-		const response = await this._fetch(this.requestUri, this.requestInit);
-		if (typeof this.postprocess === "function") await this.postprocess(response, false);
+		let response = await this._fetch(this.requestUri, this.requestInit);
+
+		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, false);
 		if (this.ensureSuccess) response.ensureSuccess();
 
 		return response;
@@ -330,14 +320,14 @@ export class HTTPRequestBuilder {
 	/** @returns The raw request result */
 	private async fetchNullable(signal?: AbortSignal): Promise<[Response, boolean]> {
 		this.requestInit.signal = signal;
-		if (typeof this.preprocess === "function") await this.preprocess(this.requestInit);
+		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit);
 
-		const response = await this._fetch(this.requestUri, this.requestInit);
+		let response = await this._fetch(this.requestUri, this.requestInit, this.nullStatusCodes ?? void 0);
 
-		const isNull = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
-		if (typeof this.postprocess === "function") await this.postprocess(response, isNull);
-		if (!isNull && this.ensureSuccess) response.ensureSuccess();
+		const nullAndValid = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
+		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, nullAndValid);
+		if (!nullAndValid && this.ensureSuccess) response.ensureSuccess();
 
-		return [response, isNull];
+		return [response, nullAndValid];
 	}
 }

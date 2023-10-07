@@ -25,20 +25,26 @@ export interface ICookieOptions {
 	secure?: boolean;
 }
 
-/** Replicate data to `cookie` */
+/** Sync values to `document.cookie` */
 export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** Domain to set on cookie */
 	public domain?: string;
+
 	/** Expire time to set on cookie. Leave empty for session cookies */
 	public expires?: Date;
+
 	/** Set cookie to HostOnly */
 	public hostOnly?: boolean;
+
 	/** Set cookie to HttpOnly */
 	public httpOnly?: boolean;
+
 	/** Set cookie to HttpOnly */
 	public path?: string;
+
 	/** Cookie SameSite policy. Default = 'None' */
 	public sameSite?: "Lax" | "Strict" | "None";
+
 	/** Set cookie to secure. Default true */
 	public secure?: boolean;
 
