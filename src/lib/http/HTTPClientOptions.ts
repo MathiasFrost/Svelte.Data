@@ -13,9 +13,6 @@ export interface HTTPClientOptions {
 	/** @see Postprocess */
 	postprocess?: Postprocess;
 
-	/** How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
-	retries?: number;
-
 	/** Custom underlying fetch function to use instead of the default `window.fetch` */
 	fetch?: Fetch;
 }

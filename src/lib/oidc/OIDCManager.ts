@@ -66,7 +66,9 @@ export class OIDCManager<TAudience extends string> {
 
 	/** Custom fetch that manages attaching access_token to requests.
 	 * @see HTTPClient
-	 * @see HTTPClientOptions */
+	 * @see HTTPClientOptions
+	 * @param audience OIDC audience matching the resource this fetch should communicate with
+	 * @param retries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
 	public createFetch(audience: TAudience, retries: number = 0): Fetch {
 		return async (requestInfo, requestInit, nullStatusCodes) => {
 			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
