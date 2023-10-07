@@ -4,8 +4,10 @@ export type OIDCConfigurations<TAudience extends string> = Readonly<Record<TAudi
 /** TODOC */
 export interface OIDCConfiguration<TAudience extends string> {
 	authority: string;
+	metadataUri?: string;
 	clientId: string;
 	redirectUri: string;
 	scope: string;
-	onSignInPrompt: (audience: TAudience) => void;
+	onSignInPrompt?: (audience: TAudience) => void;
+	autoSignIn?: boolean;
 }

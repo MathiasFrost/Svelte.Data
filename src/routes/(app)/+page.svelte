@@ -34,7 +34,11 @@
 <button on:click={() => getProfile()}> Get profile pic </button>
 
 {#if $signInPrompt}
-	<button on:click={() => oidcManager.signIn($signInPrompt)}>Sing in to access {$signInPrompt}</button>
+	<button
+		on:click={() => {
+			const prompt = $signInPrompt;
+			if (prompt) oidcManager.signInUserInteraction(prompt);
+		}}>Sing in to access {$signInPrompt}</button>
 {/if}
 
 {#if url}

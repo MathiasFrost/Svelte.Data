@@ -14,7 +14,7 @@
 	{#await getUser()}
 		<div>Loading...</div>
 	{:then user}
-		<div>{user.name}</div>
+		<div>{user?.name}</div>
 	{:catch e}
 		<div>{e.message}</div>
 	{/await}
