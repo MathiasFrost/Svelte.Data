@@ -9,7 +9,7 @@
 	<h1>User</h1>
 
 	<Authorize>
-		<p>Hello "{$user?.name}"</p>
+		<p>Hello "{$user["name"]}"</p>
 		<TestComponent />
 		<p slot="unauthorized">
 			Nope

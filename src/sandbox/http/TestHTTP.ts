@@ -1,6 +1,5 @@
 import type { Fetch } from "$lib/http/Fetch.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-import { ensureObject, ensureString } from "$lib/types/index.js";
 import type { DateOnly } from "$lib/date/DateOnly.js";
 import type { DateWrap } from "$lib/date/DateOnly.js";
 import { oidcManager } from "$sandbox/user/oidcConfig.js";
@@ -20,10 +19,6 @@ export class TestHTTP {
 			.get("weatherforecast")
 			.withFetch(fetch)
 			.fromJSONArray((something) => new WeatherForecast(something));
-	}
-
-	public static async getUser(): Promise<{ name: string } | null> {
-		return await this.client.get("user").fromJSONObjectNullable<{ name: string }>((something) => ({ name: ensureString(ensureObject(something).name) }));
 	}
 
 	public static async getTest(): Promise<string> {

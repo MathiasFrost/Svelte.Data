@@ -1,24 +1,21 @@
 <script lang="ts">
-	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
-	import { user } from "$sandbox/user/user.js";
 	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
 	import { oidcManager } from "$sandbox/user/oidcConfig.js";
+	import { user } from "$sandbox/user/user.js";
 
-	async function getUser() {
-		const res = await TestHTTP.getUser();
-		user.set(res);
-		return res;
+	let refresh = false;
+	async function getUser(refresh: boolean): Promise<Record<string, unknown>> {
+		console.log(refresh);
+		if (refresh) user.set({});
+		const res = await oidcManager.getOidcMessage("MS.Graph", refresh);
+		const o = res.idTokenObject;
+		user.set(o);
+		refresh = false;
+		return o;
 	}
 </script>
 
 <nav>
-	{#await getUser()}
-		<div>Loading...</div>
-	{:then user}
-		<div>{user?.name}</div>
-	{:catch e}
-		<div>{e.message}</div>
-	{/await}
 	{#await AspNetCoreHTTP.getClaims()}
 		<div>Loading...</div>
 	{:then res}
@@ -26,8 +23,9 @@
 	{:catch e}
 		<div>{e.message}</div>
 	{/await}
-	{#await oidcManager.getOidcMessage("MS.Graph") then res}
-		<div>{res.idTokenObject["name"]}</div>
+	{#await getUser(refresh) then res}
+		<div>{res["name"]}</div>
+		<button on:click={() => (refresh = true)}>Force OIDC refresh</button>
 	{:catch e}
 		<div>{e.message}</div>
 	{/await}
