@@ -39,11 +39,20 @@ export class OIDCMessage {
 	public get idTokenObject(): Record<string, unknown> {
 		if (!this.idToken) return {};
 		try {
-			return JSON.parse(atob(this.idToken.split(".")[1]));
+			return JSON.parse(this.decodeJwt(this.idToken));
 		} catch (e) {
 			console.warn("Unable to deserialize id_token ", e);
 			return {};
 		}
+	}
+
+	private decodeJwt(jwt: string): string {
+		return decodeURIComponent(
+			atob(jwt.split(".")[1])
+				.split("")
+				.map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+				.join("")
+		);
 	}
 
 	public get hasValidAccessToken(): boolean {

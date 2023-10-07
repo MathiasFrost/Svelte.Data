@@ -86,6 +86,22 @@ export class OIDCManager<TAudience extends string> {
 
 		// Try all methods from storage retrieval to refresh_token exchange through iframe silent sign-in to user interaction redirect
 		while (method <= AcquisitionMethod.UserInteraction) {
+			// If window is not active we suspend this promise and resume when visible again to avoid fetching logic to happen twice
+			if (document.hidden) {
+				console.info(`OIDC '${audience}': asked for access_token on inactive window. Suspending until active again`);
+				const promise = new Promise<void>((resolve) => {
+					function listener(): void {
+						if (!document.hidden) {
+							console.info(`OIDC '${audience}': window active. Resuming.`);
+							resolve();
+							document.removeEventListener("visibilitychange", listener);
+						}
+					}
+					document.addEventListener("visibilitychange", listener);
+				});
+				await promise;
+			}
+
 			switch (method) {
 				case AcquisitionMethod.Storage:
 					{
