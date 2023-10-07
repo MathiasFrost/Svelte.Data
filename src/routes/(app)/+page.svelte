@@ -70,7 +70,9 @@
 			{/each}
 		{:catch e}
 			<tr>
-				<td colspan="4" style="color:crimson">{e.message}</td>
+				<td colspan="4" style="color:crimson"
+					>{e.message}
+					<pre>{e.stack}</pre></td>
 			</tr>
 		{/await}
 	</tbody>

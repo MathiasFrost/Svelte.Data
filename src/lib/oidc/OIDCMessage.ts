@@ -1,4 +1,4 @@
-import { ensureNumberNullable, ensureObject, ensureStringNullable } from "$lib/types/index.js";
+import { ensureObject } from "$lib/types/index.js";
 
 export class OIDCMessage {
 	public readonly accessToken: string | null = null;
@@ -18,13 +18,18 @@ export class OIDCMessage {
 			} catch {
 				return;
 			}
-		} else {
+		} else if (something) {
 			o = ensureObject(something);
-		}
-		this.accessToken = ensureStringNullable(o.accessToken);
-		this.refreshToken = ensureStringNullable(o.refreshToken);
-		this.expiresIn = ensureNumberNullable(o.expiresIn);
-		this.idToken = ensureStringNullable(o.idToken);
+		} else return;
+		this.accessToken = typeof o["access_token"] === "string" ? o["access_token"] : null;
+		this.idToken = typeof o["id_token"] === "string" ? o["id_token"] : null;
+		this.refreshToken = typeof o["refresh_token"] === "string" ? o["refresh_token"] : null;
+		this.expiresIn = typeof o["expires_in"] === "number" ? o["expires_in"] : null;
+	}
+
+	/** @inheritDoc */
+	public toJSON(): object {
+		return { access_token: this.accessToken, id_token: this.idToken, refresh_token: this.refreshToken, expires_in: this.expiresIn };
 	}
 
 	public isNonceValid(nonce: string): boolean {
@@ -52,6 +57,6 @@ export class OIDCMessage {
 		const tokenExpiresAt = currentTime + this.expiresIn;
 
 		// If expired try to refresh
-		return currentTime >= tokenExpiresAt;
+		return currentTime < tokenExpiresAt;
 	}
 }
