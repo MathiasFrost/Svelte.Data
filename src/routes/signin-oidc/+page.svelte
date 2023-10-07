@@ -5,7 +5,7 @@
 
 	onMount(async () => {
 		await oidcManager.signInCallback();
-		await goto("/", { replaceState: true });
+		if (window === window.parent) await goto("/", { replaceState: true });
 	});
 </script>
 

@@ -4,11 +4,15 @@ import { ensureObject, ensureString } from "$lib/types/index.js";
 import type { DateOnly } from "$lib/date/DateOnly.js";
 import type { DateWrap } from "$lib/date/DateOnly.js";
 import { oidcManager } from "$sandbox/user/oidcConfig.js";
+import { HTTPClient } from "$lib/http/index.js";
 
 /** @static */
 export class TestHTTP {
 	/** TODOC */
-	private static client = oidcManager.createHttpClient("http://localhost:5173/api/", "MS.Graph");
+	private static client = new HTTPClient("http://localhost:5173/api/", {
+		defaultRequestInit: { redirect: "manual" },
+		fetch: oidcManager.createFetch("MS.Graph", 3)
+	});
 
 	/** TODOC */
 	public static async getForecasts(fetch?: Fetch): Promise<WeatherForecast[]> {

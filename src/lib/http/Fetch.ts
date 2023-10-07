@@ -1,2 +1,2 @@
-/** Convenient alias for `typeof window.fetch` */
-export type Fetch = typeof window.fetch;
+/** An enhanced fetch */
+export type Fetch = (input: RequestInfo | URL, init?: RequestInit | undefined, nullStatusCodes?: number[]) => Promise<Response>;

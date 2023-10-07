@@ -1,6 +1,6 @@
 import type { OIDCConfigurations } from "$lib/oidc/OIDCConfiguration.js";
 import { indefinitePromise } from "$lib/async/index.js";
-import { HTTPClient, type Postprocess, type Preprocess } from "$lib/http/index.js";
+import type { Fetch } from "$lib/http/index.js";
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";
 
@@ -39,34 +39,43 @@ export class OIDCManager<TAudience extends string> {
 		this.configurations = configurations;
 	}
 
-	public createHttpClient(baseAddress: string, audience: TAudience): HTTPClient {
-		/** Attach access_token if exists
-		 * @notes Rather than pre-emptively making sure our access_token is valid, we send the request first, then react to 401 or 403 */
-		const preprocess: Preprocess = async (requestInit) => {
-			const headers = new Headers({ ...requestInit.headers });
-			const oidcMessage = await this.getOidcMessage(audience);
+	public createFetch(audience: TAudience, retries: number = 0): Fetch {
+		return async (requestInfo, requestInit, nullStatusCodes) => {
+			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
+
+			requestInit ??= {};
+			let headers = new Headers({ ...requestInit.headers });
+
+			let oidcMessage = await this.getOidcMessage(audience);
 			if (oidcMessage.accessToken) headers.append("Authorization", `Bearer ${oidcMessage.accessToken}`);
 			requestInit.headers = headers;
-		};
 
-		/** Try to acquire a token once if we get 401 or 403
-		 * @notes It is recommended to not initialize a request if the user does not have access to the resource. If 401 or 403 happens, we assume the user's token needs to be re-acquired */
-		const postprocess: Postprocess = async (response, nullable, retry, retryCount) => {
-			if (!nullable && [401, 403].includes(response.status)) {
-				if (typeof window !== "undefined") {
-					if (retryCount < 1) {
-						if (await this.getOidcMessage(audience, true)) {
-							return await retry();
-						} else {
-							this.promptSignIn(audience);
-						}
-					}
+			let response = await window.fetch(requestInfo, requestInit);
+
+			// Check if status code is of a value that we want to accept as null and hence not retry
+
+			// First check if we have to retry based on 401 or 403
+			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
+				headers = new Headers({ ...requestInit.headers });
+				oidcMessage = await this.getOidcMessage(audience, true);
+				if (!oidcMessage.accessToken) {
+					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
+					return response;
 				}
-				await indefinitePromise<never>();
+				headers.append("Authorization", `Bearer ${oidcMessage.accessToken}`);
+				requestInit.headers = headers;
+				response = await window.fetch(requestInfo, requestInit);
 			}
-			return null;
+
+			// Then check if we want general retries for 500, 502, 503, 504, 507, 429, 425, 408
+			let retryCount = 0;
+			while (!nullStatusCodes?.includes(response.status) && [500, 502, 503, 504, 507, 429, 425, 408].includes(response.status) && retryCount < retries) {
+				retryCount++;
+				await new Promise((resolve) => setTimeout(resolve, 1_000));
+				response = await window.fetch(requestInfo, requestInit);
+			}
+			return response;
 		};
-		return new HTTPClient(baseAddress, { redirect: "manual" }, preprocess, postprocess);
 	}
 
 	public async getOidcMessage(audience: TAudience, forceRefresh: boolean = false): Promise<OIDCMessage> {
