@@ -4,7 +4,7 @@ import { HTTPClient } from "$lib/http/index.js";
 
 export class AspNetCoreHTTP {
 	private static httpClient = new HTTPClient("http://localhost:5000/OAuth2/", {
-		defaultRequestInit: { redirect: "manual" },
+		defaultRequestInit: { redirect: "manual", credentials: "include" },
 		fetch: oidcManager.createFetch("AspNetCore.API", 3)
 	});
 

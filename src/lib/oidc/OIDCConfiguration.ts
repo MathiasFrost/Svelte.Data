@@ -18,6 +18,12 @@ export interface OIDCConfiguration<TAudience extends string> {
 	/** OIDC protocol scope */
 	scope: string;
 
+	/** Endpoint to store sensitive data in encrypted cookie */
+	cookieSetEndpoint: string;
+
+	/** Endpoint to get decrypted data */
+	cookieGetEndpoint: string;
+
 	/** Invoked when acquiring access_token requires user interaction */
 	onSignInPrompt?: (audience: TAudience) => void;
 
