@@ -11,4 +11,12 @@ export class AspNetCoreHTTP {
 	public static async getClaims(): Promise<Record<string, unknown>> {
 		return await this.httpClient.get("Claims").fromJSONObject(ensureObject);
 	}
+
+	public static async postValidation(): Promise<Record<string, unknown>> {
+		return await this.httpClient
+			.post("Validation")
+			.asJSON({ Test: 2 })
+			.withPostprocess((response) => response.validationErrors())
+			.fromJSONObject(ensureObject);
+	}
 }

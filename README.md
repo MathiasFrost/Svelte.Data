@@ -144,7 +144,7 @@ import { WeatherForecast } from "$lib/models/WeatherForecast.js";
 /** @static */
 export class TestHTTP {
 	/** TODOC */
-	private static httpClient = new HTTPClient("http://localhost:5173/api/", HTTPClient.backendInit());
+	private static httpClient = new HTTPClient("http://localhost:5173/api/", { redirect: "manual", credentials: "include" });
 
 	/** @param fetch This is only needed for SSR */
 	public static async getForecasts(fetch?: typeof window.fetch): Promise<WeatherForecast[]> {

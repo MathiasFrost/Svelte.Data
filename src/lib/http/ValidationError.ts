@@ -1,7 +1,7 @@
 /** The result of a Response.prototype.validationErrors() exception */
 export class ValidationError extends Error {
 	/** All validation errors returned from response */
-	public errors: { [k: string]: string[] };
+	public errors: Record<string, string[]>;
 
 	public get firstError(): string {
 		const keys = Object.keys(this.errors);
@@ -13,7 +13,7 @@ export class ValidationError extends Error {
 	}
 
 	/** TODOC */
-	public constructor(errors: { [k: string]: string[] }) {
+	public constructor(errors: Record<string, string[]>) {
 		super("One or more validation errors occurred.");
 		this.name = "ValidationError";
 		this.errors = errors;
