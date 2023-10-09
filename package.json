@@ -25,7 +25,8 @@
 		},
 		"./env": {
 			"types": "./dist/env/index.d.ts",
-			"svelte": "./dist/env/index.js"
+			"svelte": "./dist/env/index.js",
+			"node": "./dist/env/index.js"
 		},
 		"./date": {
 			"types": "./dist/date/index.d.ts",

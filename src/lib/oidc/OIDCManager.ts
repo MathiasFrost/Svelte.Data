@@ -334,7 +334,7 @@ export class OIDCManager<TAudience extends string> {
 			const err = searchParams.get("error");
 			if (err) {
 				// noinspection ExceptionCaughtLocallyJS
-				throw new OIDCError(err);
+				throw new OIDCError(`${err}: ${searchParams.get("error_description")}`);
 			}
 
 			const code = searchParams.get("code") ?? "";
