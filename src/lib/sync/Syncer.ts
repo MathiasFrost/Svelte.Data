@@ -1,10 +1,9 @@
-import type { Transformer } from "$lib/types/Transformer.js";
-import { jsonTransformer } from "$lib/types/transformers.js";
+import { type Serializer, jsonSerializer } from "$lib/types/Serializer.js";
 
 /** Base class for replicating data */
 export abstract class Syncer<T> {
 	/** Functions to convert value to and from its string representation */
-	public transformer: Transformer<T>;
+	public serializer: Serializer<T>;
 
 	/** Used when we are inevitably unable to retrieve value from replication source */
 	public fallback: T;
@@ -13,10 +12,10 @@ export abstract class Syncer<T> {
 	protected key: string;
 
 	/** TODOC */
-	protected constructor(key: string, fallback: T, transformer: Transformer<T> = jsonTransformer<T>()) {
+	protected constructor(key: string, fallback: T, serializer: Serializer<T> = jsonSerializer<T>()) {
 		this.key = key;
 		this.fallback = fallback;
-		this.transformer = transformer;
+		this.serializer = serializer;
 	}
 
 	/** Type of storage, i.e.: sessionStorage. Used for logging */
@@ -36,7 +35,7 @@ export abstract class Syncer<T> {
 	/** TODOC */
 	protected deserialize(string: string): T {
 		try {
-			return this.transformer.deserialize(string);
+			return this.serializer.deserialize(string);
 		} catch (e) {
 			console.warn("Unable to deserialize store value properly...\n", e);
 			return this.fallback;

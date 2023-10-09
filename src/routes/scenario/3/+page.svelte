@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { HistoryManager } from "$lib/history/HistoryManager.js";
 	import { LocalStorageSyncer } from "$lib/sync/LocalStorageSyncer.js";
-	import { jsonTransformer, stringTransformer } from "$lib/types/transformers.js";
+	import { jsonSerializer, stringSerializer } from "$lib/types/Serializer.js";
 	import { ensureArray } from "$lib/types/unknown.js";
 	import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-	import type { MaybePromise } from "@sveltejs/kit";
 	import type { PageData } from "./$types.js";
+	import type { MaybePromise } from "@sveltejs/kit";
 
 	/** @inheritdoc */
 	export let data: PageData;
@@ -13,10 +13,10 @@
 	/** Manage history for `forecasts` */
 	const history = new HistoryManager<WeatherForecast[]>({
 		onChange: (val) => (forecasts = val),
-		transformer: jsonTransformer((string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something)))
+		serializer: jsonSerializer((string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something)))
 	});
 	/** Store history in local storage */
-	const local = new LocalStorageSyncer<string>("history", history.serialize(), stringTransformer());
+	const local = new LocalStorageSyncer<string>("history", history.serialize(), stringSerializer());
 
 	let forecasts: WeatherForecast[] = history.deserialize(local.pull()) ?? data.forecasts;
 	let forecastPromise: MaybePromise<WeatherForecast[]> = forecasts;

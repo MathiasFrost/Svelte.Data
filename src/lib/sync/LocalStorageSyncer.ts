@@ -1,4 +1,4 @@
-import type { Transformer } from "$lib/types/Transformer.js";
+import type { Serializer } from "$lib/types/Serializer.js";
 import { StorageSyncer } from "./StorageSyncer.js";
 
 /** Sync values to `window.localStorage` */
@@ -14,7 +14,7 @@ export class LocalStorageSyncer<T> extends StorageSyncer<T> {
 	}
 
 	/** @inheritdoc */
-	public constructor(key: string, fallback: T, transformer?: Transformer<T>) {
-		super(key, fallback, transformer);
+	public constructor(key: string, fallback: T, serializer?: Serializer<T>) {
+		super(key, fallback, serializer);
 	}
 }

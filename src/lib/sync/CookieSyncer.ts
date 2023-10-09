@@ -1,4 +1,4 @@
-import type { Transformer } from "$lib/types/Transformer.js";
+import type { Serializer } from "$lib/types/Serializer.js";
 import { Syncer } from "./Syncer.js";
 
 /** Cookie options */
@@ -51,10 +51,10 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** Replicate data to `cookie`
 	 * @param name Name of `cookie`
 	 * @param fallback Value used when we are unable to retrieve value from cookies
-	 * @param transformer TODOC
+	 * @param serializer TODOC
 	 * @param options Optional parameters */
-	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, transformer?: Transformer<T>) {
-		super(name, fallback, transformer);
+	public constructor(name: string, fallback: T, options: Partial<ICookieOptions> = {}, serializer?: Serializer<T>) {
+		super(name, fallback, serializer);
 		this.domain = options?.domain;
 		this.expires = options?.expires;
 		this.hostOnly = options?.hostOnly;
@@ -86,7 +86,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	public override push(value: T): void {
 		if (typeof document === "undefined") return;
 
-		const str = this.transformer.serialize(value);
+		const str = this.serializer.serialize(value);
 		const cookieComponents: string[] = [`${encodeURI(str)}`];
 		if (this.sameSite) cookieComponents.push(`SameSite=${this.sameSite}`);
 		if (this.domain) cookieComponents.push(`Domain=${this.domain}`);

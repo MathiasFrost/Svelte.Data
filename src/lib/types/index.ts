@@ -1,6 +1,7 @@
 export {
 	isObjectNullable,
 	isObject,
+	ensureType,
 	ensureStringNullable,
 	ensureString,
 	ensureObjectNullable,
@@ -18,5 +19,12 @@ export {
 	ensureArrayNullable,
 	ensureArray
 } from "$lib/types/unknown.js";
-export { type Transformer } from "$lib/types/Transformer.js";
-export { jsonTransformer, stringTransformer, numberTransformer, booleanTransformer, dateTransformer } from "$lib/types/transformers.js";
+export {
+	type Serializer,
+	jsonSerializer,
+	stringSerializer,
+	typeSerializer,
+	numberSerializer,
+	booleanSerializer,
+	dateSerializer
+} from "$lib/types/Serializer.js";

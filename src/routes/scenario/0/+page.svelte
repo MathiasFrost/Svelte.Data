@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { stringTransformer } from "$lib/types/transformers.js";
+	import { stringSerializer } from "$lib/types/Serializer.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
 	import { browser } from "$app/environment";
 	import { onMount } from "svelte";
@@ -8,7 +8,7 @@
 	const session = new SessionStorageSyncer(
 		"test",
 		"",
-		stringTransformer((string) => {
+		stringSerializer((string) => {
 			if (string.startsWith('"')) throw new Error("Invalid");
 			return string;
 		})

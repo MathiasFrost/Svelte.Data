@@ -1,4 +1,4 @@
-import { stringTransformer } from "$lib/types/transformers.js";
+import { stringSerializer } from "$lib/types/Serializer.js";
 import { CookieSyncer } from "$lib/sync/CookieSyncer.js";
 import { writable, type Writable } from "svelte/store";
 
@@ -12,7 +12,7 @@ const testPromise = (str?: string) =>
 			}, 1_000);
 	});
 
-const cookie = new CookieSyncer("test", "", { sameSite: "Strict" }, stringTransformer());
+const cookie = new CookieSyncer("test", "", { sameSite: "Strict" }, stringSerializer());
 export const store: Writable<string> & { cookie: CookieSyncer<string> } = { ...writable(initStore()), cookie: cookie };
 function initStore(): string {
 	const res = cookie.pull();
