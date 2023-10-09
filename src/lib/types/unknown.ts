@@ -42,6 +42,12 @@ export function ensureType<T>(something: unknown, values: T[]): T {
 	throw new Error(`Expected something among ${values.join(", ")}, found ${something}`);
 }
 
+/** Make sure that something is among the allowed values */
+export function ensureTypeNullable<T>(something: unknown, values: T[]): T | null {
+	if (something === null) return null;
+	return ensureType<T>(something, values);
+}
+
 /** Make sure that something is a number (not null) */
 export function ensureNumber(something: unknown): number {
 	if (typeof something === "number") return something;

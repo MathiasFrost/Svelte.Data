@@ -70,7 +70,16 @@ Handle pulling and pushing a value to and from a replication source
 
 Examples on how you can employ these components in different scenarios:
 
-TODO
+### Sync value to `window.localStorage`
+
+```ts
+import { LocalStorageSyncer } from "@maal/svelte-data/sync";
+import { writable } from "svelte/store";
+
+const syncer = new LocalStorageSyncer("key", "initialValue");
+export const someStore = writable<string>(syncer.pull());
+someStore.subscribe((value) => syncer.push(value));
+```
 
 ## Recommendations for handling remote data
 
