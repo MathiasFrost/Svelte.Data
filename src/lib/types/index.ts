@@ -12,6 +12,8 @@ export {
 	ensureInstanceOf,
 	ensureDateStringNullable,
 	ensureDateString,
+	ensureDateOnlyString,
+	ensureDateOnlyStringNullable,
 	ensureBooleanNullable,
 	ensureBoolean,
 	ensureBigintNullable,
