@@ -1,8 +1,9 @@
 import type { OIDCConfigurations } from "$lib/oidc/OIDCConfiguration.js";
 import { indefinitePromise } from "$lib/async/index.js";
 import type { Fetch } from "$lib/http/index.js";
-import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";
+import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
+import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
 /** @notes order matters */
 enum AcquisitionMethod {
@@ -57,52 +58,93 @@ export class OIDCManager<TAudience extends string> {
 	private readonly iFrameRejections: string[] = [];
 
 	/** References to active refresh_tokens exchange requests per refresh_token */
-	private readonly refreshPromises: { [key: string]: Promise<OIDCMessage | null> } = {};
+	private readonly refreshPromises: { [key: string]: Promise<number | null> } = {};
+
+	/** Store resolves from suspending user interaction sign ins from `getOidcMessage` */
+	private resolves: { audience: TAudience; resolve: (expiresIn: number) => void }[] = [];
+
+	/** Store rejects from suspending user interaction sign ins from `getOidcMessage` */
+	private rejects: { audience: TAudience; reject: () => void }[] = [];
 
 	/** @param configurations Configuration for all audiences the app will use */
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
 	}
 
+	public getExpiresIn(audience: TAudience): number | null {
+		if (typeof window === "undefined") throw new Error("Can't get expires_in server-side");
+		const expiresIn = Number(window.localStorage.getItem(storagePrefix(audience)));
+		if (isNaN(expiresIn)) return null;
+		return expiresIn;
+	}
+
+	public async getAccessToken(audience: TAudience): Promise<string | null> {
+		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+		const configuration = this.configurations[audience];
+		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
+		if (res.ok) return await res.text();
+		return null;
+	}
+
+	public async getIdToken(audience: TAudience): Promise<string | null> {
+		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+		const configuration = this.configurations[audience];
+		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
+		if (res.ok) return await res.text();
+		return null;
+	}
+
+	public async getRefreshToken(audience: TAudience): Promise<string | null> {
+		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+		const configuration = this.configurations[audience];
+		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
+		if (res.ok) return await res.text();
+		return null;
+	}
+
+	/** @returns The deserialized id_token. Empty object if failed. */
+	public async getIdTokenObject(audience: TAudience): Promise<Record<string, unknown>> {
+		const idToken = await this.getIdToken(audience);
+		if (!idToken) return {};
+		try {
+			return JSON.parse(this.decodeJwt(idToken));
+		} catch (e) {
+			console.warn("Unable to deserialize id_token ", e);
+			return {};
+		}
+	}
+
+	public isNotExpired(expiresIn: number | null): expiresIn is number {
+		if (!expiresIn) return false;
+		const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+		const tokenExpiresAt = currentTime + expiresIn;
+		return currentTime < tokenExpiresAt;
+	}
+
 	/** Custom fetch that manages attaching access_token to requests.
 	 * @see HTTPClient
 	 * @see HTTPClientOptions
 	 * @param audience OIDC audience matching the resource this fetch should communicate with
-	 * @param retries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
-	public createFetch(audience: TAudience, retries: number = 0): Fetch {
+	 * @param maxRetries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
+	public createFetch(audience: TAudience, maxRetries: number = 0): Fetch {
+		const retryFetch = createRetryFetch(maxRetries);
 		return async (requestInfo, requestInit, nullStatusCodes) => {
 			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
 
-			requestInit ??= {};
-			let headers = new Headers({ ...requestInit.headers });
+			await this.ensureValidAccessToken(audience);
 
-			let oidcMessage = await this.getOidcMessage(audience);
-			if (oidcMessage.accessToken) headers.append("Authorization", `Bearer ${oidcMessage.accessToken}`);
-			requestInit.headers = headers;
-
-			let response = await window.fetch(requestInfo, requestInit);
+			let response = await retryFetch(requestInfo, requestInit);
 
 			// Check if status code is of a value that we want to accept as null and hence not retry
 
 			// First check if we have to retry based on 401 or 403
 			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
-				headers = new Headers({ ...requestInit.headers });
-				oidcMessage = await this.getOidcMessage(audience, true);
-				if (!oidcMessage.accessToken) {
+				const expiresIn = await this.ensureValidAccessToken(audience, true);
+				if (!this.isNotExpired(expiresIn)) {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
 					return response;
 				}
-				headers.append("Authorization", `Bearer ${oidcMessage.accessToken}`);
-				requestInit.headers = headers;
-				response = await window.fetch(requestInfo, requestInit);
-			}
-
-			// Then check if we want general retries for 500, 502, 503, 504, 507, 429, 425, 408
-			let retryCount = 0;
-			while (!nullStatusCodes?.includes(response.status) && [500, 502, 503, 504, 507, 429, 425, 408].includes(response.status) && retryCount < retries) {
-				retryCount++;
-				await new Promise((resolve) => setTimeout(resolve, 1_000));
-				response = await window.fetch(requestInfo, requestInit);
+				response = await retryFetch(requestInfo, requestInit);
 			}
 			return response;
 		};
@@ -111,7 +153,7 @@ export class OIDCManager<TAudience extends string> {
 	/** @returns The OIDC object for the specified audience
 	 * @param audience The audience to get OIDC object for
 	 * @param forceRefresh Set to true if we skip trying to fetch from storage and initiate the process of acquiring a new token */
-	public async getOidcMessage(audience: TAudience, forceRefresh: boolean = false): Promise<OIDCMessage> {
+	public async ensureValidAccessToken(audience: TAudience, forceRefresh: boolean = false): Promise<number> {
 		if (typeof window === "undefined") throw new Error("Can't call getAccessToken server-side");
 
 		const config = this.configurations[audience];
@@ -139,12 +181,13 @@ export class OIDCManager<TAudience extends string> {
 			switch (method) {
 				case AcquisitionMethod.Storage:
 					{
-						const oidcMessage = this.getOidc(audience);
+						const expiresIn = this.getExpiresIn(audience);
+						const refreshToken = await this.getRefreshToken(audience);
 						// If we have valid token, all is good
-						if (oidcMessage.hasValidAccessToken) {
+						if (this.isNotExpired(expiresIn)) {
 							console.info(`OIDC '${audience}': access_token found in storage and valid. Returning.`);
-							return oidcMessage;
-						} else if (oidcMessage.refreshToken) {
+							return expiresIn;
+						} else if (refreshToken) {
 							console.info(`OIDC '${audience}': access_token found but invalid. Initiating refresh_token exchange.`);
 							method = AcquisitionMethod.RefreshToken;
 						} else {
@@ -155,8 +198,8 @@ export class OIDCManager<TAudience extends string> {
 					break;
 				case AcquisitionMethod.RefreshToken:
 					{
-						const oidcMessage = this.getOidc(audience);
-						const refreshTokenResult = await this.refreshToken(oidcMessage.refreshToken, audience);
+						const refreshToken = await this.getRefreshToken(audience);
+						const refreshTokenResult = await this.refreshToken(refreshToken, audience);
 						if (refreshTokenResult) {
 							console.info(`OIDC '${audience}': refresh_token exchange successful. Returning new access_token.`);
 							return refreshTokenResult;
@@ -169,10 +212,10 @@ export class OIDCManager<TAudience extends string> {
 				case AcquisitionMethod.IFrame:
 					{
 						await this.signInIFrame(audience); // This method stores OIDC result in storage if successful
-						const oidcMessage = this.getOidc(audience);
-						if (oidcMessage.accessToken) {
+						const expiresIn = this.getExpiresIn(audience);
+						if (this.isNotExpired(expiresIn)) {
 							console.info(`OIDC '${audience}': iframe sign-in successful. Returning new access_token.`);
-							return oidcMessage;
+							return expiresIn;
 						} else {
 							console.info(`OIDC '${audience}': iframe sign-in failed. Proceeding to user interaction.`);
 							method = AcquisitionMethod.UserInteraction;
@@ -185,7 +228,7 @@ export class OIDCManager<TAudience extends string> {
 					// Next time getAccessToken is called, if sign-in succeeded, we should be able to retrieve token from storage
 					else {
 						this.promptSignIn(audience);
-						const promise = new Promise<OIDCMessage>((resolve, reject) => {
+						const promise = new Promise<number>((resolve, reject) => {
 							this.resolves.push({ audience, resolve });
 							this.rejects.push({ audience, reject });
 						});
@@ -199,12 +242,6 @@ export class OIDCManager<TAudience extends string> {
 		}
 		throw new Error("Unexpected code path");
 	}
-
-	/** Store resolves from suspending user interaction sign ins from `getOidcMessage` */
-	private resolves: { audience: TAudience; resolve: (oidc: OIDCMessage) => void }[] = [];
-
-	/** Store rejects from suspending user interaction sign ins from `getOidcMessage` */
-	private rejects: { audience: TAudience; reject: () => void }[] = [];
 
 	/** Call to reject the sign in prompt from `getOidcMessage` when user interaction is required */
 	// noinspection JSUnusedGlobalSymbols
@@ -223,14 +260,14 @@ export class OIDCManager<TAudience extends string> {
 	/** Call to resolve the sign in prompt from `getOidcMessage` when user interaction is required
 	 * @notes Probably shouldn't use */
 	// noinspection JSUnusedGlobalSymbols
-	public resolvePrompt(audience: TAudience, oidc: OIDCMessage): void {
-		this.resolves.filter((value) => value.audience === audience).forEach((value) => value.resolve(oidc));
+	public resolvePrompt(audience: TAudience, expiresIn: number): void {
+		this.resolves.filter((value) => value.audience === audience).forEach((value) => value.resolve(expiresIn));
 		this.rejects = this.rejects.filter((value) => value.audience !== audience);
 		this.resolves = this.resolves.filter((value) => value.audience !== audience);
 	}
 
 	/** Exchange a refresh_token for a new OIDC object */
-	public async refreshToken(refreshToken: string | null, audience: TAudience): Promise<OIDCMessage | null> {
+	public async refreshToken(refreshToken: string | null, audience: TAudience): Promise<number | null> {
 		if (!refreshToken) return null;
 
 		// If there's an ongoing request for this refresh_token and audience, return its promise.
@@ -238,7 +275,7 @@ export class OIDCManager<TAudience extends string> {
 			return this.refreshPromises[refreshToken];
 		}
 
-		const refreshTokenInternal: () => Promise<OIDCMessage | null> = async () => {
+		const refreshTokenInternal: () => Promise<number | null> = async () => {
 			const configuration = this.configurations[audience];
 			const document = await this.configProvider.get(configuration.authority, configuration.metadataUri);
 
@@ -258,8 +295,8 @@ export class OIDCManager<TAudience extends string> {
 				}
 
 				const oidcMessage = new OIDCMessage(await response.json());
-				this.setOidc(audience, oidcMessage);
-				return oidcMessage;
+				await this.setOidc(audience, oidcMessage);
+				return oidcMessage.expiresIn;
 			} catch (e) {
 				console.info(`OIDC '${audience}': refresh_token request failed`, e);
 				return null;
@@ -273,6 +310,97 @@ export class OIDCManager<TAudience extends string> {
 		const promise = refreshTokenInternal();
 		this.refreshPromises[refreshToken] = promise;
 		return await promise;
+	}
+
+	/** Redirect to OIDC provider's authorization endpoint */
+	public async signInUserInteraction(audience: TAudience): Promise<never> {
+		const uri = await this.buildAuthorizeUri(audience);
+		window.location.href = uri.toString();
+		return await indefinitePromise<never>(); // Suspend the promise until this window is gone due to redirect
+	}
+
+	/** Handle the return from an OIDC authorization endpoint
+	 * @notes Should be called `onMount` on the page resolved to the redirect_uri specified in configuration */
+	public async signInCallback(): Promise<void> {
+		let audience: string = "[NOT SET]";
+		try {
+			const searchParams = new URLSearchParams(window.location.search);
+			const err = searchParams.get("error");
+			if (err) {
+				// noinspection ExceptionCaughtLocallyJS
+				throw new OIDCError(`${err}: ${searchParams.get("error_description")}`);
+			}
+
+			const code = searchParams.get("code") ?? "";
+			const state = searchParams.get("state") ?? "";
+
+			const payloadJson = window.sessionStorage.getItem(state);
+			if (!payloadJson) {
+				// noinspection ExceptionCaughtLocallyJS
+				throw new OIDCError("State not found in storage");
+			}
+			const statePayload = JSON.parse(payloadJson) as OIDCStatePayload<TAudience>;
+			window.sessionStorage.removeItem(state);
+			audience = statePayload.audience;
+
+			const config = this.configurations[statePayload.audience];
+			const document = await this.configProvider.get(config.authority, config.metadataUri);
+
+			const formData = new FormData();
+			formData.append("client_id", config.clientId);
+			formData.append("scope", config.scope);
+			formData.append("redirect_uri", config.redirectUri);
+			formData.append("code", code);
+			formData.append("code_verifier", statePayload.codeVerifier);
+			formData.append("grant_type", "authorization_code");
+
+			const response = await fetch(document.tokenEndpoint, { method: "POST", body: formData });
+			if (!response.ok) {
+				// noinspection ExceptionCaughtLocallyJS
+				throw new OIDCError(`authorization_code request failed: ${await response.text()}`);
+			}
+
+			const oidcMessage = new OIDCMessage(await response.json());
+			if (!oidcMessage.isNonceValid(statePayload.nonce)) {
+				// noinspection ExceptionCaughtLocallyJS
+				throw new Error("Nonce has changed. Token might have been tampered with. Failing.");
+			}
+
+			await this.setOidc(audience as TAudience, oidcMessage);
+
+			if (window !== window.parent) {
+				window.parent.postMessage("success", "*");
+			}
+		} catch (e) {
+			const oidcError = new OIDCError();
+			if (e instanceof Error) {
+				oidcError.message = e.message;
+				oidcError.name = e.name;
+				oidcError.stack = e.stack;
+				oidcError.cause = e.cause;
+			}
+			if (window !== window.parent) {
+				window.parent.postMessage({ type: "error", details: oidcError }, "*");
+			} else {
+				console.info(`OIDC '${audience}': callback failed`, e);
+			}
+		}
+	}
+
+	/** Call the function `onSignInPrompt` supplied in configuration
+	 * @see OIDCConfiguration */
+	public promptSignIn(audience: TAudience): void {
+		this.configurations[audience].onSignInPrompt?.(audience);
+	}
+
+	/** @returns The claims part of the OIDC token (access or id) decoded with UTF-8 */
+	private decodeJwt(jwt: string): string {
+		return decodeURIComponent(
+			atob(jwt.split(".")[1])
+				.split("")
+				.map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+				.join("")
+		);
 	}
 
 	/** Sign in via iframe.
@@ -358,96 +486,24 @@ export class OIDCManager<TAudience extends string> {
 		await promise;
 	}
 
-	/** Redirect to OIDC provider's authorization endpoint */
-	public async signInUserInteraction(audience: TAudience): Promise<never> {
-		const uri = await this.buildAuthorizeUri(audience);
-		window.location.href = uri.toString();
-		return await indefinitePromise<never>(); // Suspend the promise until this window is gone due to redirect
-	}
-
-	/** Handle the return from an OIDC authorization endpoint
-	 * @notes Should be called `onMount` on the page resolved to the redirect_uri specified in configuration */
-	public async signInCallback(): Promise<void> {
-		let audience: string = "[NOT SET]";
-		try {
-			const searchParams = new URLSearchParams(window.location.search);
-			const err = searchParams.get("error");
-			if (err) {
-				// noinspection ExceptionCaughtLocallyJS
-				throw new OIDCError(err);
-			}
-
-			const code = searchParams.get("code") ?? "";
-			const state = searchParams.get("state") ?? "";
-
-			const payloadJson = window.sessionStorage.getItem(state);
-			if (!payloadJson) {
-				// noinspection ExceptionCaughtLocallyJS
-				throw new OIDCError("State not found in storage");
-			}
-			const statePayload = JSON.parse(payloadJson) as OIDCStatePayload<TAudience>;
-			window.sessionStorage.removeItem(state);
-			audience = statePayload.audience;
-
-			const config = this.configurations[statePayload.audience];
-			const document = await this.configProvider.get(config.authority, config.metadataUri);
-
-			const formData = new FormData();
-			formData.append("client_id", config.clientId);
-			formData.append("scope", config.scope);
-			formData.append("redirect_uri", config.redirectUri);
-			formData.append("code", code);
-			formData.append("code_verifier", statePayload.codeVerifier);
-			formData.append("grant_type", "authorization_code");
-
-			const response = await fetch(document.tokenEndpoint, { method: "POST", body: formData });
-			if (!response.ok) {
-				// noinspection ExceptionCaughtLocallyJS
-				throw new OIDCError(`authorization_code request failed: ${await response.text()}`);
-			}
-
-			const oidcMessage = new OIDCMessage(await response.json());
-			if (!oidcMessage.isNonceValid(statePayload.nonce)) {
-				// noinspection ExceptionCaughtLocallyJS
-				throw new Error("Nonce has changed. Token might have been tampered with. Failing.");
-			}
-
-			this.setOidc(audience as TAudience, oidcMessage);
-
-			if (window !== window.parent) {
-				window.parent.postMessage("success", "*");
-			}
-		} catch (e) {
-			const oidcError = new OIDCError();
-			if (e instanceof Error) {
-				oidcError.message = e.message;
-				oidcError.name = e.name;
-				oidcError.stack = e.stack;
-				oidcError.cause = e.cause;
-			}
-			if (window !== window.parent) {
-				window.parent.postMessage({ type: "error", details: oidcError }, "*");
-			} else {
-				console.info(`OIDC '${audience}': callback failed`, e);
-			}
-		}
-	}
-
-	/** Call the function `onSignInPrompt` supplied in configuration
-	 * @see OIDCConfiguration */
-	public promptSignIn(audience: TAudience): void {
-		this.configurations[audience].onSignInPrompt?.(audience);
-	}
-
-	/** Get the OIDC object stored in `window.localStorage` */
-	public getOidc(audience: TAudience): OIDCMessage {
-		return new OIDCMessage(typeof window === "undefined" ? null : window.localStorage.getItem(storagePrefix(audience)));
-	}
-
 	/** Set the OIDC object in `window.localStorage` */
-	private setOidc(audience: TAudience, oidcMessage: OIDCMessage): void {
+	private async setOidc(audience: TAudience, oidcMessage: OIDCMessage): Promise<void> {
 		if (typeof window === "undefined") return;
-		window.localStorage.setItem(storagePrefix(audience), JSON.stringify(oidcMessage));
+		const configuration = this.configurations[audience];
+		if (oidcMessage.accessToken)
+			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_AccessToken?jwtBearer=${oidcMessage.accessToken}`, {
+				credentials: "include"
+			});
+
+		if (oidcMessage.idToken)
+			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_IdToken?jwtBearer=${oidcMessage.idToken}`, { credentials: "include" });
+
+		if (oidcMessage.refreshToken)
+			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_RefreshToken?jwtBearer=${oidcMessage.refreshToken}`, {
+				credentials: "include"
+			});
+
+		if (oidcMessage.expiresIn) window.localStorage.setItem(storagePrefix(audience), oidcMessage.expiresIn.toString());
 	}
 
 	/** @returns Encoded bytes as base64 to be used in URL */

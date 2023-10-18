@@ -1,5 +1,4 @@
-import type { Transformer } from "$lib/types/Transformer.js";
-import { jsonTransformer } from "$lib/types/transformers.js";
+import { type Serializer, jsonSerializer } from "$lib/types/Serializer.js";
 import { ensureArray } from "$lib/types/index.js";
 
 /** Options */
@@ -11,7 +10,7 @@ export interface HistoryManagerOptions<T> {
 	onHistoryChange: (history: string[], index: number) => void;
 
 	/** For converting value to and from its string representation */
-	transformer: Transformer<T>;
+	serializer: Serializer<T>;
 
 	/** Limit how many changes can be stored */
 	cap: number;
@@ -35,7 +34,7 @@ export class HistoryManager<T> {
 	public onHistoryChange?: (history: string[], index: number) => void;
 
 	/** TODOC */
-	public transformer: Transformer<T>;
+	public serializer: Serializer<T>;
 
 	/** Set to true when we want manager to ignore next change and not add it to history */
 	public ignoreNext = false;
@@ -46,7 +45,7 @@ export class HistoryManager<T> {
 		this.cap = options.cap ?? 10;
 		this.onChange = options.onChange;
 		this.onHistoryChange = options.onHistoryChange;
-		this.transformer = options.transformer ?? jsonTransformer();
+		this.serializer = options.serializer ?? jsonSerializer();
 	}
 
 	/** Add an entry to history */
@@ -62,7 +61,7 @@ export class HistoryManager<T> {
 			this.index = this.history.length - 1;
 		}
 
-		this.history = [...this.history.slice(0, ++this.index), this.transformer.serialize(value)];
+		this.history = [...this.history.slice(0, ++this.index), this.serializer.serialize(value)];
 		this.onHistoryChange?.(this.history, this.index);
 	}
 
@@ -70,7 +69,7 @@ export class HistoryManager<T> {
 	public undo(): void {
 		if (this.index > 0) {
 			this.ignoreNext = true;
-			this.onChange?.(this.transformer.deserialize(this.history[--this.index]));
+			this.onChange?.(this.serializer.deserialize(this.history[--this.index]));
 			this.onHistoryChange?.(this.history, this.index);
 		}
 	}
@@ -79,14 +78,14 @@ export class HistoryManager<T> {
 	public redo(): void {
 		if (this.index < this.history.length - 1) {
 			this.ignoreNext = true;
-			this.onChange?.(this.transformer.deserialize(this.history[++this.index]));
+			this.onChange?.(this.serializer.deserialize(this.history[++this.index]));
 			this.onHistoryChange?.(this.history, this.index);
 		}
 	}
 
 	/** Serialize history data to string. Useful for storing history in something like `localStorage` */
 	public serialize(): string {
-		return JSON.stringify({ history: this.history.map((h) => this.transformer.deserialize(h)), index: this.index });
+		return JSON.stringify({ history: this.history.map((h) => this.serializer.deserialize(h)), index: this.index });
 	}
 
 	/** TODOC */
@@ -99,6 +98,6 @@ export class HistoryManager<T> {
 		if (typeof string === "undefined") return undefined;
 
 		this.ignoreNext = true;
-		return this.transformer.deserialize(string);
+		return this.serializer.deserialize(string);
 	}
 }

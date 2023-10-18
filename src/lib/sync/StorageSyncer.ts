@@ -1,4 +1,4 @@
-import type { Transformer } from "$lib/types/Transformer.js";
+import type { Serializer } from "$lib/types/Serializer.js";
 import { Syncer } from "./Syncer.js";
 
 /** @internal */
@@ -18,7 +18,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 
 	/** @inheritdoc */
 	public override push(something: T): void {
-		this.storage?.setItem(this.key, this.transformer.serialize(something));
+		this.storage?.setItem(this.key, this.serializer.serialize(something));
 	}
 
 	/** @inheritdoc */
@@ -27,7 +27,7 @@ export abstract class StorageSyncer<T> extends Syncer<T> {
 	}
 
 	/** @inheritdoc */
-	protected constructor(key: string, fallback: T, transformer?: Transformer<T>) {
-		super(key, fallback, transformer);
+	protected constructor(key: string, fallback: T, serializer?: Serializer<T>) {
+		super(key, fallback, serializer);
 	}
 }

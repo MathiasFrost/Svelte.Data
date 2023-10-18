@@ -62,7 +62,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** TODOC */
-	private get requestUri(): string {
+	public get requestUri(): string {
 		let requestUri = "";
 		// noinspection HttpUrlsUsage
 		if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;

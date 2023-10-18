@@ -36,6 +36,18 @@ export function ensureStringNullable(something: unknown): string | null {
 	throw new Error(`Expected string | null, found ${typeof something}`);
 }
 
+/** Make sure that something is among the allowed values */
+export function ensureType<T>(something: unknown, values: T[]): T {
+	if (values.includes(something as T)) return something as T;
+	throw new Error(`Expected something among ${values.join(", ")}, found ${something}`);
+}
+
+/** Make sure that something is among the allowed values */
+export function ensureTypeNullable<T>(something: unknown, values: T[]): T | null {
+	if (something === null) return null;
+	return ensureType<T>(something, values);
+}
+
 /** Make sure that something is a number (not null) */
 export function ensureNumber(something: unknown): number {
 	if (typeof something === "number") return something;

@@ -14,10 +14,10 @@
 	let url: string | null = null;
 
 	async function getProfile(): Promise<void> {
-		const json = JSON.parse(window.localStorage.getItem("OIDC_MS.Graph") ?? "");
+		const accessToken = await oidcManager.getAccessToken("MS.Graph");
 		const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
 			headers: {
-				Authorization: "Bearer " + json["access_token"]
+				Authorization: "Bearer " + accessToken
 			}
 		});
 		url = URL.createObjectURL(await res.blob());

@@ -7,8 +7,8 @@
 	async function getUser(refresh: boolean): Promise<Record<string, unknown>> {
 		console.log(refresh);
 		if (refresh) user.set({});
-		const res = await oidcManager.getOidcMessage("MS.Graph", refresh);
-		const o = res.idTokenObject;
+		await oidcManager.ensureValidAccessToken("MS.Graph", refresh);
+		const o = await oidcManager.getIdTokenObject("MS.Graph");
 		user.set(o);
 		refresh = false;
 		return o;

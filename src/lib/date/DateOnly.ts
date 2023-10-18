@@ -26,7 +26,8 @@ export class DateOnly extends Date {
 	 * @param isoString ISO string representing a date. Time will be truncated if present.
 	 * @param wrap How to wrap this date in extreme time-zones
 	 * @param roundTripped Set to true when deserializing from an already wrapped date */
-	public constructor(isoString: string, wrap: DateWrap, roundTripped?: boolean) {
+	public constructor(isoString: string | "today", wrap: DateWrap, roundTripped?: boolean) {
+		if (isoString === "today") isoString = DateOnly.today();
 		const date = new Date(isoString.substring(0, "yyyy-MM-dd".length));
 		if (roundTripped) {
 			switch (wrap) {
