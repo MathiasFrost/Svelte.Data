@@ -3,6 +3,7 @@ import { indefinitePromise } from "$lib/async/index.js";
 import type { Fetch } from "$lib/http/index.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
+import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
 /** @notes order matters */
 enum AcquisitionMethod {
@@ -124,14 +125,15 @@ export class OIDCManager<TAudience extends string> {
 	 * @see HTTPClient
 	 * @see HTTPClientOptions
 	 * @param audience OIDC audience matching the resource this fetch should communicate with
-	 * @param retries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
-	public createFetch(audience: TAudience, retries: number = 0): Fetch {
+	 * @param maxRetries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
+	public createFetch(audience: TAudience, maxRetries: number = 0): Fetch {
+		const retryFetch = createRetryFetch(maxRetries);
 		return async (requestInfo, requestInit, nullStatusCodes) => {
 			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
 
 			await this.ensureValidAccessToken(audience);
 
-			let response = await window.fetch(requestInfo, requestInit);
+			let response = await retryFetch(requestInfo, requestInit);
 
 			// Check if status code is of a value that we want to accept as null and hence not retry
 
@@ -142,15 +144,7 @@ export class OIDCManager<TAudience extends string> {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
 					return response;
 				}
-				response = await window.fetch(requestInfo, requestInit);
-			}
-
-			// Then check if we want general retries for 500, 502, 503, 504, 507, 429, 425, 408
-			let retryCount = 0;
-			while (!nullStatusCodes?.includes(response.status) && [500, 502, 503, 504, 507, 429, 425, 408].includes(response.status) && retryCount < retries) {
-				retryCount++;
-				await new Promise((resolve) => setTimeout(resolve, 1_000));
-				response = await window.fetch(requestInfo, requestInit);
+				response = await retryFetch(requestInfo, requestInit);
 			}
 			return response;
 		};

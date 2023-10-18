@@ -6,7 +6,7 @@ Package aiming to make it easier to manage data with advanced features in Svelte
 
 ## Important
 
-Your tsconfig.json [must be set](https://kit.svelte.dev/docs/packaging#typescript) to `"moduleResolution": "nodenext"`
+Your tsconfig.json [must be set](https://kit.svelte.dev/docs/packaging#typescript) to `"moduleResolution": "bundler"`
 
 ## Components
 
