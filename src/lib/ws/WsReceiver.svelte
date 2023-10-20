@@ -2,27 +2,37 @@
 	import type { WSClient } from "$lib/ws/WSClient";
 	import { onDestroy } from "svelte";
 	import { indefinitePromise } from "$lib/async";
+	import type { WSMessage } from "$lib/ws/WSMessage";
 
 	/** TODOC */
 	export let ws: WSClient | null;
 
-	let unsub: (() => void) | null = null;
-	let promise: Promise<string> = indefinitePromise<string>();
-
-	$: if (ws) {
-		const p = ws.receive(target, (str) => str);
-		p.then((res) => {
-			unsub = res.subscribe((val) => {
-				if (typeof val === "undefined") return;
-				promise = Promise.resolve(val);
-			});
-		});
-	}
-
 	/** TODOC */
 	export let target: string;
 
+	/** TODOC */
+	let unsub: (() => void) | null = null;
+
+	/** TODOC */
+	let maybePromise: Promise<WSMessage> | WSMessage = indefinitePromise<WSMessage>();
+
+	// TODOC
+	$: receive(ws, target);
+
+	/** TODOC */
+	async function receive(ws: WSClient | null, target: string): Promise<void> {
+		unsub?.();
+		if (!ws) return;
+
+		const res = await ws.receive(target);
+		unsub = res.subscribe((val) => {
+			if (val === null) return;
+			maybePromise = val;
+		});
+	}
+
+	// Cleanup
 	onDestroy(() => unsub?.());
 </script>
 
-<slot {promise} />
+<slot {maybePromise} />

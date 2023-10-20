@@ -5,7 +5,6 @@
 
 	let refresh = false;
 	async function getUser(refresh: boolean): Promise<Record<string, unknown>> {
-		console.log(refresh);
 		if (refresh) user.set({});
 		await oidcManager.ensureValidAccessToken("MS.Graph", refresh);
 		const o = await oidcManager.getIdTokenObject("MS.Graph");

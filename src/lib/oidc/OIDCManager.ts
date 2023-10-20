@@ -5,6 +5,9 @@ import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.j
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
+/** Interval for checking validity regularly */
+let isValidInterval = 0;
+
 /** @notes order matters */
 enum AcquisitionMethod {
 	/** Get OIDC object from `window.localStorage` */
@@ -69,36 +72,65 @@ export class OIDCManager<TAudience extends string> {
 	/** @param configurations Configuration for all audiences the app will use */
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
+		if (typeof window === "undefined") return;
+		window.clearTimeout(isValidInterval);
+		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
 	}
 
+	/** TODOC */
+	public async validateAudiences(): Promise<void> {
+		for (const audience of Object.keys(this.configurations)) {
+			console.info(`OIDC '${audience}': performing regular validation check`);
+			await this.ensureValidAccessToken(audience as TAudience);
+		}
+		window.clearTimeout(isValidInterval);
+		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
+	}
+
+	/** TODOC */
 	public getExpiresIn(audience: TAudience): number | null {
 		if (typeof window === "undefined") throw new Error("Can't get expires_in server-side");
 		const expiresIn = Number(window.localStorage.getItem(storagePrefix(audience)));
-		if (isNaN(expiresIn)) return null;
+		if (isNaN(expiresIn)) {
+			this.invalidate(audience);
+			return null;
+		}
 		return expiresIn;
 	}
 
+	/** TODOC */
 	public async getAccessToken(audience: TAudience): Promise<string | null> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+
 		const configuration = this.configurations[audience];
 		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
-		if (res.ok) return await res.text();
+		if (res.status === 200) return await res.text();
+
+		this.invalidate(audience);
 		return null;
 	}
 
+	/** TODOC */
 	public async getIdToken(audience: TAudience): Promise<string | null> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+
 		const configuration = this.configurations[audience];
 		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
-		if (res.ok) return await res.text();
+		if (res.status === 200) return await res.text();
+
+		this.invalidate(audience);
 		return null;
 	}
 
+	/** TODOC */
 	public async getRefreshToken(audience: TAudience): Promise<string | null> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
+
 		const configuration = this.configurations[audience];
 		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
-		if (res.ok) return await res.text();
+		if (res.status === 200) return await res.text();
+
+		this.invalidate(audience);
 		return null;
 	}
 
@@ -110,10 +142,12 @@ export class OIDCManager<TAudience extends string> {
 			return JSON.parse(this.decodeJwt(idToken));
 		} catch (e) {
 			console.warn("Unable to deserialize id_token ", e);
+			this.invalidate(audience);
 			return {};
 		}
 	}
 
+	/** TODOC */
 	public isNotExpired(expiresIn: number | null): expiresIn is number {
 		if (!expiresIn) return false;
 		const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
@@ -158,6 +192,7 @@ export class OIDCManager<TAudience extends string> {
 
 		const config = this.configurations[audience];
 		let method: AcquisitionMethod = forceRefresh ? AcquisitionMethod.RefreshToken : AcquisitionMethod.Storage;
+		if (forceRefresh) console.info(`OIDC '${audience}': forcing refresh. Staring with refresh_token`);
 
 		// Try all methods from storage retrieval to refresh_token exchange through iframe silent sign-in to user interaction redirect
 		while (method <= AcquisitionMethod.UserInteraction) {
@@ -182,16 +217,17 @@ export class OIDCManager<TAudience extends string> {
 				case AcquisitionMethod.Storage:
 					{
 						const expiresIn = this.getExpiresIn(audience);
-						const refreshToken = await this.getRefreshToken(audience);
 						// If we have valid token, all is good
 						if (this.isNotExpired(expiresIn)) {
-							console.info(`OIDC '${audience}': access_token found in storage and valid. Returning.`);
+							console.info(`OIDC '${audience}': expires_in found in storage and valid. Assuming we have a valid access_token in cookie.`);
 							return expiresIn;
-						} else if (refreshToken) {
-							console.info(`OIDC '${audience}': access_token found but invalid. Initiating refresh_token exchange.`);
+						}
+						const refreshToken = await this.getRefreshToken(audience);
+						if (refreshToken) {
+							console.info(`OIDC '${audience}': expires_in found but invalid. Initiating refresh_token exchange.`);
 							method = AcquisitionMethod.RefreshToken;
 						} else {
-							console.info(`OIDC '${audience}': access_token invalid and refresh_token not found. Initiating iframe sign in.`);
+							console.info(`OIDC '${audience}': expires_in indicates expired and refresh_token not found. Initiating iframe sign in.`);
 							method = AcquisitionMethod.IFrame;
 						}
 					}
@@ -199,13 +235,18 @@ export class OIDCManager<TAudience extends string> {
 				case AcquisitionMethod.RefreshToken:
 					{
 						const refreshToken = await this.getRefreshToken(audience);
-						const refreshTokenResult = await this.refreshToken(refreshToken, audience);
-						if (refreshTokenResult) {
-							console.info(`OIDC '${audience}': refresh_token exchange successful. Returning new access_token.`);
-							return refreshTokenResult;
-						} else {
-							console.info(`OIDC '${audience}': refresh_token exchange failed. Proceeding to iframe.`);
+						if (!refreshToken) {
+							console.info(`OIDC '${audience}': refresh_token not found. Proceeding to iframe`);
 							method = AcquisitionMethod.IFrame;
+						} else {
+							const refreshTokenResult = await this.refreshToken(refreshToken, audience);
+							if (refreshTokenResult) {
+								console.info(`OIDC '${audience}': refresh_token exchange successful. Returning new access_token.`);
+								return refreshTokenResult;
+							} else {
+								console.info(`OIDC '${audience}': refresh_token exchange failed. Proceeding to iframe.`);
+								method = AcquisitionMethod.IFrame;
+							}
 						}
 					}
 					break;
@@ -237,9 +278,11 @@ export class OIDCManager<TAudience extends string> {
 					}
 					break;
 				default:
+					this.invalidate(audience);
 					throw new Error("Unexpected code path");
 			}
 		}
+		this.invalidate(audience);
 		throw new Error("Unexpected code path");
 	}
 
@@ -298,6 +341,7 @@ export class OIDCManager<TAudience extends string> {
 				await this.setOidc(audience, oidcMessage);
 				return oidcMessage.expiresIn;
 			} catch (e) {
+				this.invalidate(audience);
 				console.info(`OIDC '${audience}': refresh_token request failed`, e);
 				return null;
 			} finally {
@@ -324,6 +368,11 @@ export class OIDCManager<TAudience extends string> {
 	public async signInCallback(): Promise<void> {
 		let audience: string = "[NOT SET]";
 		try {
+			// Signal parent window that something is happening
+			if (window !== window.parent) {
+				window.parent.postMessage("ping", "*");
+			}
+
 			const searchParams = new URLSearchParams(window.location.search);
 			const err = searchParams.get("error");
 			if (err) {
@@ -418,10 +467,14 @@ export class OIDCManager<TAudience extends string> {
 			const uri = await this.buildAuthorizeUri(audience);
 			const iframe = document.createElement("iframe");
 			uri.searchParams.append("prompt", "none");
+			// iframe.hidden = true;
 			iframe.src = uri.toString();
 
 			const promise = new Promise<void>((resolve, reject) => {
+				let timeout = 0;
+
 				function handleMessage(e: MessageEvent) {
+					window.clearTimeout(timeout);
 					if (e.data === "success") {
 						resolve();
 						cleanup();
@@ -438,12 +491,18 @@ export class OIDCManager<TAudience extends string> {
 
 				window.addEventListener("message", handleMessage);
 				document.body.appendChild(iframe);
+
+				// If there are no activity in 2 seconds we give up
+				timeout = window.setTimeout(() => {
+					reject("Detected inactivity in iframe. Browser has likely disabled this feature for security reasons. Rejecting.");
+				}, 2_000);
 			});
 
 			try {
 				await promise;
 			} catch (e) {
 				this.iFrameRejections.push(this.configurations[audience].authority);
+				this.invalidate(audience);
 				console.info(`OIDC '${audience}': sign-in iframe failed`, e);
 			}
 		};
@@ -490,20 +549,27 @@ export class OIDCManager<TAudience extends string> {
 	private async setOidc(audience: TAudience, oidcMessage: OIDCMessage): Promise<void> {
 		if (typeof window === "undefined") return;
 		const configuration = this.configurations[audience];
-		if (oidcMessage.accessToken)
-			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_AccessToken?jwtBearer=${oidcMessage.accessToken}`, {
-				credentials: "include"
-			});
+		try {
+			if (oidcMessage.accessToken)
+				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_AccessToken?jwtBearer=${oidcMessage.accessToken}`, {
+					credentials: "include"
+				});
 
-		if (oidcMessage.idToken)
-			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_IdToken?jwtBearer=${oidcMessage.idToken}`, { credentials: "include" });
+			if (oidcMessage.idToken)
+				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_IdToken?jwtBearer=${oidcMessage.idToken}`, {
+					credentials: "include"
+				});
 
-		if (oidcMessage.refreshToken)
-			await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_RefreshToken?jwtBearer=${oidcMessage.refreshToken}`, {
-				credentials: "include"
-			});
+			if (oidcMessage.refreshToken)
+				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_RefreshToken?jwtBearer=${oidcMessage.refreshToken}`, {
+					credentials: "include"
+				});
 
-		if (oidcMessage.expiresIn) window.localStorage.setItem(storagePrefix(audience), oidcMessage.expiresIn.toString());
+			if (oidcMessage.expiresIn) window.localStorage.setItem(storagePrefix(audience), oidcMessage.expiresIn.toString());
+		} catch (e) {
+			this.invalidate(audience);
+			console.error(e);
+		}
 	}
 
 	/** @returns Encoded bytes as base64 to be used in URL */
@@ -560,5 +626,11 @@ export class OIDCManager<TAudience extends string> {
 		url.searchParams.append("response_type", "code");
 
 		return url;
+	}
+
+	/** Clear expires_in to indicate our OIDC state is invalid */
+	private invalidate(audience: TAudience): void {
+		if (typeof window === "undefined") return;
+		window.localStorage.removeItem(storagePrefix(audience));
 	}
 }

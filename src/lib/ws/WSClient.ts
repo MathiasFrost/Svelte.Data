@@ -1,5 +1,8 @@
-import type { Writable } from "svelte/store";
+import { type Writable, writable } from "svelte/store";
+import { indefinitePromise } from "$lib/async";
+import { WSMessage } from "$lib/ws/WSMessage";
 
+/** TODOC */
 export interface WSClientOptions {}
 
 /** TODOC */
@@ -7,8 +10,20 @@ export class WSClient {
 	/** Base address for requests made with this client */
 	public readonly baseAddress: URL;
 
+	/** TODOC */
+	public webSocket: WebSocket | null = null;
+
 	/** @see WSClientOptions */
 	private readonly options: Partial<WSClientOptions>;
+
+	/** TODOC */
+	private connectionPromise: Promise<void> | null = null;
+
+	/** TODOC */
+	private pingInterval = 0;
+
+	/** TODOC */
+	private stores: Map<string, Writable<WSMessage | null>> = new Map();
 
 	/** ctor */
 	public constructor(baseAddress = "", options: Partial<WSClientOptions> = {}) {
@@ -16,17 +31,42 @@ export class WSClient {
 		this.options = options;
 	}
 
-	public webSocket: WebSocket | null = null;
-
-	private connectionPromise: Promise<void> | null = null;
-
+	/** TODOC */
 	public async connect(): Promise<void> {
 		this.connectionPromise ??= this._connect();
 		await this.connectionPromise;
 	}
 
+	/** TODOC */
+	public close(): void {
+		if (typeof window !== "undefined") {
+			window.clearInterval(this.pingInterval);
+		}
+		this.webSocket?.close();
+		this.webSocket = null;
+	}
+
+	/** TODOC */
+	public async send(target: string, ...args: unknown[]): Promise<void> {
+		await this.connect();
+		this.webSocket?.send(`{"type":1,"target":"${target}","arguments":${JSON.stringify(args)}}`);
+	}
+
+	/** TODOC */
+	public async receive(target: string): Promise<Writable<WSMessage | null>> {
+		if (this.stores.has(target)) return this.stores.get(target) as Writable<WSMessage | null>;
+
+		await this.connect();
+		const store = writable<WSMessage | null>(null);
+		this.stores.set(target, store);
+		return store;
+	}
+
+	/** TODOC */
 	private async _connect(): Promise<void> {
-		if (typeof window === "undefined") throw new Error("Cannot connect to WebSockets server-side");
+		if (typeof window === "undefined") {
+			await indefinitePromise<never>();
+		}
 
 		if (this.webSocket) {
 			this.close();
@@ -38,77 +78,25 @@ export class WSClient {
 		const json = await negotiateResponse.json();
 		const token = json["connectionToken"];
 
-		this.baseAddress.searchParams.append("id", token);
+		const baseAddress = new URL(this.baseAddress);
+		baseAddress.searchParams.append("id", token);
 
-		this.webSocket = new WebSocket(this.baseAddress);
+		this.webSocket = new WebSocket(baseAddress);
 		this.webSocket.addEventListener("message", this.handleMessage.bind(this));
-		this.webSocket.addEventListener("close", (ev) => console.log(ev));
-		this.webSocket.addEventListener("error", (ev) => console.warn(ev));
-		this.webSocket.addEventListener("open", (ev) => {
-			console.log(ev);
+		this.webSocket.addEventListener("close", (ev) => console.info(`${this.baseAddress}: WebSocket closed with code ${ev.code}`));
+		this.webSocket.addEventListener("error", (ev) => console.error(ev));
+		this.webSocket.addEventListener("open", () => {
+			console.info(`${this.baseAddress}: WebSocket connected, switching to JSON protocol`);
 			this.webSocket?.send('{"protocol":"json","version":1}');
+			this.pingInterval = window.setInterval(() => this.webSocket?.send('{"type":6}'), 15_000);
 		});
 	}
 
-	public close(): void {
-		this.webSocket?.close();
-		this.webSocket = null;
-	}
-
+	/** TODOC */
 	private handleMessage(e: MessageEvent): void {
-		try {
-			const data = JSON.parse(e.data.substring(0, e.data.length - 1));
-			const store = this.stores.get(data.target);
-			if (!store) return;
-			const deserializer = this.deserializers.get(data.target) || ((json) => JSON.parse(json));
-			store.set(deserializer(data.arguments[0]));
-		} catch (e) {
-			console.warn(e);
-		}
+		const data = new WSMessage(e.data);
+		const store = this.stores.get(data.target);
+		if (!store) return;
+		store.set(data);
 	}
-
-	public async send(str: string): Promise<void> {
-		await this.connect();
-		this.webSocket?.send(`{"type":1,"target":"Ping","arguments":["${str}"]}`);
-	}
-
-	private stores: Map<string, Writable<unknown | undefined>> = new Map();
-	private deserializers: Map<string, (json: string) => unknown> = new Map();
-
-	public async receive<T>(target: string, deserializer: (json: string) => T): Promise<Writable<T | undefined>> {
-		this.deserializers.set(target, deserializer);
-		if (this.stores.has(target)) return this.stores.get(target) as Writable<T | undefined>;
-
-		await this.connect();
-		const store = customStore<T | undefined>(void 0);
-		this.stores.set(target, store);
-		return store;
-	}
-}
-
-function customStore<T>(initialValue: T): Writable<T> {
-	let value = initialValue;
-	const subscribers: ((value: T) => void)[] = [];
-
-	return {
-		set(newValue: T) {
-			value = newValue;
-			// Notify all subscribers whenever set is called, regardless of whether the value has changed
-			subscribers.forEach((s) => s(value));
-		},
-		update() {},
-		subscribe(subscriber: (value: T) => void) {
-			subscribers.push(subscriber);
-			// Provide the initial value when first subscribing
-			subscriber(value);
-
-			return () => {
-				// Unsubscribe logic
-				const index = subscribers.indexOf(subscriber);
-				if (index !== -1) {
-					subscribers.splice(index, 1);
-				}
-			};
-		}
-	};
 }
