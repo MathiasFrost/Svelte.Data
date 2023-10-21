@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { HistoryManager } from "$lib/history/HistoryManager.js";
+	import { emitRedo, emitUndo } from "$lib/history/HistoryManager.js";
 	import { LocalStorageSyncer } from "$lib/sync/LocalStorageSyncer.js";
 	import { jsonSerializer, stringSerializer } from "$lib/types/Serializer.js";
 	import { ensureArray } from "$lib/types/unknown.js";
@@ -10,11 +10,11 @@
 	/** @inheritdoc */
 	export let data: PageData;
 
-	/** Manage history for `forecasts` */
-	const history = new HistoryManager<WeatherForecast[]>({
-		onChange: (val) => (forecasts = val),
-		serializer: jsonSerializer((string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something)))
-	});
+	// /** Manage history for `forecasts` */
+	// const history = new HistoryManager<WeatherForecast[]>({
+	// 	onChange: (val) => (forecasts = val),
+	// 	serializer: jsonSerializer((string) => ensureArray(JSON.parse(string)).map((something) => new WeatherForecast(something)))
+	// });
 	/** Store history in local storage */
 	const local = new LocalStorageSyncer<string>("history", history.serialize(), stringSerializer());
 
@@ -33,8 +33,8 @@
 <h2>Scenario 3</h2>
 <p>Server loaded data with refresh and history</p>
 
-<button on:click={() => history.undo()}> undo</button>
-<button on:click={() => history.redo()}> redo</button>
+<button on:click={() => emitUndo()}> undo</button>
+<button on:click={() => emitRedo()}> redo</button>
 <button on:click={() => local.clear()}> clear history</button>
 
 <table>

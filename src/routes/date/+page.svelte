@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
+	import { TimeSpan } from "$lib/date";
+	import { history } from "$lib/history/HistoryManager";
 
 	/** Initial value - Today */
 	let str = DateOnly.today();
@@ -18,12 +20,20 @@
 			return new DateOnly(dateOnly.toJSON(), wrap, true);
 		}
 	}
+
+	function submit(this: HTMLFormElement): void {
+		console.log(new FormData(this));
+	}
 </script>
 
-<section>
+<section use:history>
 	<h1>Date</h1>
 	<input type="checkbox" bind:checked={http} />
-	<input type="date" bind:value={str} />
+	<form on:submit|preventDefault={submit}>
+		<input type="date" name="date" bind:value={str} />
+		<button type="submit">submit</button>
+	</form>
+	{new TimeSpan("5.8:32:16")}
 	<pre style="font-family: 'JetBrains Mono', monospace">
 Offset:                     {DateOnly.offsetMinutes()} ({DateOnly.offsetString()})
 Now:                        {new Date()}

@@ -1,103 +1,104 @@
-import { type Serializer, jsonSerializer } from "$lib/types/Serializer.js";
-import { ensureArray } from "$lib/types/index.js";
-
 /** Options */
-export interface HistoryManagerOptions<T> {
-	/** Called when manager wants to set the value we are tracking */
-	onChange: (value: T) => void;
-
+export interface HistoryManagerOptions {
 	/** Called when manager wants to set the value we are tracking */
 	onHistoryChange: (history: string[], index: number) => void;
-
-	/** For converting value to and from its string representation */
-	serializer: Serializer<T>;
 
 	/** Limit how many changes can be stored */
 	cap: number;
 }
 
-/** Keep track of changes to a variable */
-export class HistoryManager<T> {
-	/** Array of stored changes */
-	public history: string[] = [];
+/** TODOC */
+interface Action {
+	element: HTMLElement;
+	value: unknown;
+}
 
-	/** Current element of `history` we are at */
-	public index = -1;
+/** TODOC */
+const actionStack: Action[] = [];
 
-	/** Limit how many changes can be stored */
-	public cap: number;
+/** TODOC */
+let actionIndex = -1;
 
-	/** Called when manager wants to set the value we are tracking */
-	public onChange?: (value: T) => void;
+/** TODOC */
+let customEvent = false;
 
-	/** Called when manager wants to set the value we are tracking */
-	public onHistoryChange?: (history: string[], index: number) => void;
+/** TODOC */
+function onKeyup(e: KeyboardEvent): void {
+	if (e.ctrlKey && e.shiftKey && e.key === "Z") redo();
+	else if (e.ctrlKey && e.key === "z") undo();
+}
 
-	/** TODOC */
-	public serializer: Serializer<T>;
-
-	/** Set to true when we want manager to ignore next change and not add it to history */
-	public ignoreNext = false;
-
-	/** Keep track of changes to a variable
-	 * @param options Optional parameters */
-	public constructor(options: Partial<HistoryManagerOptions<T>> = {}) {
-		this.cap = options.cap ?? 10;
-		this.onChange = options.onChange;
-		this.onHistoryChange = options.onHistoryChange;
-		this.serializer = options.serializer ?? jsonSerializer();
+/** TODOC */
+function onInput(e: Event): void {
+	if (customEvent) return;
+	let added = false;
+	if (e.target instanceof HTMLInputElement) {
+		if (e.target.type === "checkbox") actionStack.push({ element: e.target, value: e.target.checked });
+		else actionStack.push({ element: e.target, value: e.target.value });
+		added = true;
 	}
 
-	/** Add an entry to history */
-	public addEntry(value: T): void {
-		if (this.ignoreNext) {
-			this.ignoreNext = false;
-			return;
+	if (added) {
+		if (actionIndex < actionStack.length - 2) actionStack.splice(0, actionStack.length - 1);
+		actionIndex = actionStack.length - 1;
+	}
+}
+
+/** TODOC */
+function undo(): void {
+	if (actionIndex >= 0) actionIndex--;
+	setAction();
+}
+
+/** TODOC */
+function redo(): void {
+	if (actionIndex < actionStack.length - 1) actionIndex++;
+	setAction();
+}
+
+/** TODOC */
+function setAction(): void {
+	const action = actionStack[actionIndex];
+	if (!action) return;
+
+	if (action.element instanceof HTMLInputElement) {
+		if (action.element.type === "checkbox" && typeof action.value === "boolean") action.element.checked = action.value;
+		else if (typeof action.value === "string") action.element.value = action.value;
+
+		customEvent = true;
+		const event = new Event("change", { bubbles: true, cancelable: true });
+		action.element.dispatchEvent(event);
+		customEvent = false;
+		console.log(actionIndex, action.value);
+	}
+}
+
+/** TODOC */
+export function history(node: Node): { destroy: () => void } {
+	if (node instanceof HTMLElement && typeof window !== "undefined") {
+		window.addEventListener("keyup", onKeyup);
+		node.addEventListener("input", onInput);
+	}
+	return {
+		destroy() {
+			if (node instanceof HTMLElement && typeof window !== "undefined") {
+				window.removeEventListener("keyup", onKeyup);
+				node.removeEventListener("input", onInput);
+			}
 		}
+	};
+}
 
-		const len = this.history.length;
-		if (this.cap > 0 && len >= this.cap && this.index === len - 1) {
-			this.history.splice(0, 1);
-			this.index = this.history.length - 1;
-		}
+/** TODOC */
+export function emitRedo(): void {
+	if (typeof window === "undefined") return;
+	const event = new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "Z", shiftKey: true, ctrlKey: true });
+	window.dispatchEvent(event);
+}
 
-		this.history = [...this.history.slice(0, ++this.index), this.serializer.serialize(value)];
-		this.onHistoryChange?.(this.history, this.index);
-	}
-
-	/** Set value to its previous state */
-	public undo(): void {
-		if (this.index > 0) {
-			this.ignoreNext = true;
-			this.onChange?.(this.serializer.deserialize(this.history[--this.index]));
-			this.onHistoryChange?.(this.history, this.index);
-		}
-	}
-
-	/** Set value to it's state before `undo` */
-	public redo(): void {
-		if (this.index < this.history.length - 1) {
-			this.ignoreNext = true;
-			this.onChange?.(this.serializer.deserialize(this.history[++this.index]));
-			this.onHistoryChange?.(this.history, this.index);
-		}
-	}
-
-	/** Serialize history data to string. Useful for storing history in something like `localStorage` */
-	public serialize(): string {
-		return JSON.stringify({ history: this.history.map((h) => this.serializer.deserialize(h)), index: this.index });
-	}
-
-	/** TODOC */
-	public deserialize(json: string): T | undefined {
-		const o = JSON.parse(json);
-		this.history = ensureArray(o.history).map((something) => JSON.stringify(something));
-		this.index = o.index;
-
-		const string = this.history[this.index];
-		if (typeof string === "undefined") return undefined;
-
-		this.ignoreNext = true;
-		return this.serializer.deserialize(string);
-	}
+/** TODOC */
+export function emitUndo(): void {
+	if (typeof window === "undefined") return;
+	const event = new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "z", ctrlKey: true });
+	window.dispatchEvent(event);
 }

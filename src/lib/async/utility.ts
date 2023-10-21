@@ -5,9 +5,9 @@ export function indefinitePromise<T>(): Promise<T> {
 }
 
 /** Utility function for ensuring that promise is only called client-side */
-export function browserPromise<T>(factory: () => Promise<T>): Promise<T> {
+export function browserPromise<T>(promise: () => Promise<T>): Promise<T> {
 	if (typeof window === "undefined") return indefinitePromise();
-	else return factory();
+	else return promise();
 }
 
 /** Utility type for an object containing both the value and it's promise representation */
