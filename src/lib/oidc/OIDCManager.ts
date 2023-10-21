@@ -88,14 +88,14 @@ export class OIDCManager<TAudience extends string> {
 	}
 
 	/** TODOC */
-	public getExpiresIn(audience: TAudience): number | null {
-		if (typeof window === "undefined") throw new Error("Can't get expires_in server-side");
-		const expiresIn = Number(window.localStorage.getItem(storagePrefix(audience)));
-		if (isNaN(expiresIn)) {
+	public getExpiresAt(audience: TAudience): number | null {
+		if (typeof window === "undefined") throw new Error("Can't get expires_at server-side");
+		const expiresAt = Number(window.localStorage.getItem(storagePrefix(audience)));
+		if (isNaN(expiresAt)) {
 			this.invalidate(audience);
 			return null;
 		}
-		return expiresIn;
+		return expiresAt;
 	}
 
 	/** TODOC */
@@ -148,11 +148,9 @@ export class OIDCManager<TAudience extends string> {
 	}
 
 	/** TODOC */
-	public isNotExpired(expiresIn: number | null): expiresIn is number {
-		if (!expiresIn) return false;
-		const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-		const tokenExpiresAt = currentTime + expiresIn;
-		return currentTime < tokenExpiresAt;
+	public isNotExpired(expiresAt: number | null): expiresAt is number {
+		if (!expiresAt) return false;
+		return Date.now() < expiresAt;
 	}
 
 	/** Custom fetch that manages attaching access_token to requests.
@@ -173,8 +171,8 @@ export class OIDCManager<TAudience extends string> {
 
 			// First check if we have to retry based on 401 or 403
 			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
-				const expiresIn = await this.ensureValidAccessToken(audience, true);
-				if (!this.isNotExpired(expiresIn)) {
+				const expiresAt = await this.ensureValidAccessToken(audience, true);
+				if (!this.isNotExpired(expiresAt)) {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
 					return response;
 				}
@@ -216,11 +214,11 @@ export class OIDCManager<TAudience extends string> {
 			switch (method) {
 				case AcquisitionMethod.Storage:
 					{
-						const expiresIn = this.getExpiresIn(audience);
+						const expiresAt = this.getExpiresAt(audience);
 						// If we have valid token, all is good
-						if (this.isNotExpired(expiresIn)) {
-							console.info(`OIDC '${audience}': expires_in found in storage and valid. Assuming we have a valid access_token in cookie.`);
-							return expiresIn;
+						if (this.isNotExpired(expiresAt)) {
+							console.info(`OIDC '${audience}': expires_at found in storage and valid. Assuming we have a valid access_token in cookie.`);
+							return expiresAt;
 						}
 						const refreshToken = await this.getRefreshToken(audience);
 						if (refreshToken) {
@@ -253,10 +251,10 @@ export class OIDCManager<TAudience extends string> {
 				case AcquisitionMethod.IFrame:
 					{
 						await this.signInIFrame(audience); // This method stores OIDC result in storage if successful
-						const expiresIn = this.getExpiresIn(audience);
-						if (this.isNotExpired(expiresIn)) {
+						const expiresAt = this.getExpiresAt(audience);
+						if (this.isNotExpired(expiresAt)) {
 							console.info(`OIDC '${audience}': iframe sign-in successful. Returning new access_token.`);
-							return expiresIn;
+							return expiresAt;
 						} else {
 							console.info(`OIDC '${audience}': iframe sign-in failed. Proceeding to user interaction.`);
 							method = AcquisitionMethod.UserInteraction;
@@ -565,7 +563,10 @@ export class OIDCManager<TAudience extends string> {
 					credentials: "include"
 				});
 
-			if (oidcMessage.expiresIn) window.localStorage.setItem(storagePrefix(audience), oidcMessage.expiresIn.toString());
+			if (oidcMessage.expiresIn) {
+				const expiresAt = Date.now() + oidcMessage.expiresIn * 1_000;
+				window.localStorage.setItem(storagePrefix(audience), expiresAt.toString());
+			}
 		} catch (e) {
 			this.invalidate(audience);
 			console.error(e);
