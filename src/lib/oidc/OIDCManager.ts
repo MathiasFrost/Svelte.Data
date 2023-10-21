@@ -6,7 +6,7 @@ import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
 /** Interval for checking validity regularly */
-let isValidInterval = 0;
+const isValidIntervals: Record<string, number> = {};
 
 /** @notes order matters */
 enum AcquisitionMethod {
@@ -51,9 +51,6 @@ export class OIDCManager<TAudience extends string> {
 	/** @see OIDCConfigurationProvider */
 	private readonly configProvider = new OIDCConfigurationProvider();
 
-	/** Reference to the currently active iframe sign in process */
-	private currentIFramePromise: Promise<void> | null = null;
-
 	/** Queue of iframe sign in requests */
 	private readonly iFramePromises: { audience: TAudience; promise: Promise<void> }[] = [];
 
@@ -73,18 +70,20 @@ export class OIDCManager<TAudience extends string> {
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
 		if (typeof window === "undefined") return;
-		window.clearTimeout(isValidInterval);
-		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
+		let offset = 0;
+		for (const audience of Object.keys(configurations)) {
+			window.clearTimeout(isValidIntervals[audience]);
+			isValidIntervals[audience] = window.setTimeout(() => this.validateAudiences(audience as TAudience), 180_000 + offset);
+			offset += 6_000;
+		}
 	}
 
 	/** TODOC */
-	public async validateAudiences(): Promise<void> {
-		for (const audience of Object.keys(this.configurations)) {
-			console.info(`OIDC '${audience}': performing regular validation check`);
-			await this.ensureValidAccessToken(audience as TAudience);
-		}
-		window.clearTimeout(isValidInterval);
-		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
+	public async validateAudiences(audience: TAudience): Promise<void> {
+		console.info(`OIDC '${audience}': performing regular validation check`);
+		await this.ensureValidAccessToken(audience as TAudience);
+		window.clearTimeout(isValidIntervals[audience]);
+		isValidIntervals[audience] = window.setTimeout(() => this.validateAudiences(audience), 180_000);
 	}
 
 	/** TODOC */
@@ -465,11 +464,20 @@ export class OIDCManager<TAudience extends string> {
 	/** Sign in via iframe.
 	 * @notes For this to be successful the user needs a valid SSO session with the OIDC provider. */
 	private async signInIFrame(audience: TAudience): Promise<void> {
-		// Check if a matching promise is already in the queue
-		const matchingPromiseEntry = this.iFramePromises.find((entry) => entry.audience === audience);
-		if (matchingPromiseEntry) {
-			// If a promise for the same key exists, wait for it to resolve and then exit early
-			await matchingPromiseEntry.promise;
+		// Execute promises in the queue one at a time
+		while (this.iFramePromises.length > 0) {
+			const current = this.iFramePromises.shift()!;
+			await current.promise;
+			// Check for early exit condition after promise resolution
+			if (current.audience === audience) {
+				return;
+			}
+		}
+
+		// If an authority has rejected us once there is no point in trying again before user interaction, at which point this array is reset
+		const config = this.configurations[audience];
+		if (this.iFrameRejections.includes(config.authority)) {
+			console.info(`OIDC '${audience}': sign-in for ${config.authority} has already failed. Not trying again.`);
 			return;
 		}
 
@@ -516,39 +524,6 @@ export class OIDCManager<TAudience extends string> {
 				console.info(`OIDC '${audience}': sign-in iframe failed`, e);
 			}
 		};
-
-		// Execute promises in the queue one at a time
-		if (this.currentIFramePromise === null) {
-			let earlyExit = false;
-
-			while (this.iFramePromises.length > 0) {
-				const current = this.iFramePromises.shift()!;
-				this.currentIFramePromise = current.promise;
-
-				try {
-					await this.currentIFramePromise;
-					// Check for early exit condition after promise resolution
-					if (current.audience === audience) {
-						earlyExit = true;
-					}
-				} finally {
-					this.currentIFramePromise = null;
-				}
-
-				if (earlyExit) {
-					break;
-				}
-			}
-		} else {
-			await this.currentIFramePromise;
-		}
-
-		// If an authority has rejected us once there is no point in trying again before user interaction, at which point this array is reset
-		const config = this.configurations[audience];
-		if (this.iFrameRejections.includes(config.authority)) {
-			console.info(`OIDC '${audience}': sign-in for ${config.authority} has already failed. Not trying again.`);
-			return;
-		}
 
 		const promise = signInIFrameInternal();
 		this.iFramePromises.push({ audience, promise });
