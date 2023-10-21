@@ -103,8 +103,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for access_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
@@ -115,8 +119,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for id_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
@@ -127,8 +135,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for id_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
