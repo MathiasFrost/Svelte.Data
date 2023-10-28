@@ -59,6 +59,14 @@
 		"./types": {
 			"types": "./dist/types/index.d.ts",
 			"svelte": "./dist/types/index.js"
+		},
+		"./ws": {
+			"types": "./dist/ws/index.d.ts",
+			"svelte": "./dist/ws/index.js"
+		},
+		"./ws/WsReceiver.svelte": {
+			"types": "./dist/ws/WsReceiver.svelte.d.ts",
+			"svelte": "./dist/ws/WsReceiver.svelte"
 		}
 	},
 	"files": [
