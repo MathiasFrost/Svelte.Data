@@ -9,7 +9,7 @@ import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 const isValidIntervals: Record<string, number> = {};
 
 /** @notes order matters */
-enum AcquisitionMethod {
+export enum AcquisitionMethod {
 	/** Get OIDC object from `window.localStorage` */
 	Storage,
 
@@ -24,7 +24,7 @@ enum AcquisitionMethod {
 }
 
 /** Errors thrown inside `signInCallback` */
-class OIDCError extends Error {}
+export class OIDCError extends Error {}
 
 /** @returns Key to use for audience when interacting with `window.localStorage` */
 function storagePrefix(audience: string): string {
@@ -168,21 +168,19 @@ export class OIDCManager<TAudience extends string> {
 	 * @see HTTPClient
 	 * @see HTTPClientOptions
 	 * @param audience OIDC audience matching the resource this fetch should communicate with
+	 * @param fetch Custom fetch function, like the one from server-side load
 	 * @param maxRetries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
-	public createFetch(audience: TAudience, maxRetries: number = 0): Fetch {
-		const retryFetch = createRetryFetch(maxRetries);
+	public createFetch(audience: TAudience, maxRetries: number = 0, fetch?: Fetch): Fetch {
+		const retryFetch = createRetryFetch(maxRetries, fetch);
 		return async (requestInfo, requestInit, nullStatusCodes) => {
-			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
-
 			await this.ensureValidAccessToken(audience);
-
 			let response = await retryFetch(requestInfo, requestInit);
 
 			// Check if status code is of a value that we want to accept as null and hence not retry
 
 			// First check if we have to retry based on 401 or 403
 			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
-				const expiresAt = await this.ensureValidAccessToken(audience, true);
+				const expiresAt = await this.ensureValidAccessToken(audience, AcquisitionMethod.RefreshToken);
 				if (!this.isNotExpired(expiresAt)) {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
 					return response;
@@ -195,13 +193,13 @@ export class OIDCManager<TAudience extends string> {
 
 	/** @returns The OIDC object for the specified audience
 	 * @param audience The audience to get OIDC object for
-	 * @param forceRefresh Set to true if we skip trying to fetch from storage and initiate the process of acquiring a new token */
-	public async ensureValidAccessToken(audience: TAudience, forceRefresh: boolean = false): Promise<number> {
+	 * @param startAt Which acquisition method to start at */
+	public async ensureValidAccessToken(audience: TAudience, startAt: AcquisitionMethod = AcquisitionMethod.Storage): Promise<number> {
 		if (typeof window === "undefined") throw new Error("Can't call getAccessToken server-side");
 
 		const config = this.configurations[audience];
-		let method: AcquisitionMethod = forceRefresh ? AcquisitionMethod.RefreshToken : AcquisitionMethod.Storage;
-		if (forceRefresh) console.info(`OIDC '${audience}': forcing refresh. Staring with refresh_token`);
+		let method: AcquisitionMethod = startAt;
+		if (method == AcquisitionMethod.RefreshToken) console.info(`OIDC '${audience}': forcing refresh. Staring with refresh_token`);
 
 		// Try all methods from storage retrieval to refresh_token exchange through iframe silent sign-in to user interaction redirect
 		while (method <= AcquisitionMethod.UserInteraction) {

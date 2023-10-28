@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
-	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import { TimeSpan } from "$lib/date";
-	import { history } from "$lib/history/HistoryManager";
+	import { history } from "$lib/history/history.js";
 
 	/** Initial value - Today */
 	let str = DateOnly.today();
@@ -15,7 +15,7 @@
 
 	async function roundTrip(http: boolean, dateOnly: DateOnly): Promise<DateOnly> {
 		if (http) {
-			return await TestHTTP.getDateOnly(dateOnly, wrap);
+			return await testHttp.getDateOnly(dateOnly, wrap);
 		} else {
 			return new DateOnly(dateOnly.toJSON(), wrap, true);
 		}

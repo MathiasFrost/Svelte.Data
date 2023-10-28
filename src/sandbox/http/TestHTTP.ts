@@ -30,7 +30,7 @@ export class TestHTTP {
 		return await this.httpClient.get("test").fromString();
 	}
 
-	public async postUseR(): Promise<void> {
+	public async postUser(): Promise<void> {
 		await this.httpClient.post("user").fetch();
 	}
 
