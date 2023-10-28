@@ -1,1 +1,1 @@
-export { HistoryManager, type HistoryManagerOptions } from "$lib/history/HistoryManager.js";
+export { history, emitRedo, emitUndo, type HistoryManagerOptions } from "$lib/history/history.js";

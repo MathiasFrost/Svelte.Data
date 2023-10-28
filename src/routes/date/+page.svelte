@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
-	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestHTTP.js";
+	import { TimeSpan } from "$lib/date";
+	import { history } from "$lib/history/history.js";
 
 	/** Initial value - Today */
 	let str = DateOnly.today();
@@ -13,17 +15,25 @@
 
 	async function roundTrip(http: boolean, dateOnly: DateOnly): Promise<DateOnly> {
 		if (http) {
-			return await TestHTTP.getDateOnly(dateOnly, wrap);
+			return await testHttp.getDateOnly(dateOnly, wrap);
 		} else {
 			return new DateOnly(dateOnly.toJSON(), wrap, true);
 		}
 	}
+
+	function submit(this: HTMLFormElement): void {
+		console.log(new FormData(this));
+	}
 </script>
 
-<section>
+<section use:history>
 	<h1>Date</h1>
 	<input type="checkbox" bind:checked={http} />
-	<input type="date" bind:value={str} />
+	<form on:submit|preventDefault={submit}>
+		<input type="date" name="date" bind:value={str} />
+		<button type="submit">submit</button>
+	</form>
+	{new TimeSpan("5.8:32:16")}
 	<pre style="font-family: 'JetBrains Mono', monospace">
 Offset:                     {DateOnly.offsetMinutes()} ({DateOnly.offsetString()})
 Now:                        {new Date()}

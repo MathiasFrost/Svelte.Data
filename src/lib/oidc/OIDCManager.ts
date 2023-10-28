@@ -6,10 +6,10 @@ import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
 /** Interval for checking validity regularly */
-let isValidInterval = 0;
+const isValidIntervals: Record<string, number> = {};
 
 /** @notes order matters */
-enum AcquisitionMethod {
+export enum AcquisitionMethod {
 	/** Get OIDC object from `window.localStorage` */
 	Storage,
 
@@ -24,7 +24,7 @@ enum AcquisitionMethod {
 }
 
 /** Errors thrown inside `signInCallback` */
-class OIDCError extends Error {}
+export class OIDCError extends Error {}
 
 /** @returns Key to use for audience when interacting with `window.localStorage` */
 function storagePrefix(audience: string): string {
@@ -51,9 +51,6 @@ export class OIDCManager<TAudience extends string> {
 	/** @see OIDCConfigurationProvider */
 	private readonly configProvider = new OIDCConfigurationProvider();
 
-	/** Reference to the currently active iframe sign in process */
-	private currentIFramePromise: Promise<void> | null = null;
-
 	/** Queue of iframe sign in requests */
 	private readonly iFramePromises: { audience: TAudience; promise: Promise<void> }[] = [];
 
@@ -73,18 +70,20 @@ export class OIDCManager<TAudience extends string> {
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
 		if (typeof window === "undefined") return;
-		window.clearTimeout(isValidInterval);
-		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
+		let offset = 0;
+		for (const audience of Object.keys(configurations)) {
+			window.clearTimeout(isValidIntervals[audience]);
+			isValidIntervals[audience] = window.setTimeout(() => this.validateAudiences(audience as TAudience), 180_000 + offset);
+			offset += 6_000;
+		}
 	}
 
 	/** TODOC */
-	public async validateAudiences(): Promise<void> {
-		for (const audience of Object.keys(this.configurations)) {
-			console.info(`OIDC '${audience}': performing regular validation check`);
-			await this.ensureValidAccessToken(audience as TAudience);
-		}
-		window.clearTimeout(isValidInterval);
-		isValidInterval = window.setTimeout(() => this.validateAudiences(), 180_000);
+	public async validateAudiences(audience: TAudience): Promise<void> {
+		console.info(`OIDC '${audience}': performing regular validation check`);
+		await this.ensureValidAccessToken(audience as TAudience);
+		window.clearTimeout(isValidIntervals[audience]);
+		isValidIntervals[audience] = window.setTimeout(() => this.validateAudiences(audience), 180_000);
 	}
 
 	/** TODOC */
@@ -103,8 +102,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for access_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
@@ -115,8 +118,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for id_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
@@ -127,8 +134,12 @@ export class OIDCManager<TAudience extends string> {
 		if (typeof window === "undefined") throw new Error("Can't get access_token server-side");
 
 		const configuration = this.configurations[audience];
-		const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
-		if (res.status === 200) return await res.text();
+		try {
+			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
+			if (res.status === 200) return await res.text();
+		} catch (e) {
+			console.error(`OIDC '${audience}': Request to server failed for id_token`, e);
+		}
 
 		this.invalidate(audience);
 		return null;
@@ -157,21 +168,19 @@ export class OIDCManager<TAudience extends string> {
 	 * @see HTTPClient
 	 * @see HTTPClientOptions
 	 * @param audience OIDC audience matching the resource this fetch should communicate with
+	 * @param fetch Custom fetch function, like the one from server-side load
 	 * @param maxRetries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
-	public createFetch(audience: TAudience, maxRetries: number = 0): Fetch {
-		const retryFetch = createRetryFetch(maxRetries);
+	public createFetch(audience: TAudience, maxRetries: number = 0, fetch?: Fetch): Fetch {
+		const retryFetch = createRetryFetch(maxRetries, fetch);
 		return async (requestInfo, requestInit, nullStatusCodes) => {
-			if (typeof window === "undefined") throw new Error("OIDC Fetcher can't be used server-side");
-
 			await this.ensureValidAccessToken(audience);
-
 			let response = await retryFetch(requestInfo, requestInit);
 
 			// Check if status code is of a value that we want to accept as null and hence not retry
 
 			// First check if we have to retry based on 401 or 403
 			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
-				const expiresAt = await this.ensureValidAccessToken(audience, true);
+				const expiresAt = await this.ensureValidAccessToken(audience, AcquisitionMethod.RefreshToken);
 				if (!this.isNotExpired(expiresAt)) {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
 					return response;
@@ -184,13 +193,13 @@ export class OIDCManager<TAudience extends string> {
 
 	/** @returns The OIDC object for the specified audience
 	 * @param audience The audience to get OIDC object for
-	 * @param forceRefresh Set to true if we skip trying to fetch from storage and initiate the process of acquiring a new token */
-	public async ensureValidAccessToken(audience: TAudience, forceRefresh: boolean = false): Promise<number> {
+	 * @param startAt Which acquisition method to start at */
+	public async ensureValidAccessToken(audience: TAudience, startAt: AcquisitionMethod = AcquisitionMethod.Storage): Promise<number> {
 		if (typeof window === "undefined") throw new Error("Can't call getAccessToken server-side");
 
 		const config = this.configurations[audience];
-		let method: AcquisitionMethod = forceRefresh ? AcquisitionMethod.RefreshToken : AcquisitionMethod.Storage;
-		if (forceRefresh) console.info(`OIDC '${audience}': forcing refresh. Staring with refresh_token`);
+		let method: AcquisitionMethod = startAt;
+		if (method == AcquisitionMethod.RefreshToken) console.info(`OIDC '${audience}': forcing refresh. Staring with refresh_token`);
 
 		// Try all methods from storage retrieval to refresh_token exchange through iframe silent sign-in to user interaction redirect
 		while (method <= AcquisitionMethod.UserInteraction) {
@@ -453,11 +462,20 @@ export class OIDCManager<TAudience extends string> {
 	/** Sign in via iframe.
 	 * @notes For this to be successful the user needs a valid SSO session with the OIDC provider. */
 	private async signInIFrame(audience: TAudience): Promise<void> {
-		// Check if a matching promise is already in the queue
-		const matchingPromiseEntry = this.iFramePromises.find((entry) => entry.audience === audience);
-		if (matchingPromiseEntry) {
-			// If a promise for the same key exists, wait for it to resolve and then exit early
-			await matchingPromiseEntry.promise;
+		// Execute promises in the queue one at a time
+		while (this.iFramePromises.length > 0) {
+			const current = this.iFramePromises.shift()!;
+			await current.promise;
+			// Check for early exit condition after promise resolution
+			if (current.audience === audience) {
+				return;
+			}
+		}
+
+		// If an authority has rejected us once there is no point in trying again before user interaction, at which point this array is reset
+		const config = this.configurations[audience];
+		if (this.iFrameRejections.includes(config.authority)) {
+			console.info(`OIDC '${audience}': sign-in for ${config.authority} has already failed. Not trying again.`);
 			return;
 		}
 
@@ -504,39 +522,6 @@ export class OIDCManager<TAudience extends string> {
 				console.info(`OIDC '${audience}': sign-in iframe failed`, e);
 			}
 		};
-
-		// Execute promises in the queue one at a time
-		if (this.currentIFramePromise === null) {
-			let earlyExit = false;
-
-			while (this.iFramePromises.length > 0) {
-				const current = this.iFramePromises.shift()!;
-				this.currentIFramePromise = current.promise;
-
-				try {
-					await this.currentIFramePromise;
-					// Check for early exit condition after promise resolution
-					if (current.audience === audience) {
-						earlyExit = true;
-					}
-				} finally {
-					this.currentIFramePromise = null;
-				}
-
-				if (earlyExit) {
-					break;
-				}
-			}
-		} else {
-			await this.currentIFramePromise;
-		}
-
-		// If an authority has rejected us once there is no point in trying again before user interaction, at which point this array is reset
-		const config = this.configurations[audience];
-		if (this.iFrameRejections.includes(config.authority)) {
-			console.info(`OIDC '${audience}': sign-in for ${config.authority} has already failed. Not trying again.`);
-			return;
-		}
 
 		const promise = signInIFrameInternal();
 		this.iFramePromises.push({ audience, promise });

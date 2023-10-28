@@ -58,7 +58,9 @@ export class HTTPRequestBuilder {
 
 	/** Get the server-side `load` `fetch` or client-side `window.fetch` */
 	private get _fetch(): Fetch {
-		return this.options.fetch ?? window.fetch;
+		if (this.options.fetch) return this.options.fetch;
+		if (typeof window !== "undefined") return window.fetch;
+		throw new Error("Attempted to use HTTPClient server-side without supplying the load's fetch function");
 	}
 
 	/** TODOC */

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
 	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
@@ -8,7 +8,7 @@
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
 
 	onMount(async () => {
-		forecasts = TestHTTP.getForecasts();
+		forecasts = testHttp.getForecasts();
 	});
 
 	let url: string | null = null;
