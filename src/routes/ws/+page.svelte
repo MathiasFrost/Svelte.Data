@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WSClient } from "$lib/ws/WSClient.js";
-	import WsReceiver from "$lib/ws/WsReceiver.svelte";
+	import WSReceiver from "$lib/ws/WSReceiver.svelte";
 	import { ensureString } from "$lib/types/unknown.js";
 
 	let status = "";
@@ -23,7 +23,7 @@
 <pre><code>{status}</code></pre>
 <button on:click={send}>Send</button>
 <input type="text" bind:value={text} />
-<WsReceiver {ws} target="Pong" let:maybePromise>
+<WSReceiver {ws} target="Pong" let:maybePromise>
 	{#await maybePromise}
 		<p>Waiting for message...</p>
 	{:then res}
@@ -32,4 +32,4 @@
 	{:catch e}
 		<pre><code>{e.message}</code></pre>
 	{/await}
-</WsReceiver>
+</WSReceiver>
