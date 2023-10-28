@@ -9,7 +9,7 @@ export class AspNetCoreHTTP {
 	});
 
 	public static async getClaims(): Promise<Record<string, unknown>> {
-		return await this.httpClient.get("Claims").fromJSONObject(ensureObject);
+		return await this.httpClient.get("Claims").withNullStatus(401, 403).fromJSONObject(ensureObject);
 	}
 
 	public static async postValidation(): Promise<Record<string, unknown>> {

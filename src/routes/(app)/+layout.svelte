@@ -2,12 +2,12 @@
 	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
 	import { oidcManager } from "$sandbox/user/oidcConfig.js";
 	import { user } from "$sandbox/user/user.js";
+	import { AcquisitionMethod } from "$lib/oidc/OIDCManager.js";
 
 	let refresh = false;
 	async function getUser(refresh: boolean): Promise<Record<string, unknown>> {
-		console.log(refresh);
 		if (refresh) user.set({});
-		await oidcManager.ensureValidAccessToken("MS.Graph", refresh);
+		await oidcManager.ensureValidAccessToken("MS.Graph", refresh ? AcquisitionMethod.RefreshToken : AcquisitionMethod.Storage);
 		const o = await oidcManager.getIdTokenObject("MS.Graph");
 		user.set(o);
 		refresh = false;

@@ -2,7 +2,7 @@
 	import Authorize from "$sandbox/user/Authorize.svelte";
 	import { user } from "$sandbox/user/user.js";
 	import TestComponent from "$sandbox/components/TestComponent.svelte";
-	import { TestHTTP } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestHTTP.js";
 </script>
 
 <section>
@@ -13,7 +13,7 @@
 		<TestComponent />
 		<p slot="unauthorized">
 			Nope
-			<button on:click={() => TestHTTP.postUseR()}>Sign in</button>
+			<button on:click={() => testHttp.postUser()}>Sign in</button>
 		</p>
 	</Authorize>
 </section>
