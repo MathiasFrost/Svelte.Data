@@ -97,7 +97,7 @@ export class HTTPRequestBuilder {
 
 	/** Make request use a different `fetch` implementation, commonly the `fetch` passed from your `load` function when using SvelteKit */
 	public withFetch(fetch?: Fetch): HTTPRequestBuilder {
-		if (typeof fetch !== "undefined") this.options.fetch = fetch;
+		this.options.fetch = fetch;
 		return this;
 	}
 
