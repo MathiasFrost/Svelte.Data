@@ -277,7 +277,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ctor?: new (something: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
+	public async fromJSONArray<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
 		const response = await this.fetch(signal);
 		const json = await response.json();
 		const arr = ensureArray(json);
@@ -286,7 +286,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
+	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromJSONArray(ctor, signal);
 	}
