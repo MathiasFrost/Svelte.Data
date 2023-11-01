@@ -7,7 +7,11 @@
 		try {
 			err = await testHttp.getTest();
 		} catch (e) {
-			if (e instanceof HTTPResponseError && e.response.status === 400) err = await e.response.text();
+			if (e instanceof HTTPResponseError && e.response.status === 400) {
+				console.log(e.message);
+				err = await e.response.text();
+			}
+			throw e;
 		}
 	}
 </script>

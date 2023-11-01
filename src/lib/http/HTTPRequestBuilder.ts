@@ -50,6 +50,9 @@ export class HTTPRequestBuilder {
 	/** Status codes to accept */
 	private statusCodes: number[] = [];
 
+	/** Whether to check if `Response.ok` is true */
+	private ensureSuccess = true;
+
 	/** TODOC */
 	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
 		this.baseAddress = baseAddress;
@@ -149,9 +152,15 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** Add status codes that will be considered successful. If none provided, will accept all. */
+	/** Add status codes that will be considered successful */
 	public accept(...statusCodes: number[]): HTTPRequestBuilder {
 		this.statusCodes = statusCodes;
+		return this;
+	}
+
+	/** Disable ensuring success, effectively accepting all status codes */
+	public acceptAny(): HTTPRequestBuilder {
+		this.ensureSuccess = false;
 		return this;
 	}
 
@@ -194,9 +203,14 @@ export class HTTPRequestBuilder {
 
 	/** TODOC */
 	private ensureWithinStatusCode(response: Response): void {
-		if (!this.statusCodes.length) return;
 		if (this.statusCodes.includes(response.status)) return;
 		throw new Error(`Expected status code ${this.statusCodes.join(", ")}. Got: ${response.status}`);
+	}
+
+	/** TODOC */
+	private ensureSuccessStatusCode(response: Response): void {
+		if (response.ok) return;
+		throw new Error(`Expected status code indicating success. Got: ${response.status}`);
 	}
 
 	/** TODOC */
@@ -211,13 +225,13 @@ export class HTTPRequestBuilder {
 			if (this.nullStatusCodes.includes(response.status)) return null as TResult;
 
 			// Check if status code is within acceptable values
-			this.ensureWithinStatusCode(response);
+			if (this.statusCodes.length) this.ensureWithinStatusCode(response);
+			else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
 
 			return await handler(response);
 		} catch (e) {
 			if (e instanceof Error) {
-				const content = await response.text();
-				throw new HTTPResponseError(this.requestInit, response, this.requestUri, content, e);
+				throw new HTTPResponseError(this.requestInit, response, this.requestUri, e);
 			}
 			throw e;
 		}
