@@ -1,36 +1,36 @@
 import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 
 /** Make sure that something is an array (not null) */
-export function ensureArray<T = unknown>(something: unknown, transformer?: (something?: unknown) => T): T[] {
+export function ensureArray<T = unknown>(something: unknown, ctor?: new (something?: unknown) => T): T[] {
 	if (Array.isArray(something)) {
-		if (typeof transformer !== "undefined") return something.map(transformer);
+		if (typeof ctor !== "undefined") return something.map((something) => new ctor(something));
 		return something;
 	}
 	throw new Error(`Expected Array, found ${typeof something}`);
 }
 
 /** Make sure that something is an array (may be null) */
-export function ensureArrayNullable<T = unknown>(something: unknown, transformer?: (something?: unknown) => T): T[] | null {
+export function ensureArrayNullable<T = unknown>(something: unknown, ctor?: new (something?: unknown) => T): T[] | null {
 	if (something === null || Array.isArray(something)) {
-		if (typeof transformer !== "undefined" && something !== null) return something.map(transformer);
+		if (typeof ctor !== "undefined" && something !== null) return something.map((something) => new ctor(something));
 		return something;
 	}
 	throw new Error(`Expected Array | null, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (not null) */
-export function ensureObject<T = Record<string, unknown>>(something: unknown, transformer?: (something?: unknown) => T): T {
+export function ensureObject<T = Record<string, unknown>>(something: unknown, ctor?: new (something?: unknown) => T): T {
 	if (typeof something === "object" && something !== null) {
-		if (typeof transformer !== "undefined") return transformer(something);
+		if (typeof ctor !== "undefined") return new ctor(something);
 		return something as T;
 	}
 	throw new Error(`Expected object, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (may be null) */
-export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, transformer?: (something?: unknown) => T): T | null {
+export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ctor?: new (something?: unknown) => T): T | null {
 	if (typeof something === "object") {
-		if (typeof transformer !== "undefined") return transformer(something);
+		if (typeof ctor !== "undefined" && something !== null) return new ctor(something);
 		return something as T | null;
 	}
 	throw new Error(`Expected object | null, found ${typeof something}`);
