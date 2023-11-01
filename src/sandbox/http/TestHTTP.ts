@@ -28,7 +28,7 @@ export class TestHTTP {
 	}
 
 	public async postUser(): Promise<void> {
-		await this.httpClient.post("user").fetch();
+		await this.httpClient.post("user").accept(400, 200).fetch();
 	}
 
 	public async getDateOnly(dateOnly: DateOnly, wrap: DateWrap): Promise<DateOnly> {
