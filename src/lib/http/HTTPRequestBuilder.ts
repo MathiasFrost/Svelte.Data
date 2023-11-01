@@ -6,8 +6,7 @@ import {
 	ensureDateOnlyString,
 	ensureDateString,
 	ensureNumberString,
-	ensureObject,
-	ensureString
+	ensureObject
 } from "$lib/types/unknown.js";
 import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
@@ -50,9 +49,6 @@ export class HTTPRequestBuilder {
 
 	/** Status codes to accept */
 	private statusCodes: number[] = [];
-
-	/** Whether to check if `Response.ok` is true */
-	private ensureSuccess = true;
 
 	/** TODOC */
 	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
@@ -153,15 +149,9 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** Add status codes that will be considered successful */
+	/** Add status codes that will be considered successful. If none provided, will accept all. */
 	public accept(...statusCodes: number[]): HTTPRequestBuilder {
 		this.statusCodes = statusCodes;
-		return this;
-	}
-
-	/** Disable ensuring success, effectively accepting all status codes */
-	public acceptAny(): HTTPRequestBuilder {
-		this.ensureSuccess = false;
 		return this;
 	}
 
@@ -204,14 +194,9 @@ export class HTTPRequestBuilder {
 
 	/** TODOC */
 	private ensureWithinStatusCode(response: Response): void {
+		if (!this.statusCodes.length) return;
 		if (this.statusCodes.includes(response.status)) return;
 		throw new Error(`Expected status code ${this.statusCodes.join(", ")}. Got: ${response.status}`);
-	}
-
-	/** TODOC */
-	private ensureSuccessStatusCode(response: Response): void {
-		if (response.ok) return;
-		throw new Error(`Expected status code indicating success. Got: ${response.status}`);
 	}
 
 	/** TODOC */
@@ -226,13 +211,13 @@ export class HTTPRequestBuilder {
 			if (this.nullStatusCodes.includes(response.status)) return null as TResult;
 
 			// Check if status code is within acceptable values
-			if (this.statusCodes.length) this.ensureWithinStatusCode(response);
-			else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
+			this.ensureWithinStatusCode(response);
 
 			return await handler(response);
 		} catch (e) {
 			if (e instanceof Error) {
-				throw new HTTPResponseError(this.requestInit, response, this.requestUri, e);
+				const content = await response.text();
+				throw new HTTPResponseError(this.requestInit, response, this.requestUri, content, e);
 			}
 			throw e;
 		}
@@ -240,7 +225,7 @@ export class HTTPRequestBuilder {
 
 	/** @returns The raw request result */
 	public async fetch(signal?: AbortSignal): Promise<Response> {
-		return await this.internalFetch((response) => Promise.resolve(response), signal);
+		return await this.internalFetch(async (response) => response, signal);
 	}
 
 	/** @returns The XMLHttpRequest */
@@ -278,24 +263,24 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
-		return await this.internalFetch(async (response) => {
-			const json = await response.json();
-			const arr = ensureArray(json);
-			if (ctor) return arr.map((something) => new ctor(something));
-			return arr as TResult[];
-		}, signal);
+	public async fromJSONArray<TResult = unknown>(ctor?: new (something: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
+		const response = await this.fetch(signal);
+		const json = await response.json();
+		const arr = ensureArray(json);
+		if (ctor) return arr.map((something) => new ctor(something));
+		return arr as TResult[];
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
+	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromJSONArray(ctor, signal);
 	}
 
 	/** The request body deserialized as string */
 	public async fromString(signal?: AbortSignal): Promise<string> {
-		return await this.internalFetch((response) => response.text(), signal);
+		const response = await this.fetch(signal);
+		return await response.text();
 	}
 
 	/** The request body deserialized as string */
@@ -362,11 +347,5 @@ export class HTTPRequestBuilder {
 	public async fromDateOnlyStringNullable(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromDateOnlyString(wrap, signal);
-	}
-
-	/** The location header from a 201 response */
-	public async create(signal?: AbortSignal): Promise<string> {
-		this.statusCodes.push(201);
-		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
 	}
 }

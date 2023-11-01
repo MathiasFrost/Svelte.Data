@@ -21,31 +21,20 @@ export class HTTPResponseError extends Error {
 	/** @see RequestInit */
 	public readonly requestInit: RequestInit;
 
-	/** HTTP Request URI */
-	public readonly requestUri: string;
-
 	/** @inheritDoc */
-	public constructor(requestInit: RequestInit, response: Response, requestUri: string, e: Error) {
+	public constructor(requestInit: RequestInit, response: Response, requestUri: string, content: string, e: Error) {
 		super();
 		this.response = response;
 		this.requestInit = requestInit;
-		this.requestUri = requestUri;
-		this.message = `${this.requestInit.method}: ${this.requestUri} was unsuccessful (${this.response.status} ${this.response.statusText})`;
-		this.stack = e.stack;
-		this.cause = e.cause;
-		this.error = e;
-	}
-
-	/** TODOC */
-	public async requestSummary(): Promise<string> {
-		const body = typeof this.requestInit.body === "undefined" ? "" : JSON.stringify(this.requestInit.body);
-		const content = await this.response.text();
-		return `${this.requestInit.method}: ${this.requestUri} was unsuccessful (${this.response.status} ${this.response.statusText})
+		this.message = `HTTP ${this.requestInit.method}: ${requestUri} was unsuccessful (${response.status} ${response.statusText})
 body:
-${HTTPResponseError.summary(body)}
+${HTTPResponseError.summary(JSON.stringify(this.requestInit.body))}
 content:
 ${HTTPResponseError.summary(content)}
 `;
+		this.stack = e.stack;
+		this.cause = e.cause;
+		this.error = e;
 	}
 
 	/** TODOC */
