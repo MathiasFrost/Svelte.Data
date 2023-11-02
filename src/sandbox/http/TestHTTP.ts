@@ -27,6 +27,14 @@ export class TestHTTP {
 		return await this.httpClient.get("test").withFetch(window.fetch).fromString();
 	}
 
+	public async getPhoto(): Promise<string> {
+		const res = await this.httpClient
+			.get("https://graph.microsoft.com/v1.0/me/photo/$value")
+			.withPreprocess(oidcManager.createPreprocess("MS.Graph"))
+			.fetch();
+		return URL.createObjectURL(await res.blob());
+	}
+
 	public async postUser(): Promise<void> {
 		await this.httpClient.post("user").accept(400, 200).fetch();
 	}

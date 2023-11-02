@@ -14,13 +14,7 @@
 	let url: string | null = null;
 
 	async function getProfile(): Promise<void> {
-		const accessToken = await oidcManager.getAccessToken("MS.Graph");
-		const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
-			headers: {
-				Authorization: "Bearer " + accessToken
-			}
-		});
-		url = URL.createObjectURL(await res.blob());
+		url = await testHttp.getPhoto();
 	}
 </script>
 

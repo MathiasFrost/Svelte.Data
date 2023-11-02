@@ -110,7 +110,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** Add preprocessor to this request. Overrides the one from HTTPClient */
-	public withPreprocessor(preprocess: Preprocess): HTTPRequestBuilder {
+	public withPreprocess(preprocess: Preprocess): HTTPRequestBuilder {
 		this.options.preprocess = preprocess;
 		return this;
 	}
@@ -217,7 +217,7 @@ export class HTTPRequestBuilder {
 	/** TODOC */
 	private async internalFetch<TResult>(handler: (response: Response) => Promise<TResult>, signal?: AbortSignal): Promise<TResult> {
 		this.requestInit.signal = signal;
-		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit);
+		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit, this);
 		let response = await this._fetch(this.requestUri, this.requestInit);
 		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, this);
 

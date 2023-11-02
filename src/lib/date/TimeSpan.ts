@@ -54,4 +54,16 @@ export class TimeSpan {
 
 		return builder;
 	}
+
+	/** The total milliseconds from all components */
+	public get totalMilliseconds(): number {
+		return (
+			this.days * 24 * 60 * 60 * 1000 +
+			this.hours * 60 * 60 * 1000 +
+			this.minutes * 60 * 1000 +
+			this.seconds * 1000 +
+			this.milliseconds +
+			this.microseconds / 1000
+		);
+	}
 }

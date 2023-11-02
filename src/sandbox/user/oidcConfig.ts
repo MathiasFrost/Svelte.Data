@@ -10,8 +10,8 @@ const redirectUri = "http://localhost:5173/signin-oidc";
 const onSignInPrompt = (audience: Audiences) => signInPrompt.set(audience);
 const authority = "https://login.microsoftonline.com/common/v2.0";
 const clientId = "1d17ed29-60b6-4c19-9c57-bdf5ce27f3ce";
-const cookieSetEndpoint = "http://localhost:5000/OAuth2/SetItem";
-const cookieGetEndpoint = "http://localhost:5000/OAuth2/GetItem";
+const cookieSetEndpoint = "/api/oidc";
+const cookieGetEndpoint = "/api/oidc";
 
 /** */
 export const oidcConfigs: OIDCConfigurations<Audiences> = {
