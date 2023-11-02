@@ -1,7 +1,5 @@
-import { error, text } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
-import { unauthorized } from "$sandbox/user/unauthorized.js";
-import { get } from "svelte/store";
 
 const promise = () =>
 	new Promise<void>((resolve) => {
@@ -11,9 +9,9 @@ const promise = () =>
 /** TODOC */
 export const GET: RequestHandler = async () => {
 	await promise();
-	if (!get(unauthorized)) {
-		unauthorized.set(true);
-		return text("Hello there");
-	}
-	throw error(401);
+	// if (!get(unauthorized)) {
+	// 	unauthorized.set(true);
+	// 	return text("Hello there");
+	// }
+	throw error(400, { message: "test", errorId: "123" });
 };

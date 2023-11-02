@@ -7,6 +7,9 @@ import { HTTPClient } from "$lib/http/index.js";
 
 /** @static */
 export class TestHTTP {
+	/** TODOC */
+	private readonly httpClient: HTTPClient;
+
 	/** ctor */
 	public constructor(fetch: Fetch) {
 		this.httpClient = new HTTPClient("http://localhost:5173/api/", {
@@ -16,22 +19,16 @@ export class TestHTTP {
 	}
 
 	/** TODOC */
-	private readonly httpClient;
-
-	/** TODOC */
 	public async getForecasts(fetch?: Fetch): Promise<WeatherForecast[]> {
-		return await this.httpClient
-			.get("weatherforecast")
-			.withFetch(fetch)
-			.fromJSONArray((something) => new WeatherForecast(something));
+		return await this.httpClient.get("weatherforecast").withFetch(fetch).fromJSONArray(WeatherForecast);
 	}
 
 	public async getTest(): Promise<string> {
-		return await this.httpClient.get("test").fromString();
+		return await this.httpClient.get("test").withFetch(window.fetch).fromString();
 	}
 
 	public async postUser(): Promise<void> {
-		await this.httpClient.post("user").fetch();
+		await this.httpClient.post("user").accept(400, 200).fetch();
 	}
 
 	public async getDateOnly(dateOnly: DateOnly, wrap: DateWrap): Promise<DateOnly> {

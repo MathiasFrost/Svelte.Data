@@ -1,16 +1,22 @@
-import type { DateOnly } from "$lib/date/DateOnly.js";
-import { ensureArray, ensureBigIntString, ensureBooleanString, ensureDateOnlyString, ensureDateString, ensureNumberString } from "$lib/types/unknown.js";
+import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
+import {
+	ensureArray,
+	ensureBigIntString,
+	ensureBooleanString,
+	ensureDateOnlyString,
+	ensureDateString,
+	ensureNumberString,
+	ensureObject,
+	ensureString
+} from "$lib/types/unknown.js";
 import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
-import type { DateWrap } from "$lib/date/DateOnly.js";
 import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
+import { HTTPResponseError } from "$lib/http/HTTPResponseError";
 
 /** TODOC */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
-/** TODOC */
-export type Deserialize<TResult> = (something?: unknown) => TResult;
 
 // noinspection JSUnusedGlobalSymbols
 /** TODOC */
@@ -20,9 +26,6 @@ export class HTTPRequestBuilder {
 
 	/** TODOC */
 	private readonly _requestUri: string;
-
-	/** TODOC */
-	private readonly ensureSuccess: boolean;
 
 	/** TODOC */
 	private readonly requestInit: RequestInit;
@@ -43,16 +46,21 @@ export class HTTPRequestBuilder {
 	private optional: unknown | null = null;
 
 	/** Status codes to ignore from ensuring success when calling `from{Type}Nullable` */
-	private nullStatusCodes: number[] | null = null;
+	private nullStatusCodes: number[] = [];
+
+	/** Status codes to accept */
+	private statusCodes: number[] = [];
+
+	/** Whether to check if `Response.ok` is true */
+	private ensureSuccess = true;
 
 	/** TODOC */
-	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, ensureSuccess: boolean, options: HTTPClientOptions) {
+	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
 		this.baseAddress = baseAddress;
 		this.requestInit = { ...(options.defaultRequestInit ?? {}) }; // TODO: deep copy this object
 		this.requestInit.method = httpMethod;
 		this.requestInit.headers = new Headers();
 		this._requestUri = requestUri;
-		this.ensureSuccess = ensureSuccess;
 		this.options = { ...options };
 	}
 
@@ -139,9 +147,21 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** Add status codes that should be treated as 204 No Content when calling `from{Type}Nullable` */
-	public withNullStatus(...statusCodes: number[]): HTTPRequestBuilder {
+	/** Add status code for which to return null in `from{Type}` methods when encountered */
+	public acceptNullFrom(...statusCodes: number[]): HTTPRequestBuilder {
 		this.nullStatusCodes = statusCodes;
+		return this;
+	}
+
+	/** Add status codes that will be considered successful */
+	public accept(...statusCodes: number[]): HTTPRequestBuilder {
+		this.statusCodes = statusCodes;
+		return this;
+	}
+
+	/** Disable ensuring success, effectively accepting all status codes */
+	public acceptAny(): HTTPRequestBuilder {
+		this.ensureSuccess = false;
 		return this;
 	}
 
@@ -182,24 +202,53 @@ export class HTTPRequestBuilder {
 		return this;
 	}
 
-	/** @returns The raw request result */
-	public async fetch(signal?: AbortSignal): Promise<Response> {
+	/** TODOC */
+	private ensureWithinStatusCode(response: Response): void {
+		if (this.statusCodes.includes(response.status)) return;
+		throw new Error(`Expected status code ${this.statusCodes.join(", ")}. Got: ${response.status}`);
+	}
+
+	/** TODOC */
+	private ensureSuccessStatusCode(response: Response): void {
+		if (response.ok) return;
+		throw new Error(`Expected status code indicating success. Got: ${response.status}`);
+	}
+
+	/** TODOC */
+	private async internalFetch<TResult>(handler: (response: Response) => Promise<TResult>, signal?: AbortSignal): Promise<TResult> {
 		this.requestInit.signal = signal;
 		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit);
-
 		let response = await this._fetch(this.requestUri, this.requestInit);
+		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, this);
 
-		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, false);
-		if (this.ensureSuccess) response.ensureSuccess();
+		try {
+			// Early return null if status code is among null status codes
+			if (this.nullStatusCodes.includes(response.status)) return null as TResult;
 
-		return response;
+			// Check if status code is within acceptable values
+			if (this.statusCodes.length) this.ensureWithinStatusCode(response);
+			else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
+
+			return await handler(response);
+		} catch (e) {
+			if (e instanceof Error) {
+				throw new HTTPResponseError(this.requestInit, response, this.requestUri, e);
+			}
+			throw e;
+		}
+	}
+
+	/** @returns The raw request result */
+	public async fetch(signal?: AbortSignal): Promise<Response> {
+		return await this.internalFetch((response) => Promise.resolve(response), signal);
 	}
 
 	/** @returns The XMLHttpRequest */
-	public send(): XMLHttpRequest {
+	public send(signal?: AbortSignal): XMLHttpRequest {
 		const request = this.xmlHttpRequest ?? new XMLHttpRequest();
 
 		if (!this.requestInit.method) throw new Error("Request method must be set");
+		this.requestInit.signal = signal;
 		request.open(this.requestInit.method, this.requestUri, true);
 
 		if (this.requestInit.credentials === "include") request.withCredentials = true;
@@ -210,48 +259,49 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObject<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult> {
-		const response = await this.fetch(signal);
-		const json = await response.json();
-		return deserialize(json);
+	public async fromJSONObject<TResult = Record<string, unknown>>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult> {
+		return await this.internalFetch(async (response) => {
+			const json = await response.json();
+			const o = ensureObject(json);
+			if (ctor) return new ctor(o);
+			return o as TResult;
+		}, signal);
 	}
 
-	/** The request body deserialized as a JSON object or null if 204 */
-	public async fromJSONObjectNullable<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult | null> {
-		const [response, isNull] = await this.fetchNullable(signal);
-		if (isNull) return null;
-
-		const json = await response.json();
-		return deserialize(json);
+	/** The request body deserialized as a JSON object */
+	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(
+		ctor?: new (something?: unknown) => TResult,
+		signal?: AbortSignal
+	): Promise<TResult | null> {
+		this.nullStatusCodes.push(204);
+		return await this.fromJSONObject(ctor, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult[]> {
-		const response = await this.fetch(signal);
-		const json = await response.json();
-		return ensureArray(json).map(deserialize);
+	public async fromJSONArray<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
+		return await this.internalFetch(async (response) => {
+			const json = await response.json();
+			const arr = ensureArray(json);
+			if (ctor) return arr.map((something) => new ctor(something));
+			return arr as TResult[];
+		}, signal);
 	}
 
-	/** The request body deserialized as a JSON array or null if 204 */
-	public async fromJSONArrayNullable<TResult>(deserialize: Deserialize<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
-		const [response, isNull] = await this.fetchNullable(signal);
-		if (isNull) return null;
-
-		const json = await response.json();
-		return ensureArray(json).map(deserialize);
+	/** The request body deserialized as a JSON array */
+	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
+		this.nullStatusCodes.push(204);
+		return await this.fromJSONArray(ctor, signal);
 	}
 
 	/** The request body deserialized as string */
 	public async fromString(signal?: AbortSignal): Promise<string> {
-		const response = await this.fetch(signal);
-		return await response.text();
+		return await this.internalFetch((response) => response.text(), signal);
 	}
 
 	/** The request body deserialized as string */
 	public async fromStringNullable(signal?: AbortSignal): Promise<string | null> {
-		const [response, isNull] = await this.fetchNullable(signal);
-		if (isNull) return null;
-		return await response.text();
+		this.nullStatusCodes.push(204);
+		return await this.fromString(signal);
 	}
 
 	/** The request body deserialized as number */
@@ -262,9 +312,8 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as number or null if 204 */
 	public async fromNumberNullable(signal?: AbortSignal): Promise<number | null> {
-		const content = await this.fromStringNullable(signal);
-		if (!content) return null;
-		return ensureNumberString(content);
+		this.nullStatusCodes.push(204);
+		return await this.fromNumber(signal);
 	}
 
 	/** The request body deserialized as bigint */
@@ -275,9 +324,8 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as number or null if 204 */
 	public async fromBigintNullable(signal?: AbortSignal): Promise<bigint | null> {
-		const content = await this.fromStringNullable(signal);
-		if (!content) return null;
-		return ensureBigIntString(content);
+		this.nullStatusCodes.push(204);
+		return await this.fromBigint(signal);
 	}
 
 	/** The request body deserialized as boolean */
@@ -288,9 +336,8 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as boolean or null if 204 */
 	public async fromBooleanNullable(signal?: AbortSignal): Promise<boolean | null> {
-		const content = await this.fromStringNullable(signal);
-		if (!content) return null;
-		return ensureBooleanString(content);
+		this.nullStatusCodes.push(204);
+		return await this.fromBoolean(signal);
 	}
 
 	/** The request body deserialized as Date */
@@ -301,9 +348,8 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as Date or null if 204 */
 	public async fromDateStringNullable(signal?: AbortSignal): Promise<Date | null> {
-		const content = await this.fromStringNullable(signal);
-		if (!content) return null;
-		return ensureDateString(content);
+		this.nullStatusCodes.push(204);
+		return await this.fromDateString(signal);
 	}
 
 	/** The request body deserialized as DateOnly */
@@ -314,22 +360,13 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as DateOnly or null if 204 */
 	public async fromDateOnlyStringNullable(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly | null> {
-		const content = await this.fromStringNullable(signal);
-		if (!content) return null;
-		return ensureDateOnlyString(content, wrap, true);
+		this.nullStatusCodes.push(204);
+		return await this.fromDateOnlyString(wrap, signal);
 	}
 
-	/** @returns The raw request result */
-	private async fetchNullable(signal?: AbortSignal): Promise<[Response, boolean]> {
-		this.requestInit.signal = signal;
-		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit);
-
-		let response = await this._fetch(this.requestUri, this.requestInit, this.nullStatusCodes ?? void 0);
-
-		const nullAndValid = response.status === 204 || (this.nullStatusCodes !== null && this.nullStatusCodes.includes(response.status));
-		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, nullAndValid);
-		if (!nullAndValid && this.ensureSuccess) response.ensureSuccess();
-
-		return [response, nullAndValid];
+	/** The location header from a 201 response */
+	public async create(signal?: AbortSignal): Promise<string> {
+		this.statusCodes.push(201);
+		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
 	}
 }

@@ -1,26 +1,38 @@
 import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 
 /** Make sure that something is an array (not null) */
-export function ensureArray(something: unknown): unknown[] {
-	if (Array.isArray(something)) return something;
+export function ensureArray<T = unknown>(something: unknown, ctor?: new (something?: unknown) => T): T[] {
+	if (Array.isArray(something)) {
+		if (typeof ctor !== "undefined") return something.map((something) => new ctor(something));
+		return something;
+	}
 	throw new Error(`Expected Array, found ${typeof something}`);
 }
 
 /** Make sure that something is an array (may be null) */
-export function ensureArrayNullable(something: unknown): unknown[] | null {
-	if (something === null || Array.isArray(something)) return something;
+export function ensureArrayNullable<T = unknown>(something: unknown, ctor?: new (something?: unknown) => T): T[] | null {
+	if (something === null || Array.isArray(something)) {
+		if (typeof ctor !== "undefined" && something !== null) return something.map((something) => new ctor(something));
+		return something;
+	}
 	throw new Error(`Expected Array | null, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (not null) */
-export function ensureObject(something: unknown): Record<string, unknown> {
-	if (something !== null && typeof something === "object") return something as Record<string, unknown>;
+export function ensureObject<T = Record<string, unknown>>(something: unknown, ctor?: new (something?: unknown) => T): T {
+	if (typeof something === "object" && something !== null) {
+		if (typeof ctor !== "undefined") return new ctor(something);
+		return something as T;
+	}
 	throw new Error(`Expected object, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (may be null) */
-export function ensureObjectNullable(something: unknown): Record<string, unknown> | null {
-	if (typeof something === "object") return something as Record<string, unknown> | null;
+export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ctor?: new (something?: unknown) => T): T | null {
+	if (typeof something === "object") {
+		if (typeof ctor !== "undefined" && something !== null) return new ctor(something);
+		return something as T | null;
+	}
 	throw new Error(`Expected object | null, found ${typeof something}`);
 }
 
@@ -44,8 +56,8 @@ export function ensureType<T>(something: unknown, values: T[]): T {
 
 /** Make sure that something is among the allowed values */
 export function ensureTypeNullable<T>(something: unknown, values: T[]): T | null {
-	if (something === null) return null;
-	return ensureType<T>(something, values);
+	if (something === null || values.includes(something as T)) return something as T | null;
+	throw new Error(`Expected something among ${values.join(", ")} | null, found ${something}`);
 }
 
 /** Make sure that something is a number (not null) */
@@ -127,8 +139,8 @@ export function ensureDateOnlyStringNullable(something: unknown, wrap: DateWrap,
 /** Make sure that something is a Boolean parsable string (not null) */
 export function ensureBooleanString(something: unknown): boolean {
 	if (typeof something !== "string") throw new Error(`Expected Boolean parsable string, found ${typeof something}`);
-	if (something === "true") return true;
-	if (something === "false") return false;
+	if (something.toLowerCase() === "true") return true;
+	if (something.toLowerCase() === "false") return false;
 	throw new Error(`Expected Boolean parsable string, found ${typeof something}`);
 }
 
@@ -149,14 +161,13 @@ export function ensureNumberString(something: unknown): number {
 
 /** Make sure that something is an instance of something */
 // eslint-disable-next-line @typescript-eslint/ban-types
-export function ensureInstanceOf<T>(something: unknown, t: Function): T {
+export function ensureInstanceOf<T>(something: unknown, t: new (...args: never[]) => T): T {
 	if (something instanceof t) return something as T;
 	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);
 }
 
 /** Make sure that something is an instance of something */
-// eslint-disable-next-line @typescript-eslint/ban-types
-export function ensureInstanceOfNullable<T>(something: unknown, t: Function): T | null {
+export function ensureInstanceOfNullable<T>(something: unknown, t: new (...args: never[]) => T): T | null {
 	if (something === null) return null;
 	if (something instanceof t) return something as T;
 	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);
