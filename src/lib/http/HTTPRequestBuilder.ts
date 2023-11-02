@@ -6,7 +6,8 @@ import {
 	ensureDateOnlyString,
 	ensureDateString,
 	ensureNumberString,
-	ensureObject
+	ensureObject,
+	ensureString
 } from "$lib/types/unknown.js";
 import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
@@ -239,7 +240,7 @@ export class HTTPRequestBuilder {
 
 	/** @returns The raw request result */
 	public async fetch(signal?: AbortSignal): Promise<Response> {
-		return await this.internalFetch(async (response) => response, signal);
+		return await this.internalFetch((response) => Promise.resolve(response), signal);
 	}
 
 	/** @returns The XMLHttpRequest */
@@ -278,11 +279,12 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as a JSON array */
 	public async fromJSONArray<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
-		const response = await this.fetch(signal);
-		const json = await response.json();
-		const arr = ensureArray(json);
-		if (ctor) return arr.map((something) => new ctor(something));
-		return arr as TResult[];
+		return await this.internalFetch(async (response) => {
+			const json = await response.json();
+			const arr = ensureArray(json);
+			if (ctor) return arr.map((something) => new ctor(something));
+			return arr as TResult[];
+		}, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
@@ -293,8 +295,7 @@ export class HTTPRequestBuilder {
 
 	/** The request body deserialized as string */
 	public async fromString(signal?: AbortSignal): Promise<string> {
-		const response = await this.fetch(signal);
-		return await response.text();
+		return await this.internalFetch((response) => response.text(), signal);
 	}
 
 	/** The request body deserialized as string */
@@ -361,5 +362,11 @@ export class HTTPRequestBuilder {
 	public async fromDateOnlyStringNullable(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromDateOnlyString(wrap, signal);
+	}
+
+	/** The location header from a 201 response */
+	public async create(signal?: AbortSignal): Promise<string> {
+		this.statusCodes.push(201);
+		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
 	}
 }

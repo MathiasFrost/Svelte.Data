@@ -172,14 +172,14 @@ export class OIDCManager<TAudience extends string> {
 	 * @param maxRetries How many times we should retry the requests if they result in status codes 500, 502, 503, 504, 507, 429, 425, 408 */
 	public createFetch(audience: TAudience, maxRetries: number = 0, fetch?: Fetch): Fetch {
 		const retryFetch = createRetryFetch(maxRetries, fetch);
-		return async (requestInfo, requestInit, nullStatusCodes) => {
+		return async (requestInfo, requestInit) => {
 			await this.ensureValidAccessToken(audience);
 			let response = await retryFetch(requestInfo, requestInit);
 
 			// Check if status code is of a value that we want to accept as null and hence not retry
 
 			// First check if we have to retry based on 401 or 403
-			if (!nullStatusCodes?.includes(response.status) && [401, 403].includes(response.status)) {
+			if ([401, 403].includes(response.status)) {
 				const expiresAt = await this.ensureValidAccessToken(audience, AcquisitionMethod.RefreshToken);
 				if (!this.isNotExpired(expiresAt)) {
 					console.info(`OIDC '${audience}': req-acquired access_token but none acquired. Giving up.`);
