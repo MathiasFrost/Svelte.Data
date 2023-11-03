@@ -86,7 +86,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 			?.split("=")[1];
 		if (typeof str === "undefined") return this.fallback;
 
-		return this.deserialize(str);
+		return this.deserialize(decodeURI(str));
 	}
 
 	/** @inheritdoc */

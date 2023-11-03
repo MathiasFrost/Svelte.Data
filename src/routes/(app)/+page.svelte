@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
 	import { TabManager } from "$lib/oidc/TabManager";
 
@@ -18,19 +18,26 @@
 		url = await testHttp.getPhoto();
 	}
 
-	let active = TabManager.tabActive;
-	let tabIndex = TabManager.tabIndex;
+	let active = TabManager.isActive();
+	let tabId = TabManager.tabId;
+	let interval = 0;
+
+	onMount(() => window.setInterval(() => console.log(TabManager.isActive()), 1_000));
+	onDestroy(() => {
+		if (typeof window === "undefined") return;
+		window.clearInterval(interval);
+	});
 </script>
 
 <h1>Svelte.Data</h1>
 
 <h2>Welcome to your library project</h2>
 
-tab active: {active} ({tabIndex})
+tab active: {active} ({tabId})
 <button
 	on:click={() => {
-		active = TabManager.tabActive;
-		tabIndex = TabManager.tabIndex;
+		active = TabManager.isActive();
+		tabId = TabManager.tabId;
 	}}>refresh</button>
 
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>

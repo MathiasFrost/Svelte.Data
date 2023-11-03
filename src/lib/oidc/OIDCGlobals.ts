@@ -1,4 +1,4 @@
-import { CookieSyncer, LocalStorageSyncer } from "$lib/sync";
+import { CookieSyncer } from "$lib/sync";
 import { TimeSpan } from "$lib/date";
 import { stringSerializer } from "$lib/types";
 
@@ -23,7 +23,7 @@ export class OIDCGlobals {
 	public static readonly cookieSyncers = {} as Record<string, CookieSyncer<string>>;
 
 	/** TODOC */
-	public static readonly tabSyncer = new LocalStorageSyncer<boolean[]>("OIDC_Tabs", []);
+	public static readonly tabSyncer = new CookieSyncer<{ id: string; timestamp: number }>("OIDC_Tab", { id: "", timestamp: 0 }, { sameSite: "Strict" });
 
 	/** Interval for checking validity regularly */
 	public static isValidIntervals: Record<string, number> = {};

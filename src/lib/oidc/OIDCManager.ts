@@ -211,9 +211,9 @@ export class OIDCManager<TAudience extends string> {
 						}
 
 						// Just keep checking storage for the active tab to complete the token request
-						if (!TabManager.tabActive) {
+						if (!TabManager.isActive()) {
 							console.info(
-								`OIDC '${audience}': expires_in expired or non-existent, but tab ${TabManager.tabIndex} is not active. Waiting for active tab.`
+								`OIDC '${audience}': expires_in expired or non-existent, but tab ${TabManager.tabId} is not active. Waiting for active tab.`
 							);
 							await new Promise((resolve) => setTimeout(resolve, 1_000));
 							break;

@@ -1,50 +1,85 @@
 import { OIDCGlobals } from "$lib/oidc/OIDCGlobals";
 
-console.log("modle");
+/** TODOC */
 export class TabManager {
 	/** TODOC */
-	public static tabIndex = 0;
+	public static readonly tabId = `${Date.now()}-${Math.random()}`;
 
 	/** TODOC */
-	public static get tabActive() {
-		return OIDCGlobals.tabSyncer.pull()[this.tabIndex];
-	}
+	private static heartbeatInterval = 0;
 
-	/** ctor */
+	/** TODOC */
+	private static readonly heartbeatFrequency: number = 5_000; // every 5 seconds
+
+	/** TODOC */
+	private static electionTimeout = 0;
+
+	/** @static ctor */
 	public static initialize(): void {
 		if (typeof window === "undefined") return;
 
-		window.removeEventListener("beforeunload", this.onBeforeUnload.bind(this));
-		window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
+		// Set up the heartbeat
+		this.setTab(true);
+		this.heartbeatInterval = window.setInterval(this.sendHeartbeat.bind(this), this.heartbeatFrequency);
 
-		document.removeEventListener("visibilitychange", this.onVisibilityChange.bind(this));
-		document.addEventListener("visibilitychange", this.onVisibilityChange.bind(this));
-
-		let existing = OIDCGlobals.tabSyncer.pull();
-		this.tabIndex = existing.length;
-		existing = existing.map(() => false); // When new tab is initialized all other tabs is necessarily not active
-		existing.push(true);
-		OIDCGlobals.tabSyncer.push(existing);
-		console.log(this.tabIndex, existing);
+		// Set up event listeners
+		document.addEventListener("visibilitychange", this.sendHeartbeat.bind(this));
+		window.addEventListener("beforeunload", this.onUnload.bind(this));
 	}
 
 	/** TODOC */
-	public static onBeforeUnload(): void {
-		console.info(`OIDC: tab ${this.tabIndex} closed`);
-		const existing = OIDCGlobals.tabSyncer.pull();
-		existing.splice(this.tabIndex, 1);
-		OIDCGlobals.tabSyncer.push(existing);
+	public static setTab(master: boolean): void {
+		console.info(`OIDC: tab ${this.tabId} (master: ${master})`);
+		OIDCGlobals.tabSyncer.push({ id: this.tabId, timestamp: Date.now() });
 	}
 
 	/** TODOC */
-	public static onVisibilityChange(): void {
-		if (document.visibilityState !== "visible") return;
+	private static sendHeartbeat(): void {
+		if (document.visibilityState === "visible") {
+			this.setTab(true);
+		} else {
+			const heartbeat = OIDCGlobals.tabSyncer.pull();
+			if (heartbeat.id === this.tabId) this.setTab(true);
+		}
+	}
 
-		console.info(`OIDC: tab ${this.tabIndex} active`);
-		const existing = OIDCGlobals.tabSyncer.pull().map((_value, i) => i === this.tabIndex);
-		OIDCGlobals.tabSyncer.push(existing);
+	/** TODOC */
+	private static electMaster(): void {
+		// Generate a random delay
+		const delay = Math.floor(Math.random() * 1_000); // 1 second max
+		window.clearTimeout(this.electionTimeout);
+		this.electionTimeout = window.setTimeout(() => {
+			const currentHeartbeat = OIDCGlobals.tabSyncer.pull();
+			if (!currentHeartbeat || Date.now() - currentHeartbeat.timestamp > this.heartbeatFrequency * 2) {
+				// Assume mastership and set heartbeat
+				this.setTab(true);
+			}
+		}, delay);
+	}
+
+	/** TODOC */
+	public static isActive(): boolean {
+		const heartbeat = OIDCGlobals.tabSyncer.pull();
+		if (!heartbeat.id) return false;
+
+		// If the current tab is the last known active tab, or if the last heartbeat is old, consider this tab as active.
+		if (heartbeat.id === this.tabId) {
+			// This is the active tab
+			return true;
+		}
+
+		// If no active tab has had a heartbeat, start election process.
+		if (Date.now() - heartbeat.timestamp > this.heartbeatFrequency * 2) {
+			this.electMaster();
+		}
+		return false;
+	}
+
+	/** TODOC */
+	public static onUnload(): void {
+		// Clear the interval on tab close to stop sending heartbeats
+		window.clearInterval(this.heartbeatInterval);
 	}
 }
 
-// Static ctor
 TabManager.initialize();
