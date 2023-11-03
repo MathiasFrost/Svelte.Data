@@ -29,53 +29,7 @@ export class OIDCGlobals {
 	public static isValidIntervals: Record<string, number> = {};
 
 	/** TODOC */
-	public static get tabActive() {
-		return OIDCGlobals.tabSyncer.pull()[this.tabIndex];
-	}
-
-	/** TODOC */
-	public static tabIndex = 0;
-
-	/** ctor */
-	public static initialize(): void {
-		if (typeof window === "undefined") return;
-
-		window.removeEventListener("beforeunload", this.onBeforeUnload.bind(this));
-		window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
-
-		document.removeEventListener("visibilitychange", this.onVisibilityChange.bind(this));
-		document.addEventListener("visibilitychange", this.onVisibilityChange.bind(this));
-
-		let existing = OIDCGlobals.tabSyncer.pull();
-		this.tabIndex = existing.length;
-		existing = existing.map(() => false); // When new tab is initialized all other tabs is necessarily not active
-		existing.push(true);
-		OIDCGlobals.tabSyncer.push(existing);
-		console.log(this.tabIndex, existing);
-	}
-
-	/** TODOC */
 	public static addIfNotExists(audience: string, name: string): void {
 		OIDCGlobals.cookieSyncers[audience] ??= new CookieSyncer(name, "", { sameSite: "Strict", maxAge: new TimeSpan(0, 1, 0, 0, 0, 0) }, stringSerializer());
 	}
-
-	/** TODOC */
-	public static onBeforeUnload(): void {
-		console.info(`OIDC: tab ${this.tabIndex} closed`);
-		const existing = OIDCGlobals.tabSyncer.pull();
-		existing.splice(this.tabIndex, 1);
-		OIDCGlobals.tabSyncer.push(existing);
-	}
-
-	/** TODOC */
-	public static onVisibilityChange(): void {
-		if (document.visibilityState !== "visible") return;
-
-		console.info(`OIDC: tab ${this.tabIndex} active`);
-		const existing = OIDCGlobals.tabSyncer.pull().map((_value, i) => i === this.tabIndex);
-		OIDCGlobals.tabSyncer.push(existing);
-	}
 }
-
-// Static ctor
-OIDCGlobals.initialize();

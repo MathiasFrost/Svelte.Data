@@ -3,7 +3,7 @@
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
 	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
-	import { OIDCGlobals } from "$lib/oidc";
+	import { TabManager } from "$lib/oidc/TabManager";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
@@ -18,15 +18,20 @@
 		url = await testHttp.getPhoto();
 	}
 
-	let active = OIDCGlobals.tabActive;
+	let active = TabManager.tabActive;
+	let tabIndex = TabManager.tabIndex;
 </script>
 
 <h1>Svelte.Data</h1>
 
 <h2>Welcome to your library project</h2>
 
-tab active: {active}
-<button on:click={() => (active = OIDCGlobals.tabActive)}>refresh</button>
+tab active: {active} ({tabIndex})
+<button
+	on:click={() => {
+		active = TabManager.tabActive;
+		tabIndex = TabManager.tabIndex;
+	}}>refresh</button>
 
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>

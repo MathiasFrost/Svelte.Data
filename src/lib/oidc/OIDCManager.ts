@@ -5,6 +5,7 @@ import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.j
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 import { OIDCGlobals } from "$lib/oidc/OIDCGlobals";
+import { TabManager } from "$lib/oidc/TabManager";
 
 /** @notes order matters */
 export enum AcquisitionMethod {
@@ -210,9 +211,9 @@ export class OIDCManager<TAudience extends string> {
 						}
 
 						// Just keep checking storage for the active tab to complete the token request
-						if (!OIDCGlobals.tabActive) {
+						if (!TabManager.tabActive) {
 							console.info(
-								`OIDC '${audience}': expires_in expired or non-existent, but tab ${OIDCGlobals.tabIndex} is not active. Waiting for active tab.`
+								`OIDC '${audience}': expires_in expired or non-existent, but tab ${TabManager.tabIndex} is not active. Waiting for active tab.`
 							);
 							await new Promise((resolve) => setTimeout(resolve, 1_000));
 							break;
