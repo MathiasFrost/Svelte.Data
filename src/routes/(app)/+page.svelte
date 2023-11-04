@@ -3,7 +3,7 @@
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onDestroy, onMount } from "svelte";
 	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
-	import { TabManager } from "$lib/oidc/TabManager";
+	import { TabManager } from "$lib/oidc/TabManager.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);

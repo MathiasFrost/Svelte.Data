@@ -4,8 +4,8 @@ import type { Fetch, Preprocess } from "$lib/http/index.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
-import { OIDCGlobals } from "$lib/oidc/OIDCGlobals";
-import { TabManager } from "$lib/oidc/TabManager";
+import { OIDCGlobals } from "$lib/oidc/OIDCGlobals.js";
+import { TabManager } from "$lib/oidc/TabManager.js";
 
 /** @notes order matters */
 export enum AcquisitionMethod {
@@ -200,6 +200,13 @@ export class OIDCManager<TAudience extends string> {
 
 		// Try all methods from storage retrieval to refresh_token exchange through iframe silent sign-in to user interaction redirect
 		while (method <= AcquisitionMethod.UserInteraction) {
+			// Just keep checking storage for the active tab to complete the token request
+			if (!TabManager.isActive()) {
+				console.info(`OIDC '${audience}': tab ${TabManager.tabId} is not active. Waiting for active tab.`);
+				await new Promise((resolve) => setTimeout(resolve, 1_000));
+				continue;
+			}
+
 			switch (method) {
 				case AcquisitionMethod.Storage:
 					{
@@ -208,15 +215,6 @@ export class OIDCManager<TAudience extends string> {
 						if (this.isNotExpired(expiresAt)) {
 							console.info(`OIDC '${audience}': expires_in found in storage and valid. Assuming we have a valid access_token in cookie.`);
 							return expiresAt;
-						}
-
-						// Just keep checking storage for the active tab to complete the token request
-						if (!TabManager.isActive()) {
-							console.info(
-								`OIDC '${audience}': expires_in expired or non-existent, but tab ${TabManager.tabId} is not active. Waiting for active tab.`
-							);
-							await new Promise((resolve) => setTimeout(resolve, 1_000));
-							break;
 						}
 
 						const refreshToken = await this.getRefreshToken(audience);

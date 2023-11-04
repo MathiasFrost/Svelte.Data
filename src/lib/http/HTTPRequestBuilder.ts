@@ -13,7 +13,7 @@ import type { Fetch } from "./Fetch.js";
 import type { Postprocess } from "./Postprocess.js";
 import type { Preprocess } from "./Preprocess.js";
 import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
-import { HTTPResponseError } from "$lib/http/HTTPResponseError";
+import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 
 /** TODOC */
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
-	import { TimeSpan } from "$lib/date";
+	import { TimeSpan } from "$lib/date/TimeSpan.js";
 	import { history } from "$lib/history/history.js";
 
 	/** Initial value - Today */

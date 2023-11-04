@@ -1,4 +1,4 @@
-import { OIDCGlobals } from "$lib/oidc/OIDCGlobals";
+import { OIDCGlobals } from "$lib/oidc/OIDCGlobals.js";
 
 /** TODOC */
 export class TabManager {

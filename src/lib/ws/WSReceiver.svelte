@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { WSClient } from "$lib/ws/WSClient";
+	import type { WSClient } from "$lib/ws/WSClient.js";
 	import { onDestroy } from "svelte";
-	import { indefinitePromise } from "$lib/async";
-	import type { WSMessage } from "$lib/ws/WSMessage";
+	import { indefinitePromise } from "$lib/async/utility.js";
+	import type { WSMessage } from "$lib/ws/WSMessage.js";
 
 	/** TODOC */
 	export let ws: WSClient | null;
