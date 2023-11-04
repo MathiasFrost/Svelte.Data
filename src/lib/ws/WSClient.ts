@@ -1,6 +1,6 @@
 import { type Writable, writable } from "svelte/store";
-import { indefinitePromise } from "$lib/async";
-import { WSMessage } from "$lib/ws/WSMessage";
+import { indefinitePromise } from "$lib/async/utility.js";
+import { WSMessage } from "$lib/ws/WSMessage.js";
 
 /** TODOC */
 export interface WSClientOptions {}

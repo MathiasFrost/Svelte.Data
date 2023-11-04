@@ -1,6 +1,6 @@
 import { TestHTTP } from "$sandbox/http/TestHTTP.js";
 import type { PageLoad } from "./$types.js";
-import { createRetryFetch } from "$lib/http";
+import { createRetryFetch } from "$lib/http/createRetryFetch.js";
 
 /** @inheritdoc */
 export const load = (async ({ fetch }) => {

@@ -1,5 +1,6 @@
 import type { Serializer } from "$lib/types/Serializer.js";
 import { Syncer } from "./Syncer.js";
+import type { TimeSpan } from "$lib/date/TimeSpan.js";
 
 /** Cookie options */
 export interface ICookieOptions {
@@ -8,6 +9,9 @@ export interface ICookieOptions {
 
 	/** Expire time to set on cookie. Leave empty for session cookies */
 	expires?: Date;
+
+	/** How long the cookie will last after updated */
+	maxAge?: TimeSpan;
 
 	/** Set cookie to HostOnly */
 	hostOnly?: boolean;
@@ -32,6 +36,9 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 
 	/** Expire time to set on cookie. Leave empty for session cookies */
 	public expires?: Date;
+
+	/** Hwo long it will last after set */
+	public maxAge?: TimeSpan;
 
 	/** Set cookie to HostOnly */
 	public hostOnly?: boolean;
@@ -79,7 +86,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 			?.split("=")[1];
 		if (typeof str === "undefined") return this.fallback;
 
-		return this.deserialize(str);
+		return this.deserialize(decodeURI(str));
 	}
 
 	/** @inheritdoc */
@@ -92,6 +99,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 		if (this.domain) cookieComponents.push(`Domain=${this.domain}`);
 		if (this.secure) cookieComponents.push("Secure");
 		if (this.expires) cookieComponents.push(`Expires=${this.expires.toUTCString()}`);
+		else if (this.maxAge) cookieComponents.push(`Expires=${new Date(Date.now() + this.maxAge.totalMilliseconds)}`);
 		if (this.hostOnly) cookieComponents.push("HostOnly");
 		if (this.httpOnly) cookieComponents.push("HttpOnly");
 		if (this.path) cookieComponents.push(`Path=${this.path}`);

@@ -54,4 +54,50 @@ export class TimeSpan {
 
 		return builder;
 	}
+
+	/** The total milliseconds from all components */
+	public get totalMilliseconds(): number {
+		return (
+			this.days * 24 * 60 * 60 * 1000 +
+			this.hours * 60 * 60 * 1000 +
+			this.minutes * 60 * 1000 +
+			this.seconds * 1000 +
+			this.milliseconds +
+			this.microseconds / 1000
+		);
+	}
+
+	/** The total seconds from all components */
+	public get totalSeconds(): number {
+		return this.days * 24 * 60 * 60 + this.hours * 60 * 60 + this.minutes * 60 + this.seconds + this.milliseconds / 1000 + this.microseconds / 1000 / 1000;
+	}
+
+	/** The total minutes from all components */
+	public get totalMinutes(): number {
+		return this.days * 24 * 60 + this.hours * 60 + this.minutes + this.seconds / 60 + this.milliseconds / 1000 / 60 + this.microseconds / 1000 / 1000 / 60;
+	}
+
+	/** The total hours from all components */
+	public get totalHours(): number {
+		return (
+			this.days * 24 +
+			this.hours +
+			this.minutes / 60 +
+			this.seconds / 60 / 60 +
+			this.milliseconds / 1000 / 60 / 60 +
+			this.microseconds / 1000 / 1000 / 60 / 60
+		);
+	}
+
+	/** The total days from all components */
+	public get totalDays(): number {
+		return (
+			this.days +
+			this.hours / 24 +
+			this.minutes / 60 / 24 +
+			this.seconds / 60 / 60 / 24 +
+			this.milliseconds / 1000 / 60 / 60 / 24 +
+			this.microseconds / 1000 / 1000 / 60 / 60 / 24
+		);
+	}
 }

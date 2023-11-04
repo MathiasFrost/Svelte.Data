@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
+	import { TabManager } from "$lib/oidc/TabManager.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
@@ -14,19 +15,30 @@
 	let url: string | null = null;
 
 	async function getProfile(): Promise<void> {
-		const accessToken = await oidcManager.getAccessToken("MS.Graph");
-		const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
-			headers: {
-				Authorization: "Bearer " + accessToken
-			}
-		});
-		url = URL.createObjectURL(await res.blob());
+		url = await testHttp.getPhoto();
 	}
+
+	let active = TabManager.isActive();
+	let tabId = TabManager.tabId;
+	let interval = 0;
+
+	onMount(() => window.setInterval(() => console.log(TabManager.isActive()), 1_000));
+	onDestroy(() => {
+		if (typeof window === "undefined") return;
+		window.clearInterval(interval);
+	});
 </script>
 
 <h1>Svelte.Data</h1>
 
 <h2>Welcome to your library project</h2>
+
+tab active: {active} ({tabId})
+<button
+	on:click={() => {
+		active = TabManager.isActive();
+		tabId = TabManager.tabId;
+	}}>refresh</button>
 
 <p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
 <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>

@@ -1,4 +1,4 @@
-import type { HTTPRequestBuilder } from "$lib/http/HTTPRequestBuilder";
+import type { HTTPRequestBuilder } from "$lib/http/HTTPRequestBuilder.js";
 
 /** Modify Response right after response is received
  * @param response The unaltered response from the fetch request

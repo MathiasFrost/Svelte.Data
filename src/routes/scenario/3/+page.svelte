@@ -2,7 +2,7 @@
 	import { emitRedo, emitUndo, history } from "$lib/history/history.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import type { PageData } from "./$types.js";
-	import { CookieSyncer } from "$lib/sync";
+	import { CookieSyncer } from "$lib/sync/CookieSyncer.js";
 
 	/** @inheritdoc */
 	export let data: PageData;

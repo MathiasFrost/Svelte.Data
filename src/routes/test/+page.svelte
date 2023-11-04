@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { HTTPResponseError } from "$lib/http";
+	import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 	import { testHttp } from "$sandbox/http/TestHTTP";
 
 	let err = "";

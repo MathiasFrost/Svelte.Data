@@ -19,7 +19,14 @@ export {
 	ensureBigintNullable,
 	ensureBigint,
 	ensureArrayNullable,
-	ensureArray
+	ensureArray,
+	ensureBigIntString,
+	ensureBooleanString,
+	ensureDictionaryNullable,
+	ensureDictionary,
+	ensureNumberString,
+	ensureTypeNullable,
+	stripQuotes
 } from "$lib/types/unknown.js";
 export {
 	type Serializer,
@@ -28,5 +35,6 @@ export {
 	typeSerializer,
 	numberSerializer,
 	booleanSerializer,
-	dateSerializer
+	dateSerializer,
+	dateOnlySerializer
 } from "$lib/types/Serializer.js";
