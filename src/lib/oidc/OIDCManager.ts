@@ -53,12 +53,11 @@ export class OIDCManager<TAudience extends string> {
 	/** @param configurations Configuration for all audiences the app will use */
 	public constructor(configurations: OIDCConfigurations<TAudience>) {
 		this.configurations = configurations;
+		Object.keys(configurations).forEach((audience) => OIDCGlobals.addIfNotExists(audience, `${storagePrefix(audience)}_ExpiresAt`));
 		if (typeof window === "undefined") return;
 
 		let offset = 0;
 		for (const audience of Object.keys(configurations)) {
-			OIDCGlobals.addIfNotExists(audience, `${storagePrefix(audience)}_ExpiresAt`);
-
 			window.clearTimeout(OIDCGlobals.isValidIntervals[audience]);
 			OIDCGlobals.isValidIntervals[audience] = window.setTimeout(() => this.validateAudiences(audience as TAudience), 180_000 + offset);
 			offset += 6_000;
@@ -90,7 +89,7 @@ export class OIDCManager<TAudience extends string> {
 
 		const configuration = this.configurations[audience];
 		try {
-			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
+			const res = await window.fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_AccessToken`, { credentials: "include" });
 			if (res.status === 200) return await res.text();
 		} catch (e) {
 			console.error(`OIDC '${audience}': Request to server failed for access_token`, e);
@@ -106,7 +105,7 @@ export class OIDCManager<TAudience extends string> {
 
 		const configuration = this.configurations[audience];
 		try {
-			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
+			const res = await window.fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_IdToken`, { credentials: "include" });
 			if (res.status === 200) return await res.text();
 		} catch (e) {
 			console.error(`OIDC '${audience}': Request to server failed for id_token`, e);
@@ -122,7 +121,7 @@ export class OIDCManager<TAudience extends string> {
 
 		const configuration = this.configurations[audience];
 		try {
-			const res = await fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
+			const res = await window.fetch(`${configuration.cookieGetEndpoint}/${storagePrefix(audience)}_RefreshToken`, { credentials: "include" });
 			if (res.status === 200) return await res.text();
 		} catch (e) {
 			this.invalidate(audience);
@@ -326,7 +325,7 @@ export class OIDCManager<TAudience extends string> {
 
 			// Make the request
 			try {
-				const response = await fetch(document.tokenEndpoint, { method: "POST", body: body });
+				const response = await window.fetch(document.tokenEndpoint, { method: "POST", body: body });
 				if (!response.ok) {
 					console.info(`OIDC '${audience}': refresh_token request failed`, await response.text());
 					return null;
@@ -399,7 +398,7 @@ export class OIDCManager<TAudience extends string> {
 			formData.append("code_verifier", statePayload.codeVerifier);
 			formData.append("grant_type", "authorization_code");
 
-			const response = await fetch(document.tokenEndpoint, { method: "POST", body: formData });
+			const response = await window.fetch(document.tokenEndpoint, { method: "POST", body: formData });
 			if (!response.ok) {
 				// noinspection ExceptionCaughtLocallyJS
 				throw new OIDCError(`authorization_code request failed: ${await response.text()}`);
@@ -524,21 +523,21 @@ export class OIDCManager<TAudience extends string> {
 		const configuration = this.configurations[audience];
 		try {
 			if (oidcMessage.accessToken)
-				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_AccessToken`, {
+				await window.fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_AccessToken`, {
 					method: "PUT",
 					body: oidcMessage.accessToken,
 					credentials: "include"
 				});
 
 			if (oidcMessage.idToken)
-				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_IdToken`, {
+				await window.fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_IdToken`, {
 					method: "PUT",
 					body: oidcMessage.idToken,
 					credentials: "include"
 				});
 
 			if (oidcMessage.refreshToken)
-				await fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_RefreshToken`, {
+				await window.fetch(`${configuration.cookieSetEndpoint}/${storagePrefix(audience)}_RefreshToken`, {
 					method: "PUT",
 					body: oidcMessage.refreshToken,
 					credentials: "include"

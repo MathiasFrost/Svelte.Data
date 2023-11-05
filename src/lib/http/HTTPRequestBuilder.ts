@@ -369,4 +369,12 @@ export class HTTPRequestBuilder {
 		this.statusCodes.push(201);
 		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
 	}
+
+	/** The `object URL` from a stream response */
+	public async createObjectURL(signal?: AbortSignal): Promise<string> {
+		return await this.internalFetch(async (response) => {
+			const blob = await response.blob();
+			return URL.createObjectURL(blob);
+		}, signal);
+	}
 }

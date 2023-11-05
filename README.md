@@ -106,7 +106,7 @@ Response.prototype.ensureSuccess = function (): Response {
 
 export class TestHTTP {
 	public async getForecasts(): Promise<WeatherForecast[]> {
-		const res = await fetch("http://localhost:5173/api/weatherforecast");
+		const res = await window.fetch("http://localhost:5173/api/weatherforecast");
 		return ensureArray(await res.ensureSuccess().json()).map((el) => new WeatherForecast(el));
 	}
 }

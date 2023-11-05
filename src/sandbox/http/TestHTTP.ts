@@ -28,11 +28,10 @@ export class TestHTTP {
 	}
 
 	public async getPhoto(): Promise<string> {
-		const res = await this.httpClient
+		return await this.httpClient
 			.get("https://graph.microsoft.com/v1.0/me/photo/$value")
 			.withPreprocess(oidcManager.createPreprocess("MS.Graph"))
-			.fetch();
-		return URL.createObjectURL(await res.blob());
+			.createObjectURL();
 	}
 
 	public async postUser(): Promise<void> {
