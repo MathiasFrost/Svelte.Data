@@ -1,5 +1,5 @@
-import { HTTPRequestBuilder } from "./HTTPRequestBuilder.js";
-import { ValidationError } from "./ValidationError.js";
+import { HTTPRequestBuilder } from "$lib/http/HTTPRequestBuilder.js";
+import { ValidationError } from "$lib/http/ValidationError.js";
 import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
 
 declare global {

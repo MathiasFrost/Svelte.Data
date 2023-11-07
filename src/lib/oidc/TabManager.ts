@@ -1,4 +1,5 @@
 import { OIDCGlobals } from "$lib/oidc/OIDCGlobals.js";
+import type { Cookies } from "@sveltejs/kit";
 
 /** TODOC */
 export class TabManager {
@@ -28,9 +29,9 @@ export class TabManager {
 	}
 
 	/** TODOC */
-	public static setTab(master: boolean): void {
+	public static setTab(master: boolean, cookies?: Cookies): void {
 		console.info(`OIDC: tab ${this.tabId} (master: ${master})`);
-		OIDCGlobals.tabSyncer.push({ id: this.tabId, timestamp: Date.now() });
+		OIDCGlobals.tabSyncer.push({ id: this.tabId, timestamp: Date.now() }, cookies);
 	}
 
 	/** TODOC */
@@ -44,12 +45,25 @@ export class TabManager {
 	}
 
 	/** TODOC */
-	private static electMaster(): void {
+	private static serverElectionTimeout: NodeJS.Timeout | null = null;
+
+	/** TODOC */
+	private static setTimeout(callback: () => void, delay: number): void {
+		if (typeof window === "undefined") {
+			if (this.serverElectionTimeout) clearTimeout(this.serverElectionTimeout);
+			this.serverElectionTimeout = setTimeout(callback, delay);
+		} else {
+			window.clearTimeout(this.electionTimeout);
+			this.electionTimeout = window.setTimeout(callback, delay);
+		}
+	}
+
+	/** TODOC */
+	private static electMaster(cookies?: Cookies): void {
 		// Generate a random delay
 		const delay = Math.floor(Math.random() * 1_000); // 1 second max
-		window.clearTimeout(this.electionTimeout);
-		this.electionTimeout = window.setTimeout(() => {
-			const currentHeartbeat = OIDCGlobals.tabSyncer.pull();
+		this.setTimeout(() => {
+			const currentHeartbeat = OIDCGlobals.tabSyncer.pull(cookies);
 			if (!currentHeartbeat || Date.now() - currentHeartbeat.timestamp > this.heartbeatFrequency * 2) {
 				// Assume mastership and set heartbeat
 				this.setTab(true);
@@ -58,9 +72,11 @@ export class TabManager {
 	}
 
 	/** TODOC */
-	public static isActive(): boolean {
-		const heartbeat = OIDCGlobals.tabSyncer.pull();
-		if (!heartbeat.id) return false;
+	public static isActive(cookies?: Cookies): boolean {
+		const heartbeat = OIDCGlobals.tabSyncer.pull(cookies);
+		if (!heartbeat.id) {
+			return typeof window === "undefined";
+		}
 
 		// If the current tab is the last known active tab, or if the last heartbeat is old, consider this tab as active.
 		if (heartbeat.id === this.tabId) {
@@ -70,7 +86,7 @@ export class TabManager {
 
 		// If no active tab has had a heartbeat, start election process.
 		if (Date.now() - heartbeat.timestamp > this.heartbeatFrequency * 2) {
-			this.electMaster();
+			this.electMaster(cookies);
 		}
 		return false;
 	}

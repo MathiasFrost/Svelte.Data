@@ -72,7 +72,7 @@ export class WSClient {
 			this.close();
 		}
 
-		const negotiateResponse = await fetch(this.baseAddress.toString().replace(/^ws/, "http") + "/negotiate?negotiateVersion=1", { method: "POST" });
+		const negotiateResponse = await window.fetch(this.baseAddress.toString().replace(/^ws/, "http") + "/negotiate?negotiateVersion=1", { method: "POST" });
 		if (!negotiateResponse.ok) throw new Error("Unable to negotiate with WebSocket endpoint");
 
 		const json = await negotiateResponse.json();

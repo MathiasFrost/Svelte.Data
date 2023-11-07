@@ -1,6 +1,7 @@
 import type { Serializer } from "$lib/types/Serializer.js";
-import { Syncer } from "./Syncer.js";
+import { Syncer } from "$lib/sync/Syncer.js";
 import type { TimeSpan } from "$lib/date/TimeSpan.js";
+import type { Cookies } from "@sveltejs/kit";
 
 /** Cookie options */
 export interface ICookieOptions {
@@ -77,20 +78,37 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	}
 
 	/** @inheritdoc */
-	public override pull(): T {
-		if (typeof document === "undefined") return this.fallback;
+	public override pull(cookies?: Cookies): T {
+		let str: string | undefined;
+		if (cookies) {
+			str = cookies.get(this.key);
+		} else if (typeof document !== "undefined") {
+			str = document.cookie
+				.split("; ")
+				.find((row) => row.startsWith(`${this.key}=`))
+				?.split("=")[1];
+		}
 
-		const str = document.cookie
-			.split("; ")
-			.find((row) => row.startsWith(`${this.key}=`))
-			?.split("=")[1];
 		if (typeof str === "undefined") return this.fallback;
 
 		return this.deserialize(decodeURI(str));
 	}
 
 	/** @inheritdoc */
-	public override push(value: T): void {
+	public override push(value: T, cookies?: Cookies): void {
+		if (cookies) {
+			cookies.set(this.key, this.serializer.serialize(value), {
+				domain: this.domain,
+				expires: this.expires,
+				httpOnly: this.httpOnly,
+				maxAge: this.maxAge?.totalSeconds,
+				path: this.path,
+				secure: this.secure,
+				sameSite: this.sameSite?.toLowerCase() as "lax" | "strict" | "none" | undefined
+			});
+			return;
+		}
+
 		if (typeof document === "undefined") return;
 
 		const str = this.serializer.serialize(value);
@@ -108,7 +126,11 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	}
 
 	/** @inheritdoc */
-	public override clear(): void {
+	public override clear(cookies?: Cookies): void {
+		if (cookies) {
+			cookies.delete(this.key);
+			return;
+		}
 		if (typeof document === "undefined") return;
 		document.cookie = `${this.key}=; SameSite=Strict; Max-Age=0`;
 	}

@@ -1,5 +1,5 @@
 import type { Serializer } from "$lib/types/Serializer.js";
-import { StorageSyncer } from "./StorageSyncer.js";
+import { StorageSyncer } from "$lib/sync/StorageSyncer.js";
 
 /** Sync values to `window.localStorage` */
 export class SessionStorageSyncer<T> extends StorageSyncer<T> {

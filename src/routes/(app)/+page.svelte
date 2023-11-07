@@ -2,8 +2,10 @@
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onDestroy, onMount } from "svelte";
-	import { oidcManager, signInPrompt } from "$sandbox/user/oidcConfig.js";
+	import { getSignInPromptStore, oidcManager } from "$sandbox/user/oidcConfig.js";
 	import { TabManager } from "$lib/oidc/TabManager.js";
+
+	const signInPrompt = getSignInPromptStore();
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);

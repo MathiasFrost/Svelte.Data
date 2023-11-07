@@ -9,9 +9,9 @@ import {
 	ensureObject,
 	ensureString
 } from "$lib/types/unknown.js";
-import type { Fetch } from "./Fetch.js";
-import type { Postprocess } from "./Postprocess.js";
-import type { Preprocess } from "./Preprocess.js";
+import type { Fetch } from "$lib/http/Fetch.js";
+import type { Postprocess } from "$lib/http/Postprocess.js";
+import type { Preprocess } from "$lib/http/Preprocess.js";
 import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
 import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 
@@ -368,5 +368,13 @@ export class HTTPRequestBuilder {
 	public async create(signal?: AbortSignal): Promise<string> {
 		this.statusCodes.push(201);
 		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
+	}
+
+	/** The `object URL` from a stream response */
+	public async createObjectURL(signal?: AbortSignal): Promise<string> {
+		return await this.internalFetch(async (response) => {
+			const blob = await response.blob();
+			return URL.createObjectURL(blob);
+		}, signal);
 	}
 }

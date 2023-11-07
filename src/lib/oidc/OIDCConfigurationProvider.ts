@@ -1,16 +1,16 @@
-import { ensureObject, ensureString } from "$lib/types/index.js";
+import { ensureObject, ensureString } from "$lib/types/unknown.js";
+import type { Fetch } from "$lib/http/Fetch.js";
 
 /** Class for managing OIDC configurations */
 export class OIDCConfigurationProvider {
 	/** Cached configurations */
 	private _configurations = new Map<string, OIDCDocument>();
 
-	/** @param authority OIDC provider's authority URI whose openid-configuration document we want to fetch
+	/** @param fetch Which fetch to use
+	 *  @param authority OIDC provider's authority URI whose openid-configuration document we want to fetch
 	 * @param metadataUri Fully qualified URI to the openid-configuration document. Will be inferred from authority if not specified
 	 * @returns The openid-configuration document */
-	public async get(authority: string, metadataUri: string | null = null): Promise<OIDCDocument> {
-		if (typeof window === "undefined") throw new Error("Can't call this server-side");
-
+	public async get(fetch: Fetch, authority: string, metadataUri: string | null = null): Promise<OIDCDocument> {
 		const cached = this._configurations.get(authority);
 		if (cached) return cached;
 

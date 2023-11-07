@@ -1,5 +1,5 @@
 import type { Serializer } from "$lib/types/Serializer.js";
-import { Syncer } from "./Syncer.js";
+import { Syncer } from "$lib/sync/Syncer.js";
 
 /** @internal */
 export abstract class StorageSyncer<T> extends Syncer<T> {
