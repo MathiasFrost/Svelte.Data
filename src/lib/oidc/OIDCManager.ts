@@ -256,9 +256,10 @@ export class OIDCManager<TAudience extends string> {
 					break;
 				case AcquisitionMethod.IFrame:
 					{
+						// If we get to this point, user has to sign in client-side
 						if (typeof window === "undefined") {
-							method = AcquisitionMethod.UserInteraction;
-							continue;
+							console.info(`OIDC '${audience}': reached iframe sign-in server-side. Returning 0.`);
+							return 0;
 						}
 
 						await this.signInIFrame(audience); // This method stores OIDC result in storage if successful

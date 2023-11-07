@@ -45,11 +45,24 @@ export class TabManager {
 	}
 
 	/** TODOC */
+	private static serverElectionTimeout: NodeJS.Timeout | null = null;
+
+	/** TODOC */
+	private static setTimeout(callback: () => void, delay: number): void {
+		if (typeof window === "undefined") {
+			if (this.serverElectionTimeout) clearTimeout(this.serverElectionTimeout);
+			this.serverElectionTimeout = setTimeout(callback, delay);
+		} else {
+			window.clearTimeout(this.electionTimeout);
+			this.electionTimeout = window.setTimeout(callback, delay);
+		}
+	}
+
+	/** TODOC */
 	private static electMaster(cookies?: Cookies): void {
 		// Generate a random delay
 		const delay = Math.floor(Math.random() * 1_000); // 1 second max
-		window.clearTimeout(this.electionTimeout);
-		this.electionTimeout = window.setTimeout(() => {
+		this.setTimeout(() => {
 			const currentHeartbeat = OIDCGlobals.tabSyncer.pull(cookies);
 			if (!currentHeartbeat || Date.now() - currentHeartbeat.timestamp > this.heartbeatFrequency * 2) {
 				// Assume mastership and set heartbeat
@@ -61,7 +74,9 @@ export class TabManager {
 	/** TODOC */
 	public static isActive(cookies?: Cookies): boolean {
 		const heartbeat = OIDCGlobals.tabSyncer.pull(cookies);
-		if (!heartbeat.id) return false;
+		if (!heartbeat.id) {
+			return typeof window === "undefined";
+		}
 
 		// If the current tab is the last known active tab, or if the last heartbeat is old, consider this tab as active.
 		if (heartbeat.id === this.tabId) {

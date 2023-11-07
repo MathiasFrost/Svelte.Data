@@ -1,12 +1,12 @@
 import type { LayoutServerLoad } from "./$types";
-import { serverOidcManager, setSignInPromptStore } from "$sandbox/user/oidcConfig";
-import { writable } from "svelte/store";
+import { serverOidcManager } from "$sandbox/user/oidcConfig";
+import { TabManager } from "$lib/oidc";
 
 /** TODOC */
 export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
+	TabManager.setTab(true, cookies);
 	const oidc = serverOidcManager(fetch, cookies);
-	await oidc.ensureValidAccessToken("MS.Graph");
-	const o = await oidc.getIdTokenObject("MS.Graph");
-	setSignInPromptStore(writable());
-	return { user: o };
+	const signInPrompt = (await oidc.ensureValidAccessToken("MS.Graph")) === 0;
+	const user = signInPrompt ? {} : await oidc.getIdTokenObject("MS.Graph");
+	return { user, signInPrompt: signInPrompt ? "MS.Graph" : null };
 };
