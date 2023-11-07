@@ -1,7 +1,6 @@
 import type { Fetch } from "$lib/http/Fetch.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
-import type { DateOnly } from "$lib/date/DateOnly.js";
-import type { DateWrap } from "$lib/date/DateOnly.js";
+import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import { oidcManager } from "$sandbox/user/oidcConfig.js";
 import { HTTPClient } from "$lib/http/index.js";
 
@@ -11,10 +10,10 @@ export class TestHTTP {
 	private readonly httpClient: HTTPClient;
 
 	/** ctor */
-	public constructor(fetch: Fetch) {
+	public constructor(fetch?: Fetch) {
 		this.httpClient = new HTTPClient("http://localhost:5173/api/", {
 			defaultRequestInit: { redirect: "manual" },
-			fetch
+			fetch: oidcManager.createFetch("MS.Graph", 3, fetch)
 		});
 	}
 
@@ -44,4 +43,11 @@ export class TestHTTP {
 }
 
 /** @see TestHTTP */
-export const testHttp = new TestHTTP(oidcManager.createFetch("MS.Graph", 3));
+export const testHttp = new TestHTTP();
+
+/** @inheritDoc TestHTTP */
+export class ServerTestHTTP extends TestHTTP {
+	public constructor(fetch: Fetch) {
+		super(fetch);
+	}
+}

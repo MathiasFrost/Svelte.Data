@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { user } from "$sandbox/user/user.js";
+	import { getUserStore } from "$sandbox/user/user.js";
+
+	const user = getUserStore();
 </script>
 
 {#if $user["name"]}

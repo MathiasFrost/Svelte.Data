@@ -1,10 +1,26 @@
 <script lang="ts">
 	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
-	import { oidcManager } from "$sandbox/user/oidcConfig.js";
-	import { user } from "$sandbox/user/user.js";
+	import { oidcManager, setSignInPromptStore } from "$sandbox/user/oidcConfig.js";
+	import { setUserStore } from "$sandbox/user/user.js";
 	import { AcquisitionMethod } from "$lib/oidc/OIDCManager.js";
+	import type { LayoutData } from "./$types";
+	import { writable } from "svelte/store";
+
+	export let data: LayoutData;
+
+	// Create a store and update it when necessary...
+	const user = writable<Record<string, unknown>>();
+	$: user.set(data.user);
+
+	// ...and add it to the context for child components to access
+	setUserStore(user);
+
+	const signInPrompt = writable<boolean>();
+	$: signInPrompt.set(data.signInPrompt);
+	setSignInPromptStore(signInPrompt);
 
 	let refresh = false;
+
 	async function getUser(refresh: boolean): Promise<Record<string, unknown>> {
 		if (refresh) user.set({});
 		await oidcManager.ensureValidAccessToken("MS.Graph", refresh ? AcquisitionMethod.RefreshToken : AcquisitionMethod.Storage);
