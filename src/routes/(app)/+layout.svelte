@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
-	import { oidcManager, setSignInPromptStore } from "$sandbox/user/oidcConfig.js";
+	import { oidcManager } from "$sandbox/user/oidcConfig.js";
 	import { setUserStore } from "$sandbox/user/user.js";
 	import { AcquisitionMethod } from "$lib/oidc/OIDCManager.js";
 	import type { LayoutData } from "./$types";
@@ -14,10 +14,6 @@
 
 	// ...and add it to the context for child components to access
 	setUserStore(user);
-
-	const signInPrompt = writable<boolean>();
-	$: signInPrompt.set(data.signInPrompt);
-	setSignInPromptStore(signInPrompt);
 
 	let refresh = false;
 

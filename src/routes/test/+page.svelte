@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
-	import { testHttp } from "$sandbox/http/TestHTTP";
+	import { testHttp } from "$sandbox/http/TestHTTP.js";
 
 	let err = "";
 	async function test(): Promise<void> {

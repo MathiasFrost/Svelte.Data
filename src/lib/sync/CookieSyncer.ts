@@ -1,5 +1,5 @@
 import type { Serializer } from "$lib/types/Serializer.js";
-import { Syncer } from "./Syncer.js";
+import { Syncer } from "$lib/sync/Syncer.js";
 import type { TimeSpan } from "$lib/date/TimeSpan.js";
 import type { Cookies } from "@sveltejs/kit";
 

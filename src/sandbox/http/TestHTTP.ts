@@ -2,7 +2,7 @@ import type { Fetch } from "$lib/http/Fetch.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import { oidcManager } from "$sandbox/user/oidcConfig.js";
-import { HTTPClient } from "$lib/http/index.js";
+import { HTTPClient } from "$lib/http/HTTPClient.js";
 
 /** @static */
 export class TestHTTP {

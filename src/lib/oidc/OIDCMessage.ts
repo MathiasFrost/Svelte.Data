@@ -1,4 +1,4 @@
-import { ensureObject } from "$lib/types/index.js";
+import { ensureObject } from "$lib/types/unknown.js";
 
 /** Message from the OIDC token endpoint */
 export class OIDCMessage {

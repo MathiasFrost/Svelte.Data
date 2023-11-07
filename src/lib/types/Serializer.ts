@@ -1,7 +1,7 @@
 // noinspection JSUnusedGlobalSymbols
 
 import { ensureBoolean, ensureDateOnlyString, ensureDateString, ensureNumber, ensureType } from "$lib/types/unknown.js";
-import type { DateOnly, DateWrap } from "$lib/date/index.js";
+import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 
 /** TODOC */
 export interface Serializer<T> {

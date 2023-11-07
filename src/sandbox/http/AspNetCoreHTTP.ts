@@ -1,5 +1,5 @@
 import { oidcManager } from "$sandbox/user/oidcConfig.js";
-import { HTTPClient } from "$lib/http/index.js";
+import { HTTPClient } from "$lib/http/HTTPClient.js";
 
 export class AspNetCoreHTTP {
 	private static httpClient = new HTTPClient("http://localhost:5000/OAuth2/", {

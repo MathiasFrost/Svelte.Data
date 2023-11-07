@@ -1,7 +1,6 @@
 import type { OIDCConfigurations } from "$lib/oidc/OIDCConfiguration.js";
 import { OIDCManager } from "$lib/oidc/OIDCManager.js";
-import { browserWritable } from "$lib/store/index.js";
-import type { Fetch } from "$lib/http";
+import type { Fetch } from "$lib/http/Fetch.js";
 import type { Cookies } from "@sveltejs/kit";
 import { getContext, setContext } from "svelte";
 import type { Writable } from "svelte/store";

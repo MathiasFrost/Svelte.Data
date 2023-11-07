@@ -1,6 +1,7 @@
 import type { OIDCConfigurations } from "$lib/oidc/OIDCConfiguration.js";
-import { indefinitePromise } from "$lib/async/index.js";
-import type { Fetch, Preprocess } from "$lib/http/index.js";
+import { indefinitePromise } from "$lib/async/utility.js";
+import type { Fetch } from "$lib/http/Fetch.js";
+import type { Preprocess } from "$lib/http/Preprocess.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";
 import { OIDCMessage } from "$lib/oidc/OIDCMessage.js";
 import { createRetryFetch } from "$lib/http/createRetryFetch.js";
