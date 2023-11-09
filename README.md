@@ -151,7 +151,7 @@ export class TestHTTP {
 		return await this.httpClient
 			.get("weatherforecast")
 			.withFetch(fetch) // If you are fetching server-side in SvelteKit's `load` function
-			.fromJSONArray(WeatherForecast);
+			.fromJSONArray(something => new WeatherForecast(something));
 	}
 }
 ```

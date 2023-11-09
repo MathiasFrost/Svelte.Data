@@ -19,7 +19,10 @@ export class TestHTTP {
 
 	/** TODOC */
 	public async getForecasts(fetch?: Fetch): Promise<WeatherForecast[]> {
-		return await this.httpClient.get("weatherforecast").withFetch(fetch).fromJSONArray(WeatherForecast);
+		return await this.httpClient
+			.get("weatherforecast")
+			.withFetch(fetch)
+			.fromJSONArray((something) => new WeatherForecast(something));
 	}
 
 	public async getTest(): Promise<string> {
