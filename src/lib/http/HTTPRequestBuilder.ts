@@ -22,37 +22,37 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** TODOC */
 export class HTTPRequestBuilder {
 	/** TODOC */
-	private readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | null = null;
 
 	/** TODOC */
-	private readonly _requestUri: string;
+	public readonly _requestUri: string;
 
 	/** TODOC */
-	private readonly requestInit: RequestInit;
+	public readonly requestInit: RequestInit;
 
 	/** @see HTTPClientOptions */
-	private readonly options: HTTPClientOptions;
+	public readonly options: HTTPClientOptions;
 
 	/** @see XMLHttpRequest */
-	private xmlHttpRequest?: XMLHttpRequest;
+	public xmlHttpRequest?: XMLHttpRequest;
 
 	/** TODOC */
-	private query: URLSearchParams | null = null;
+	public query: URLSearchParams | null = null;
 
 	/** TODOC */
-	private params: unknown[] | null = null;
+	public params: unknown[] | null = null;
 
 	/** TODOC */
-	private optional: unknown | null = null;
+	public optional: unknown | null = null;
 
 	/** Status codes to ignore from ensuring success when calling `from{Type}Nullable` */
-	private nullStatusCodes: number[] = [];
+	public nullStatusCodes: number[] = [];
 
 	/** Status codes to accept */
-	private statusCodes: number[] = [];
+	public statusCodes: number[] = [];
 
 	/** Whether to check if `Response.ok` is true */
-	private ensureSuccess = true;
+	public ensureSuccess = true;
 
 	/** TODOC */
 	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
