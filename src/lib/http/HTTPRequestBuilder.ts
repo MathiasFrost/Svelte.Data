@@ -1,5 +1,6 @@
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import {
+	type Ensure,
 	ensureArray,
 	ensureBigIntString,
 	ensureBooleanString,
@@ -259,38 +260,31 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObject<TResult = Record<string, unknown>>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult> {
+	public async fromJSONObject<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
-			const o = ensureObject(json);
-			if (ctor) return new ctor(o);
-			return o as TResult;
+			return ensureObject(json, ensure);
 		}, signal);
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(
-		ctor?: new (something?: unknown) => TResult,
-		signal?: AbortSignal
-	): Promise<TResult | null> {
+	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult | null> {
 		this.nullStatusCodes.push(204);
-		return await this.fromJSONObject(ctor, signal);
+		return await this.fromJSONObject(ensure, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[]> {
+	public async fromJSONArray<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[]> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
-			const arr = ensureArray(json);
-			if (ctor) return arr.map((something) => new ctor(something));
-			return arr as TResult[];
+			return ensureArray(json, ensure);
 		}, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ctor?: new (something?: unknown) => TResult, signal?: AbortSignal): Promise<TResult[] | null> {
+	public async fromJSONArrayNullable<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
 		this.nullStatusCodes.push(204);
-		return await this.fromJSONArray(ctor, signal);
+		return await this.fromJSONArray(ensure, signal);
 	}
 
 	/** The request body deserialized as string */
