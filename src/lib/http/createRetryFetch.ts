@@ -1,7 +1,7 @@
 import type { Fetch } from "$lib/http/Fetch.js";
 
 /** Status codes that could become successful if retried */
-export const TEMPORAL_FAILURES = [500, 502, 503, 504, 507, 429, 425, 408];
+export const TEMPORAL_FAILURES = [502, 503, 504, 507, 429, 425, 408];
 
 /** Create a fetch function that will retry a set amount of times */
 export function createRetryFetch(maxRetries: number, fetch?: Fetch): Fetch {
