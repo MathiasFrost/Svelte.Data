@@ -1,10 +1,42 @@
 <script lang="ts">
+	import { SelectState } from "$lib/select/SelectState";
+	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
+
 	let open = false;
 	let openDd = false;
 	let test: HTMLDialogElement;
 	$: if (open && test) test.showModal();
 	else if (!open && test) test.close();
+
+	interface User {
+		id: number;
+		username: string;
+		name: string;
+	}
+
+	const users: User[] = [
+		{ id: 24, username: "ML", name: "Mathias" },
+		{ id: 32, username: "OPB", name: "Ola" },
+		{ id: 42, username: "ADr", name: "Andre" },
+		{ id: 52, username: "HMRL", name: "Harald" },
+		{ id: 62, username: "JML", name: "Josefine" },
+		{ id: 72, username: "MIR", name: "Miriam" }
+	];
+
+	let state = new SelectState<User, number>();
 </script>
+
+<div style="display: flex;">
+	<input type="search" bind:this={state.search["username"]} />
+	<input type="search" bind:this={state.search["name"]} />
+</div>
+<EnhancedSelect bind:state let:filter>
+	<ul>
+		{#each filter(users) as user}
+			<li>{user.name}</li>
+		{/each}
+	</ul>
+</EnhancedSelect>
 
 <h1>Dialog</h1>
 
@@ -86,6 +118,7 @@
 		z-index: 1;
 		max-height: 200px; /* Adjust as needed */
 		overflow: auto; /* Scrollbar will appear if content overflows */
+		margin: 0.3rem;
 	}
 
 	.dropdown-content button {

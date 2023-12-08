@@ -1,10 +1,8 @@
-import { oidcManager } from "$sandbox/user/oidcConfig.js";
 import { HTTPClient } from "$lib/http/HTTPClient.js";
 
 export class AspNetCoreHTTP {
 	private static httpClient = new HTTPClient("http://localhost:5000/OAuth2/", {
-		defaultRequestInit: { redirect: "manual", credentials: "include" },
-		fetch: oidcManager.createFetch("AspNetCore.API", 3)
+		defaultRequestInit: { redirect: "manual", credentials: "include" }
 	});
 
 	public static async getClaims(): Promise<Record<string, unknown> | null> {
