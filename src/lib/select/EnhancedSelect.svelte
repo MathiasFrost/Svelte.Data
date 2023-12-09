@@ -95,6 +95,19 @@
 	$: filtered = getOptions(pool, search);
 
 	// TODOC
+	$: updateDisplay(value, search);
+
+	// Update all references
+	$: self.value = `${value}`;
+	$: self.values = values.map((value) => `${value}`);
+	$: self.search = search;
+	$: self.filtered = filtered;
+	$: self.pool = pool;
+	$: self.options = options;
+	$: self.selectedIndex = selectedIndex;
+	$: self.name = name;
+
+	// TODOC
 	onDestroy(() => {
 		observer?.disconnect();
 	});
@@ -198,7 +211,7 @@
 
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
-		if (e.target instanceof Node && container?.contains(e.target)) open = true;
+		if (e.key !== "Enter" && e.target instanceof Node && container?.contains(e.target)) open = true;
 		if (!global && !focused) return;
 		switch (e.key) {
 			case "ArrowUp":
@@ -212,10 +225,18 @@
 				else hovered++;
 				break;
 			case "Enter":
+				if (!open || e.ctrlKey) return;
 				{
 					e.preventDefault();
 					const item = options[hovered];
 					if (item) selectElement(item);
+				}
+				break;
+			case "Escape":
+				e.preventDefault();
+				for (const key of Object.keys(search)) {
+					const ref = search[key];
+					ref.value = "";
 				}
 				break;
 			default:
@@ -259,21 +280,21 @@
 		selectedIndex = hovered;
 
 		// Update display
-		if (filtered.length && isObject(filtered[0])) {
+		updateDisplay(value, search);
+
+		const first = Object.keys(search)[0];
+		if (search[first]) search[first].focus();
+		close();
+		dispatch("change", self);
+	}
+
+	/** TODOC */
+	function updateDisplay(value: K | null | undefined, search: Record<string, HTMLInputElement>): void {
+		if (pool.length && isObject(pool[0])) {
 			if (key) {
-				const item = filtered.find((item) => isObject(item) && `${value}` === `${item[key]}`);
+				const item = pool.find((item) => isObject(item) && `${value}` === `${item[key]}`);
 				if (isObject(item)) {
 					Object.keys(search).forEach((key) => {
-						// Default search
-						for (const prop of Object.keys(item)) {
-							const str = `${item[prop]}`;
-							if (!options[selectedIndex].innerHTML.includes(str)) continue;
-							const ref = search["default"];
-							ref.value = str;
-							break;
-						}
-
-						// Named searches
 						if (key in search && key in item) {
 							const ref = search[key];
 							ref.value = `${item[key]}`;
@@ -284,12 +305,9 @@
 				console.warn("EnhancedSelect cannot update display when key is not specified");
 			}
 		} else {
-			const item = filtered.find((item) => `${item}` === `${value}`);
+			const item = pool.find((item) => `${item}` === `${value}`);
 			search["default"].setAttribute("value", `${item}`);
 		}
-
-		close();
-		dispatch("change", self);
 	}
 
 	/** TODOC */
@@ -322,7 +340,7 @@
 	function onWindowClick(e: MouseEvent): void {
 		if (!container) return;
 		if (e.target instanceof Node && container.contains(e.target)) return;
-		closeAndBlur();
+		close();
 	}
 
 	/** TODOC */
@@ -348,6 +366,10 @@
 	function closeAndBlur(): void {
 		close();
 		focused = false;
+
+		// If force, set display
+		if (!force) return;
+		updateDisplay(value, search);
 	}
 
 	/** TODOC */
@@ -365,6 +387,7 @@
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
 
+<input type="hidden" hidden {name} {value} />
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
 		<slot name="search" />

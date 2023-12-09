@@ -46,10 +46,10 @@
 </select>
 
 <p>Value: {select?.value}, selectedIndex: {select?.selectedIndex}</p>
-<div class="dropdown right-dropdown">
-	<EnhancedSelect bind:self={select} pool={users} key="id">
+<form on:submit|preventDefault={(e) => console.log(new FormData(e.target))} class="dropdown right-dropdown">
+	<EnhancedSelect name="user" bind:self={select} pool={users} key="id" value="2">
 		<svelte:fragment slot="search">
-			<input type="search" bind:this={input} />
+			<input type="search" name="name" bind:this={input} />
 			<input type="search" name="username" />
 		</svelte:fragment>
 		<svelte:fragment slot="options" let:options>
@@ -63,7 +63,8 @@
 			</div>
 		</svelte:fragment>
 	</EnhancedSelect>
-</div>
+	<button type="submit">submit</button>
+</form>
 
 <style>
 	:global(.highlighted) {
