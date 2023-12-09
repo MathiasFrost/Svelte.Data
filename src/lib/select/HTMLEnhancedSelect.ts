@@ -1,10 +1,10 @@
 /** TODOC */
-export interface HTMLEnhancedSelect<T, K> {
+export interface HTMLEnhancedSelect<T> {
 	/** The value of a non-multiple enhanced select */
-	value: K | null;
+	value: string;
 
 	/** The values of a multiple enhanced select */
-	values: K[];
+	values: string[];
 
 	/** Reference to the options pool */
 	pool: T[];

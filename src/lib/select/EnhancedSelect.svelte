@@ -9,12 +9,15 @@
 	/** TODOC */
 	type K = $$Generic;
 
+	/** For binding */
+	export let value: K | null | undefined = void 0;
+
 	/** TODOC */
 	export let pool: T[] = [];
 
 	/** TODOC */
-	export const self: HTMLEnhancedSelect<T, K> = {
-		value: null,
+	export const self: HTMLEnhancedSelect<T> = {
+		value: "",
 		values: [],
 		pool,
 		filtered: pool,
@@ -35,6 +38,9 @@
 	/** TODOC */
 	let optionContainer: HTMLElement | null = null;
 
+	/** TODOC */
+	let focused: boolean = false;
+
 	// TODOC
 	$: setUpObserver(container);
 
@@ -42,40 +48,50 @@
 	$: updateHighlighted(hovered, self.options);
 
 	// TODOC
+	$: value = (Number(self.value) || self.value) as K;
+
+	// TODOC
 	$: self.filtered = getOptions(self.pool, self.search);
 
 	// TODOC
-	onDestroy(() => observer?.disconnect());
+	onDestroy(() => {
+		observer?.disconnect();
+	});
 
 	/** TODOC */
 	function setUpObserver(container: HTMLDivElement | null): void {
 		if (!container || observer) return;
 		observer = new MutationObserver(mutationCallback);
-		observer.observe(container, { attributes: false, childList: true, subtree: false });
+		observer.observe(container, { attributes: false, childList: true, subtree: true });
 	}
 
 	/** TODOC */
 	function mutationCallback(mutationsList: MutationRecord[]): void {
 		for (const mutation of mutationsList) {
 			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach(searchForValueAttribute);
+				mutation.addedNodes.forEach((node) => searchForValueAttribute(node, "added"));
+				mutation.removedNodes.forEach((node) => searchForValueAttribute(node, "removed"));
 			}
 		}
 		self.options = self.options;
 	}
 
 	/** TODOC */
-	function searchForValueAttribute(node: Node) {
+	function searchForValueAttribute(node: Node, action: "removed" | "added") {
 		// Check if the node is an Element and has a 'value' attribute
 		if (node.nodeType === Node.ELEMENT_NODE && node instanceof HTMLElement) {
 			if (node.hasAttribute("value")) {
-				if (!self.options.includes(node)) {
+				if (action === "added" && !self.options.includes(node)) {
 					self.options.push(node);
 					node.addEventListener("mouseover", onMouseover);
+					node.addEventListener("click", onClick);
+					node.addEventListener("keydown", onKeydown);
 					if (!optionContainer && node.parentElement) {
 						optionContainer = node.parentElement;
 						optionContainer.addEventListener("mouseout", onMouseout);
 					}
+				} else if (action === "removed" && self.options.includes(node)) {
+					self.options.splice(self.options.indexOf(node), 1);
 				}
 			} else if (node instanceof HTMLInputElement) {
 				node.addEventListener("input", onInput);
@@ -84,7 +100,7 @@
 
 		// If the node has child nodes, recursively search them
 		if (node.hasChildNodes()) {
-			node.childNodes.forEach(searchForValueAttribute);
+			node.childNodes.forEach((node) => searchForValueAttribute(node, action));
 		}
 	}
 
@@ -112,6 +128,13 @@
 				if (hovered >= self.options.length - 1) hovered = 0;
 				else hovered++;
 				break;
+			case "Enter":
+				{
+					e.preventDefault();
+					const item = self.options[hovered];
+					if (item) selectElement(item);
+				}
+				break;
 		}
 		self.selectedIndex = hovered;
 	}
@@ -120,6 +143,20 @@
 	function onInput(this: HTMLInputElement): void {
 		const name = this.name ? this.name : "default";
 		self.search[name] = this.value;
+	}
+
+	/** TODOC */
+	function onClick(this: HTMLElement): void {
+		selectElement(this);
+	}
+
+	/** TODOC */
+	function selectElement(e: HTMLElement): void {
+		const value = e.getAttribute("value");
+		if (!value) self.value = "";
+		else self.value = value;
+		hovered = self.options.indexOf(e);
+		self.selectedIndex = hovered;
 	}
 
 	/** TODOC */
