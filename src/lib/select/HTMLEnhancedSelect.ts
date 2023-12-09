@@ -1,5 +1,8 @@
 /** TODOC */
 export interface HTMLEnhancedSelect<T> {
+	/** TODOC */
+	name: string;
+
 	/** The value of a non-multiple enhanced select */
 	value: string;
 
