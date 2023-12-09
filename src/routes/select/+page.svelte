@@ -46,20 +46,24 @@
 </select>
 
 <p>Value: {select?.value}, selectedIndex: {select?.selectedIndex}</p>
-<EnhancedSelect bind:self={select} pool={users}>
-	<svelte:fragment slot="search">
-		<input type="search" bind:this={input} />
-		<input type="search" name="username" />
-	</svelte:fragment>
-	<svelte:fragment slot="options" let:options>
-		<ul class="selector">
-			<li value={null} />
-			{#each options as option}
-				<li value={option.id}>{option.name}</li>
-			{/each}
-		</ul>
-	</svelte:fragment>
-</EnhancedSelect>
+<div class="dropdown right-dropdown">
+	<EnhancedSelect bind:self={select} pool={users} key="id">
+		<svelte:fragment slot="search">
+			<input type="search" bind:this={input} />
+			<input type="search" name="username" />
+		</svelte:fragment>
+		<svelte:fragment slot="options" let:options>
+			<div class="dropdown-content">
+				<ul class="selector">
+					<li value={null} />
+					{#each options as option}
+						<li value={option.id}>{option.name}</li>
+					{/each}
+				</ul>
+			</div>
+		</svelte:fragment>
+	</EnhancedSelect>
+</div>
 
 <style>
 	:global(.highlighted) {
@@ -67,7 +71,24 @@
 	}
 
 	.selector {
-		max-height: 6rem;
+		margin: 1rem;
+		border: 1px solid crimson;
 		overflow-y: auto;
+		max-height: 4rem;
+		width: 100%;
+	}
+
+	.dropdown {
+		position: relative;
+		display: inline-block;
+	}
+
+	.dropdown-content {
+		position: absolute;
+		display: flex;
+		width: 100%;
+		min-width: 4rem;
+		z-index: 1;
+		max-height: 40rem;
 	}
 </style>

@@ -19,7 +19,7 @@ export interface HTMLEnhancedSelect<T> {
 	options: HTMLElement[];
 
 	/** The search string */
-	search: Record<string, string>;
+	search: Record<string, HTMLInputElement>;
 
 	/** The currently selected option */
 	selectedIndex: number;
