@@ -2,12 +2,16 @@
 	import type { HTMLEnhancedSelect } from "$lib/select/HTMLEnhancedSelect";
 	import { onDestroy } from "svelte";
 	import { isObject } from "$lib/types";
+	import { createEventDispatcher } from "svelte";
 
 	/** TODOC */
 	type T = $$Generic;
 
 	/** TODOC */
 	type K = $$Generic;
+
+	/** TODOC */
+	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelect<T> }>();
 
 	/** For binding */
 	export let value: K | null | undefined = void 0;
@@ -17,6 +21,12 @@
 
 	/** TODOC */
 	export let pool: T[] = [];
+
+	/** Do not auto-close */
+	export let keepOpen = false;
+
+	/** If keyboard events should be global */
+	export let global = false;
 
 	/** TODOC */
 	export const self: HTMLEnhancedSelect<T> = {
@@ -45,8 +55,11 @@
 	/** TODOC */
 	let scrollBox: HTMLElement | null = null;
 
-	/** When any of the elements pertaining to the EnhancedSelect is in focus */
+	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
+
+	/** TODOC */
+	let open: boolean = false;
 
 	// TODOC
 	$: setUpObserver(container);
@@ -81,6 +94,17 @@
 			}
 		}
 		self.options = self.options;
+
+		// Check if selectedIndex is still in range
+		const last = self.options.length - 1;
+		if (hovered >= last) {
+			// Wrap to closest
+			const distanceToZero = Math.abs(hovered);
+			const distanceToB = Math.abs(hovered - last);
+
+			if (distanceToZero < distanceToB) hovered = 0;
+			else hovered = last;
+		}
 	}
 
 	/** TODOC */
@@ -103,7 +127,7 @@
 					node.addEventListener("mouseover", onMouseover);
 					node.addEventListener("click", onClick);
 					node.addEventListener("keydown", onKeydown);
-					if (typeof document !== "undefined" && document.activeElement === node) focused = true;
+					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 					if (!optionContainer && node.parentElement) {
 						optionContainer = node.parentElement;
 						optionContainer.addEventListener("mouseout", onMouseout);
@@ -114,7 +138,7 @@
 			} else if (node instanceof HTMLInputElement) {
 				node.setAttribute("autocomplete", "off");
 				node.addEventListener("input", onInput);
-				if (typeof document !== "undefined" && document.activeElement === node) focused = true;
+				if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 			}
 		}
 
@@ -137,7 +161,8 @@
 
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
-		if (!focused) return;
+		if (e.target instanceof Node && container?.contains(e.target)) open = true;
+		if (!global && !focused) return;
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
@@ -156,7 +181,10 @@
 					if (item) selectElement(item);
 				}
 				break;
+			default:
+				return;
 		}
+
 		self.selectedIndex = hovered;
 
 		// Check if element is in view
@@ -189,6 +217,8 @@
 		else self.value = value;
 		hovered = self.options.indexOf(e);
 		self.selectedIndex = hovered;
+		close();
+		dispatch("change", self);
 	}
 
 	/** TODOC */
@@ -209,19 +239,19 @@
 		} else {
 			return;
 		}
-		focused = false;
+		closeAndBlur();
 	}
 
 	/** TODOC */
 	function onFocus(): void {
-		focused = true;
+		openAndFocus();
 	}
 
 	/** TODOC */
 	function onWindowClick(e: MouseEvent): void {
 		if (!container) return;
 		if (e.target instanceof Node && container.contains(e.target)) return;
-		focused = false;
+		closeAndBlur();
 	}
 
 	/** TODOC */
@@ -242,6 +272,23 @@
 			return prev;
 		}, Array.from(pool));
 	}
+
+	/** TODOC */
+	function closeAndBlur(): void {
+		if (!keepOpen) open = false;
+		focused = false;
+	}
+
+	/** TODOC */
+	function close(): void {
+		if (!keepOpen) open = false;
+	}
+
+	/** TODOC */
+	function openAndFocus(): void {
+		open = true;
+		focused = true;
+	}
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
@@ -249,6 +296,8 @@
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
 		<slot name="search" />
-		<slot name="options" options={self.filtered} {focused} />
+		{#if open}
+			<slot name="options" options={self.filtered} />
+		{/if}
 	{/if}
 </div>

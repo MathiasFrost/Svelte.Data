@@ -39,7 +39,7 @@
 <h1>Select</h1>
 
 <p>Value: {selectValue} {typeof selectValue}</p>
-<select bind:value={selectValue} bind:this={nativeSelect} size="4">
+<select bind:value={selectValue} bind:this={nativeSelect}>
 	{#each users as option}
 		<option value={option.id}>{option.name}</option>
 	{/each}
@@ -51,15 +51,13 @@
 		<input type="search" bind:this={input} />
 		<input type="search" name="username" />
 	</svelte:fragment>
-	<svelte:fragment slot="options" let:focused let:options>
-		{#if focused}
-			<ul class="selector">
-				<li value={null} />
-				{#each options as option}
-					<li value={option.id}>{option.name}</li>
-				{/each}
-			</ul>
-		{/if}
+	<svelte:fragment slot="options" let:options>
+		<ul class="selector">
+			<li value={null} />
+			{#each options as option}
+				<li value={option.id}>{option.name}</li>
+			{/each}
+		</ul>
 	</svelte:fragment>
 </EnhancedSelect>
 
@@ -69,7 +67,7 @@
 	}
 
 	.selector {
-		max-height: 3rem;
+		max-height: 6rem;
 		overflow-y: auto;
 	}
 </style>
