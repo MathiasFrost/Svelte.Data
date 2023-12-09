@@ -34,6 +34,11 @@
 
 	// TODOC
 	$: if (input) input.focus();
+
+	/** TODOC */
+	function onSubmit(this: HTMLFormElement): void {
+		console.log(new FormData(this));
+	}
 </script>
 
 <h1>Select</h1>
@@ -46,11 +51,11 @@
 </select>
 
 <p>Value: {select?.value}, selectedIndex: {select?.selectedIndex}</p>
-<form on:submit|preventDefault={(e) => console.log(new FormData(e.target))} class="dropdown right-dropdown">
-	<EnhancedSelect name="user" bind:self={select} pool={users} key="id" value="2">
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">
+	<EnhancedSelect name="user" bind:self={select} pool={users} key="id" value="3" force>
 		<svelte:fragment slot="search">
-			<input type="search" name="name" bind:this={input} />
-			<input type="search" name="username" />
+			<input type="search" placeholder="Name" name="name" bind:this={input} />
+			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
 		<svelte:fragment slot="options" let:options>
 			<div class="dropdown-content">

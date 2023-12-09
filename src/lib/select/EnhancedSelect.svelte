@@ -95,7 +95,7 @@
 	$: filtered = getOptions(pool, search);
 
 	// TODOC
-	$: updateDisplay(value, search);
+	$: updateDisplay(value);
 
 	// Update all references
 	$: self.value = `${value}`;
@@ -171,6 +171,7 @@
 					node.addEventListener("mouseover", onMouseover);
 					node.addEventListener("click", onClick);
 					node.addEventListener("keydown", onKeydown);
+					node.setAttribute("tabindex", "-1");
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 					if (!optionContainer && node.parentElement) {
 						optionContainer = node.parentElement;
@@ -184,7 +185,9 @@
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : "default";
 					search[name] = node;
+					updateDisplay(value);
 					node.addEventListener("input", onInput);
+					node.addEventListener("click", openAndFocus);
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 				} else {
 					delete search[name];
@@ -211,7 +214,10 @@
 
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
-		if (e.key !== "Enter" && e.target instanceof Node && container?.contains(e.target)) open = true;
+		if (!open && e.target instanceof Node && container?.contains(e.target)) {
+			if (e.key !== "Enter") open = true;
+			if (!["Enter", "Escape"].includes(e.key)) return;
+		}
 		if (!global && !focused) return;
 		switch (e.key) {
 			case "ArrowUp":
@@ -234,10 +240,7 @@
 				break;
 			case "Escape":
 				e.preventDefault();
-				for (const key of Object.keys(search)) {
-					const ref = search[key];
-					ref.value = "";
-				}
+				clearSearch();
 				break;
 			default:
 				return;
@@ -253,10 +256,18 @@
 		if (!item || !scrollBox) return;
 		const rect = item.getBoundingClientRect();
 		const boxRect = scrollBox.getBoundingClientRect();
-		const isVisible = rect.top >= boxRect.top && rect.bottom <= boxRect.top + boxRect.height;
+		// Checking visibility with respect to the scroll position
+		const isVisible = rect.top >= boxRect.top && rect.bottom <= boxRect.bottom;
 
 		if (!isVisible) {
-			item.scrollIntoView({ behavior: "instant" });
+			// Determine the correct scroll position
+			if (rect.top < boxRect.top) {
+				// If the item is above the visible area, scroll to its top
+				scrollBox.scrollTo({ behavior: "instant", top: scrollBox.scrollTop + rect.top - boxRect.top });
+			} else {
+				// If the item is below the visible area, scroll so it's at the bottom
+				scrollBox.scrollTo({ behavior: "instant", top: scrollBox.scrollTop + rect.bottom - boxRect.bottom });
+			}
 		}
 	}
 
@@ -280,7 +291,7 @@
 		selectedIndex = hovered;
 
 		// Update display
-		updateDisplay(value, search);
+		updateDisplay(value);
 
 		const first = Object.keys(search)[0];
 		if (search[first]) search[first].focus();
@@ -289,7 +300,12 @@
 	}
 
 	/** TODOC */
-	function updateDisplay(value: K | null | undefined, search: Record<string, HTMLInputElement>): void {
+	function clearSearch(): void {
+		Object.keys(search).forEach((key) => (search[key].value = ""));
+	}
+
+	/** TODOC */
+	function updateDisplay(value: K | null | undefined): void {
 		if (pool.length && isObject(pool[0])) {
 			if (key) {
 				const item = pool.find((item) => isObject(item) && `${value}` === `${item[key]}`);
@@ -319,14 +335,10 @@
 	}
 
 	/** TODOC */
-	function onBlur(e: Event): void {
+	function onBlur(e: FocusEvent): void {
 		if (!container) return;
-		if ("relatedTarget" in e && e.relatedTarget instanceof Node) {
+		if (e.relatedTarget instanceof Node) {
 			if (container.contains(e.relatedTarget)) return;
-		} else if ("explicitOriginalTarget" in e && e.explicitOriginalTarget instanceof Node) {
-			if (e.explicitOriginalTarget !== e.target && container.contains(e.explicitOriginalTarget)) return;
-		} else {
-			return;
 		}
 		closeAndBlur();
 	}
@@ -369,7 +381,7 @@
 
 		// If force, set display
 		if (!force) return;
-		updateDisplay(value, search);
+		updateDisplay(value);
 	}
 
 	/** TODOC */
@@ -390,7 +402,7 @@
 <input type="hidden" hidden {name} {value} />
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
-		<slot name="search" />
+		<slot name="search" {clearSearch} />
 		{#if open}
 			<slot name="options" options={filtered} />
 		{/if}
