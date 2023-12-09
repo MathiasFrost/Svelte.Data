@@ -28,19 +28,21 @@
 
 <EnhancedSelect bind:self={select} pool={users}>
 	<input type="search" slot="input" let:onInput on:input={onInput} let:onKeydown on:keydown={onKeydown} />
-	<ul slot="body" let:options let:isHighlighted>
+	<ul slot="body" let:options let:registerOption>
 		{#each options as option, i}
-			<li class:highlighted={isHighlighted(i)}>{option.name}</li>
+			<li on:load={registerOption}>{option.name}</li>
 		{/each}
 	</ul>
 </EnhancedSelect>
 
+<select>
+	{#each users as option, i}
+		<option>{option.name}</option>
+	{/each}
+</select>
+
 <style>
 	li.highlighted {
 		background-color: #565454;
-	}
-
-	li.selected {
-		background-color: #f1f1f1;
 	}
 </style>

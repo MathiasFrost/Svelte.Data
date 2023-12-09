@@ -29,6 +29,9 @@
 	};
 
 	/** TODOC */
+	let hovered = self.selectedIndex;
+
+	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
 		switch (e.key) {
 			case "ArrowUp":
@@ -40,6 +43,8 @@
 				else self.selectedIndex++;
 				break;
 		}
+		hovered = self.selectedIndex;
+		console.log(hovered);
 	}
 
 	/** TODOC */
@@ -52,10 +57,28 @@
 		return pool.filter((item) => !search || getSearch(item).toLowerCase().includes(search.toLowerCase()));
 	}
 
-	function getIsHighlighted(selectedIndex: number): (i: number) => boolean {
-		return (i) => i === selectedIndex;
+	/** TODOC */
+	function getIsHighlighted(hovered: number): (i: number) => boolean {
+		return (i) => i === hovered;
+	}
+
+	/** TODOC */
+	function getOnMouseover(): (this: HTMLInputElement, i: number) => void {
+		return (i) => {
+			console.log(i);
+			hovered = i;
+		};
+	}
+
+	/** TODOC */
+	let childComponents: HTMLElement[] = [];
+
+	/** TODOC */
+	function registerOption(this: HTMLElement) {
+		console.log(this);
+		childComponents.push(this);
 	}
 </script>
 
 <slot name="input" {onInput} {onKeydown} />
-<slot name="body" options={getOptions(self.pool, self.search)} isHighlighted={getIsHighlighted(self.selectedIndex)} />
+<slot name="body" options={getOptions(self.pool, self.search)} {registerOption} />
