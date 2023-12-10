@@ -41,6 +41,9 @@
 	export let multiple = false;
 
 	/** TODOC */
+	export let open: boolean = false;
+
+	/** TODOC */
 	export const self: HTMLEnhancedSelect<T> = {
 		name,
 		value: "",
@@ -81,9 +84,6 @@
 
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
-
-	/** TODOC */
-	let open: boolean = false;
 
 	// Convert value to number if it can be
 	$: value = (Number(value) || value) as K;
@@ -321,7 +321,7 @@
 				const allCheckedFunc = createAllChecked(filtered, values);
 				const allChecked = allCheckedFunc();
 				if (allChecked) values = [];
-				else values = filtered.map((item) => (isObject(item) && key ? (Number(item[key] || item[key]) as K) : ((Number(item) || item) as K)));
+				else values = filtered.map((item) => (isObject(item) && key ? ((Number(item[key]) || item[key]) as K) : ((Number(item) || item) as K)));
 			}
 		} else {
 			const oldValue = value;
@@ -396,7 +396,7 @@
 	function onWindowClick(e: MouseEvent): void {
 		if (!container) return;
 		if (e.target instanceof Node && container.contains(e.target)) return;
-		close();
+		open = false; // This should always close even if keepOpen
 	}
 
 	/** TODOC */

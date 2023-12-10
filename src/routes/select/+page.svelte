@@ -164,6 +164,7 @@
 		overflow-y: auto;
 		max-height: 4rem;
 		width: 100%;
+		background-color: #242425;
 	}
 
 	.dropdown {
@@ -173,6 +174,7 @@
 
 	.dropdown-content {
 		position: absolute;
+		z-index: 999;
 		display: flex;
 		width: 100%;
 		min-width: 4rem;
