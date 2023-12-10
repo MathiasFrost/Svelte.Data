@@ -10,7 +10,10 @@
 	}
 
 	/** TODOC */
-	let select: HTMLEnhancedSelect<User> | undefined;
+	let select1: HTMLEnhancedSelect<User> | undefined;
+
+	/** TODOC */
+	let select2: HTMLEnhancedSelect<User> | undefined;
 
 	/** TODOC */
 	const users: User[] = [
@@ -41,8 +44,7 @@
 	}
 </script>
 
-<h1>Select</h1>
-
+<h2>Native select</h2>
 <p>Value: {selectValue} {typeof selectValue}</p>
 <select bind:value={selectValue} bind:this={nativeSelect}>
 	{#each users as option}
@@ -50,23 +52,59 @@
 	{/each}
 </select>
 
-<p>Value: {select?.value}, selectedIndex: {select?.selectedIndex}</p>
+<h2>Multiple search props</h2>
+<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}</p>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">
-	<EnhancedSelect name="user" bind:self={select} pool={users} key="id" value="3" force>
+	<EnhancedSelect name="user" bind:self={select1} pool={users} key="id" value="3" force>
 		<svelte:fragment slot="search">
 			<input type="search" placeholder="Name" name="name" bind:this={input} />
 			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
-		<svelte:fragment slot="options" let:options>
-			<div class="dropdown-content">
-				<ul class="selector">
-					<li value={null} />
-					{#each options as option}
-						<li value={option.id}>{option.name}</li>
-					{/each}
-				</ul>
-			</div>
-		</svelte:fragment>
+		<div slot="options" class="dropdown-content" let:options>
+			<ul class="selector">
+				<li value={null} />
+				{#each options as option}
+					<li value={option.id}>{option.name}</li>
+				{/each}
+			</ul>
+		</div>
+	</EnhancedSelect>
+	<button type="submit">submit</button>
+</form>
+
+<h2>Simple</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="user" pool={users} key="id" value="3" force>
+		<input slot="search" type="search" placeholder="Employee" name="name" style="width: 100%;" />
+		<div slot="options" class="dropdown-content" let:options>
+			<ul class="selector">
+				<li value={null} />
+				{#each options as option}
+					<li value={option.id}>{option.name}</li>
+				{/each}
+			</ul>
+		</div>
+	</EnhancedSelect>
+</form>
+
+<h2>Multiple</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>
+		<div slot="search" style="width: 100%;" let:isChecked>
+			<p>Selected: {users.filter((user) => isChecked(user)).map((user) => user.username)}</p>
+			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
+		</div>
+		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
+			<ul class="selector">
+				<li value={null}>
+					<input type="checkbox" checked={allChecked()} />
+					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
+				</li>
+				{#each options as option}
+					<li value={option.id}><input type="checkbox" checked={isChecked(option)} />{option.name}</li>
+				{/each}
+			</ul>
+		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
 </form>

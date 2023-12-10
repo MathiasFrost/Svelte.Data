@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLEnhancedSelect } from "$lib/select/HTMLEnhancedSelect";
-	import { onDestroy } from "svelte";
+	import { onDestroy, tick } from "svelte";
 	import { isObject } from "$lib/types";
 	import { createEventDispatcher } from "svelte";
 
@@ -36,6 +36,9 @@
 
 	/** Force display text to be valid when blurred */
 	export let force = false;
+
+	/** Multiple or single select */
+	export let multiple = false;
 
 	/** TODOC */
 	export const self: HTMLEnhancedSelect<T> = {
@@ -87,9 +90,6 @@
 
 	// TODOC
 	$: updateHighlighted(hovered, options);
-
-	// TODOC
-	$: value = (Number(value) || value) as K;
 
 	// TODOC
 	$: filtered = getOptions(pool, search);
@@ -180,10 +180,10 @@
 				} else if (action === "removed" && options.includes(node)) {
 					options.splice(options.indexOf(node), 1);
 				}
-			} else if (node instanceof HTMLInputElement) {
+			} else if (node instanceof HTMLInputElement && ["text", "search"].includes(`${node.getAttribute("type")}`)) {
 				if (action === "added") {
 					node.setAttribute("autocomplete", "off");
-					const name = node.name ? node.name : "default";
+					const name = node.name ? node.name : "[DEFAULT]";
 					search[name] = node;
 					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
@@ -284,44 +284,67 @@
 	/** Called when the decision has been made to select an option */
 	function selectElement(e: HTMLElement): void {
 		const attributeValue = e.getAttribute("value");
-		if (!attributeValue) value = "" as K;
-		else value = (Number(attributeValue) || attributeValue) as K;
+		if (multiple) {
+			const val = Number(attributeValue) || attributeValue;
+			// If value does not exist we treat it as a "check all/uncheck all" option
+			const exists = pool.some((item) => (isObject(item) && key ? item[key] === val : item === val));
+			if (exists) {
+				if (!values.includes(val as K)) {
+					values.push(val as K);
+				} else {
+					const index = values.indexOf(val as K);
+					if (index !== -1) values.splice(index, 1);
+				}
+				values = values;
+			} else {
+				const allCheckedFunc = createAllChecked(filtered, values);
+				const allChecked = allCheckedFunc();
+				if (allChecked) values = [];
+				else values = filtered.map((item) => (isObject(item) && key ? (Number(item[key] || item[key]) as K) : ((Number(item) || item) as K)));
+			}
+		} else {
+			const oldValue = value;
+			if (!attributeValue) value = "" as K;
+			else value = (Number(attributeValue) || attributeValue) as K;
+
+			// We have to manually update in this case
+			if (value === oldValue) updateDisplay(value);
+
+			// After selecting we want to display all options again (this needs to happen after the reactive update based on value change)
+			tick().then(() => (filtered = getOptions(pool, search)));
+
+			const first = Object.keys(search)[0];
+			if (search[first]) search[first].focus();
+			close();
+		}
 
 		hovered = options.indexOf(e);
 		selectedIndex = hovered;
 
-		const first = Object.keys(search)[0];
-		if (search[first]) search[first].focus();
-		close();
-		dispatch("change", self);
+		// Change must happen after self has been updated
+		tick().then(() => dispatch("change", self));
 	}
 
 	/** TODOC */
 	function clearSearch(): void {
-		console.log("clear search");
 		Object.keys(search).forEach((key) => (search[key].value = ""));
 	}
 
 	/** TODOC */
 	function updateDisplay(value: K | null | undefined): void {
-		console.log("update display");
-		if (pool.length && isObject(pool[0])) {
-			if (key) {
-				const item = pool.find((item) => isObject(item) && `${value}`.toLowerCase() === `${item[key]}`.toLowerCase());
-				if (isObject(item)) {
-					Object.keys(search).forEach((key) => {
-						if (key in search && key in item) {
-							const ref = search[key];
-							ref.value = `${item[key]}`;
-						}
-					});
+		if (multiple) return; // There is no obvious way to update display when multiple
+		const item = pool.find((item) =>
+			isObject(item) && key ? `${value}`.toLowerCase() === `${item[key]}`.toLowerCase() : `${item}`.toLowerCase() === `${value}`.toLowerCase()
+		);
+		if (isObject(item)) {
+			Object.keys(search).forEach((key) => {
+				if (key in search && key in item) {
+					const ref = search[key];
+					ref.value = `${item[key]}`;
 				}
-			} else {
-				console.warn("EnhancedSelect cannot update display when key is not specified");
-			}
-		} else {
-			const item = pool.find((item) => `${item}`.toLowerCase() === `${value}`.toLowerCase());
-			search["default"].setAttribute("value", `${item}`);
+			});
+		} else if (search["[DEFAULT]"]) {
+			search["[DEFAULT]"].value = `${item}`;
 		}
 	}
 
@@ -356,21 +379,32 @@
 
 	/** TODOC */
 	function getOptions(pool: T[], search: Record<string, HTMLInputElement>): T[] {
-		return Object.keys(search).reduce<T[]>((prev, curr) => {
-			if (curr === "default")
-				return prev.filter((item) => {
-					const val = search["default"].value.toLowerCase();
-					if (!val) return true;
-					return JSON.stringify(item).toLowerCase().includes(val);
-				});
-			else if (pool.length)
-				return prev.filter((item) => {
+		// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
+		const item = pool.find((item) =>
+			isObject(item)
+				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
+				: search["[DEFAULT]"]?.value.toLowerCase() === `${item}`.toLowerCase()
+		);
+		if (
+			isObject(item) &&
+			key &&
+			(item[key] === value || values.includes(item[key] as K)) &&
+			Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
+		) {
+			return Array.from(pool);
+		} else if (`${item}`.toLowerCase() === search["[DEFAULT]"]?.value.toLowerCase() && (item === value || values.includes(item as K))) {
+			return Array.from(pool);
+		}
+
+		return Object.keys(search).reduce<T[]>(
+			(prev, curr) =>
+				prev.filter((item) => {
 					const val = search[curr].value.toLowerCase();
-					if (!val) return true;
+					if (!val) return true; // If no search, display all
 					return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
-				});
-			return prev;
-		}, Array.from(pool));
+				}),
+			Array.from(pool)
+		);
 	}
 
 	/** TODOC */
@@ -385,7 +419,7 @@
 		let item = pool.find((item) =>
 			isObject(item)
 				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
-				: search["default"].value.toLowerCase() === `${item}`.toLowerCase()
+				: search["[DEFAULT]"]?.value.toLowerCase() === `${item}`.toLowerCase()
 		);
 
 		// If not found, do not change value and explicitly revert display
@@ -409,16 +443,36 @@
 		open = true;
 		focused = true;
 	}
+
+	/** TODOC */
+	function createIsChecked(values: K[]): (item: T) => boolean {
+		return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
+	}
+
+	/** TODOC */
+	function createAllChecked(filtered: T[], values: K[]): () => boolean {
+		return () => filtered.every((item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K)));
+	}
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
 
-<input type="hidden" hidden {name} {value} />
+{#if name}
+	{#if multiple}
+		<select {name} multiple hidden>
+			{#each values as value}
+				<option selected {value} />
+			{/each}
+		</select>
+	{:else}
+		<input type="hidden" hidden {name} {value} />
+	{/if}
+{/if}
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
-		<slot name="search" {clearSearch} />
+		<slot name="search" {clearSearch} isChecked={createIsChecked(values)} />
 		{#if open}
-			<slot name="options" options={filtered} />
+			<slot name="options" options={filtered} isChecked={createIsChecked(values)} allChecked={createAllChecked(filtered, values)} />
 		{/if}
 	{/if}
 </div>
