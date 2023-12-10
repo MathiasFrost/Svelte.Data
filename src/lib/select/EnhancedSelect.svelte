@@ -468,7 +468,6 @@
 
 	/** TODOC */
 	function createIsChecked(multiple: boolean, value: K | null | undefined, values: K[]): (item: T) => boolean {
-		console.log(value);
 		if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
 		else return (item) => (isObject(item) && key ? value === item[key] : value === item);
 	}

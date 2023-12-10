@@ -44,6 +44,10 @@
 			"types": "./dist/http/index.d.ts",
 			"svelte": "./dist/http/index.js"
 		},
+		"./oidc": {
+			"types": "./dist/http/oidc.d.ts",
+			"svelte": "./dist/http/oidc.js"
+		},
 		"./select": {
 			"types": "./dist/select/index.d.ts",
 			"svelte": "./dist/select/index.js"
