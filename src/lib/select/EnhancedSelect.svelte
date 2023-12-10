@@ -94,7 +94,7 @@
 	// TODOC
 	$: filtered = getOptions(pool, search);
 
-	// TODOC
+	// Update display when value changes
 	$: updateDisplay(value);
 
 	// Update all references
@@ -185,7 +185,7 @@
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : "default";
 					search[name] = node;
-					updateDisplay(value);
+					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
 					node.addEventListener("click", openAndFocus);
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
@@ -290,9 +290,6 @@
 		hovered = options.indexOf(e);
 		selectedIndex = hovered;
 
-		// Update display
-		updateDisplay(value);
-
 		const first = Object.keys(search)[0];
 		if (search[first]) search[first].focus();
 		close();
@@ -301,14 +298,16 @@
 
 	/** TODOC */
 	function clearSearch(): void {
+		console.log("clear search");
 		Object.keys(search).forEach((key) => (search[key].value = ""));
 	}
 
 	/** TODOC */
 	function updateDisplay(value: K | null | undefined): void {
+		console.log("update display");
 		if (pool.length && isObject(pool[0])) {
 			if (key) {
-				const item = pool.find((item) => isObject(item) && `${value}` === `${item[key]}`);
+				const item = pool.find((item) => isObject(item) && `${value}`.toLowerCase() === `${item[key]}`.toLowerCase());
 				if (isObject(item)) {
 					Object.keys(search).forEach((key) => {
 						if (key in search && key in item) {
@@ -321,7 +320,7 @@
 				console.warn("EnhancedSelect cannot update display when key is not specified");
 			}
 		} else {
-			const item = pool.find((item) => `${item}` === `${value}`);
+			const item = pool.find((item) => `${item}`.toLowerCase() === `${value}`.toLowerCase());
 			search["default"].setAttribute("value", `${item}`);
 		}
 	}
@@ -379,9 +378,24 @@
 		close();
 		focused = false;
 
-		// If force, set display
+		// If force, check if values are valid and if not, revert
 		if (!force) return;
-		updateDisplay(value);
+
+		// First try to find based on search
+		let item = pool.find((item) =>
+			isObject(item)
+				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
+				: search["default"].value.toLowerCase() === `${item}`.toLowerCase()
+		);
+
+		// If not found, do not change value and explicitly revert display
+		if (typeof item === "undefined") {
+			updateDisplay(value);
+		} else if (isObject(item)) {
+			value = (Number(item[key]) || item[key]) as K;
+		} else {
+			value = item as K;
+		}
 	}
 
 	/** TODOC */
