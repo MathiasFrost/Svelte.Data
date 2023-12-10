@@ -99,9 +99,6 @@
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
 
-	/** TODOC */
-	let hasTabAnchor = false;
-
 	// Convert value to number if it can be
 	$: value = (Number(value) || value) as K;
 
@@ -158,12 +155,6 @@
 			}
 		}
 		options = options;
-
-		if (!hasTabAnchor && container) {
-			hasTabAnchor = true;
-			container.setAttribute("tabindex", "0");
-			container.addEventListener("click", openAndFocus);
-		}
 
 		if (!open) {
 			// These need to be set up again when re-rendered
@@ -224,7 +215,6 @@
 				["text", "search"].includes(`${node.getAttribute("type")}`)
 			) {
 				if (action === "added") {
-					hasTabAnchor = true;
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : "[DEFAULT]";
 					search[name] = node;

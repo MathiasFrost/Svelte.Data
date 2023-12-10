@@ -61,12 +61,12 @@
 			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
 		<div slot="options" class="dropdown-content" let:options>
-			<ul class="selector">
-				<li value={null} />
+			<udiv class="selector">
+				<option value={null} />
 				{#each options as option}
-					<li value={option.id}>{option.name}</li>
+					<option value={option.id}>{option.name}</option>
 				{/each}
-			</ul>
+			</udiv>
 		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -77,12 +77,12 @@
 	<EnhancedSelect name="user" pool={users} key="id" value="3" force>
 		<input slot="search" type="search" placeholder="Employee" name="name" style="width: 100%;" />
 		<div slot="options" class="dropdown-content" let:options>
-			<ul class="selector">
-				<li value={null} />
+			<div class="selector">
+				<option value={null} />
 				{#each options as option}
-					<li value={option.id}>{option.name}</li>
+					<option value={option.id}>{option.name}</option>
 				{/each}
-			</ul>
+			</div>
 		</div>
 	</EnhancedSelect>
 </form>
@@ -95,15 +95,15 @@
 			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
 		</div>
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
-			<ul class="selector">
-				<li value={null}>
+			<div class="selector">
+				<option value={null}>
 					<input tabindex="-1" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
-				</li>
+				</option>
 				{#each options as option}
-					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
+					<option value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</option>
 				{/each}
-			</ul>
+			</div>
 		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -124,15 +124,15 @@
 				.join(", ")} />
 		<input slot="search" type="search" style="width: 100%" placeholder="Employee" name="name" />
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
-			<ul class="selector">
-				<li value={null}>
+			<div class="selector">
+				<option value={null}>
 					<input tabindex="-1" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
-				</li>
+				</option>
 				{#each options as option}
-					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
+					<option value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</option>
 				{/each}
-			</ul>
+			</div>
 		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -143,12 +143,12 @@
 	<EnhancedSelect name="user" pool={users} key="id" value="3">
 		<input slot="search" type="search" readonly let:isChecked value={users.find(isChecked)?.name} />
 		<div slot="options" class="dropdown-content" let:options>
-			<ul class="selector">
-				<li value={null} />
+			<div class="selector">
+				<option value={null} />
 				{#each options as option}
-					<li value={option.id}>{option.name}</li>
+					<option value={option.id}>{option.name}</option>
 				{/each}
-			</ul>
+			</div>
 		</div>
 	</EnhancedSelect>
 </form>
