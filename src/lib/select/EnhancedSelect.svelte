@@ -43,6 +43,13 @@
 	/** TODOC */
 	export let open: boolean = false;
 
+	/** Element to focus after closing */
+	export let reFocus: HTMLElement | null = null;
+
+	/** TODOC */
+	let cssClass = "";
+	export { cssClass as class };
+
 	/** TODOC */
 	export const self: HTMLEnhancedSelect<T> = {
 		name,
@@ -52,7 +59,14 @@
 		filtered: pool,
 		options: [],
 		selectedIndex: 0,
-		search: {}
+		search: {},
+		focus() {
+			openAndFocus();
+			reFocus?.blur();
+		},
+		close() {
+			close();
+		}
 	};
 
 	/** TODOC */
@@ -84,6 +98,9 @@
 
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
+
+	/** TODOC */
+	let hasTabAnchor = false;
 
 	// Convert value to number if it can be
 	$: value = (Number(value) || value) as K;
@@ -142,6 +159,12 @@
 		}
 		options = options;
 
+		if (!hasTabAnchor && container) {
+			hasTabAnchor = true;
+			container.setAttribute("tabindex", "0");
+			container.addEventListener("click", openAndFocus);
+		}
+
 		if (!open) {
 			// These need to be set up again when re-rendered
 			scrollBox = null;
@@ -183,7 +206,6 @@
 					options.push(node);
 					node.addEventListener("mouseover", onMouseover);
 					node.addEventListener("click", onClick);
-					node.addEventListener("keydown", onKeydown);
 					node.setAttribute("tabindex", "-1");
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 					if (!optionContainer && node.parentElement) {
@@ -193,21 +215,21 @@
 				} else if (action === "removed" && options.includes(node)) {
 					options.splice(options.indexOf(node), 1);
 				}
-			} else if (node instanceof HTMLInputElement) {
+			} else if (
+				node instanceof HTMLInputElement &&
+				!node.hasAttribute("readonly") &&
+				!node.getAttribute("readonly") &&
+				!node.hasAttribute("disabled") &&
+				!node.getAttribute("disabled") &&
+				["text", "search"].includes(`${node.getAttribute("type")}`)
+			) {
 				if (action === "added") {
-					if (
-						!node.hasAttribute("readonly") &&
-						!node.getAttribute("readonly") &&
-						!node.hasAttribute("disabled") &&
-						!node.getAttribute("disabled") &&
-						["text", "search"].includes(`${node.getAttribute("type")}`)
-					) {
-						node.setAttribute("autocomplete", "off");
-						const name = node.name ? node.name : "[DEFAULT]";
-						search[name] = node;
-						updateDisplay(value); // Update display when the input is rendered
-						node.addEventListener("input", onInput);
-					}
+					hasTabAnchor = true;
+					node.setAttribute("autocomplete", "off");
+					const name = node.name ? node.name : "[DEFAULT]";
+					search[name] = node;
+					updateDisplay(value); // Update display when the input is rendered
+					node.addEventListener("input", onInput);
 					node.addEventListener("click", openAndFocus);
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 				} else {
@@ -236,8 +258,8 @@
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
 		if (!open && e.target instanceof Node && container?.contains(e.target)) {
-			if (e.key !== "Enter") open = true;
-			if (!["Enter", "Escape"].includes(e.key)) return;
+			if (!["Enter", " "].includes(e.key)) open = true;
+			if (!["Enter", "Escape", " "].includes(e.key)) return;
 		}
 		if (!global && !focused) return;
 		switch (e.key) {
@@ -252,11 +274,14 @@
 				else hovered++;
 				break;
 			case "Enter":
-				if (!open || e.ctrlKey) return;
-				{
+			case " ":
+				if (e.key === "Enter" && (!open || e.ctrlKey)) return;
+				if (!multiple || (multiple && e.key === " " && e.ctrlKey)) {
 					e.preventDefault();
 					const item = options[hovered];
 					if (item) selectElement(item);
+				} else if (multiple && e.key === "Enter") {
+					close();
 				}
 				break;
 			case "Escape":
@@ -334,8 +359,6 @@
 			// After selecting we want to display all options again (this needs to happen after the reactive update based on value change)
 			tick().then(() => (filtered = getOptions(pool, search)));
 
-			const first = Object.keys(search)[0];
-			if (search[first]) search[first].focus();
 			close();
 		}
 
@@ -457,6 +480,12 @@
 	/** TODOC */
 	function close(): void {
 		if (keepOpen) return;
+		if (reFocus) {
+			reFocus.focus();
+		} else {
+			const first = Object.keys(search)[0];
+			if (search[first]) search[first].focus();
+		}
 		open = false;
 	}
 
@@ -491,10 +520,10 @@
 		<input type="hidden" hidden {name} {value} />
 	{/if}
 {/if}
-<div style="display: contents;" bind:this={container}>
+<div class:contents={!cssClass} class={cssClass} bind:this={container}>
 	{#if observer}
 		{#if $$slots["display"] && multiple && !focused && !open}
-			<slot name="display" isChecked={createIsChecked(multiple, value, values)} />
+			<slot name="display" {clearSearch} isChecked={createIsChecked(multiple, value, values)} />
 		{:else}
 			<slot name="search" {clearSearch} isChecked={createIsChecked(multiple, value, values)} />
 		{/if}
@@ -503,3 +532,9 @@
 		{/if}
 	{/if}
 </div>
+
+<style>
+	.contents {
+		display: contents;
+	}
+</style>

@@ -23,4 +23,10 @@ export interface HTMLEnhancedSelect<T> {
 
 	/** The currently selected option */
 	selectedIndex: number;
+
+	/** TODOC */
+	focus(): void;
+
+	/** TODOC */
+	close(): void;
 }
