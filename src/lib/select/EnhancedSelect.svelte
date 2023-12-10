@@ -107,6 +107,16 @@
 	$: self.selectedIndex = selectedIndex;
 	$: self.name = name;
 
+	// Need to blur then display slot is destroyed
+	$: if ($$slots["display"] && multiple) {
+		if (open) {
+			const first = Object.keys(search)[0];
+			search[first]?.focus();
+		} else {
+			closeAndBlur();
+		}
+	}
+
 	// TODOC
 	onDestroy(() => {
 		observer?.disconnect();
@@ -180,7 +190,14 @@
 				} else if (action === "removed" && options.includes(node)) {
 					options.splice(options.indexOf(node), 1);
 				}
-			} else if (node instanceof HTMLInputElement && ["text", "search"].includes(`${node.getAttribute("type")}`)) {
+			} else if (
+				node instanceof HTMLInputElement &&
+				!node.hasAttribute("readonly") &&
+				!node.getAttribute("readonly") &&
+				!node.hasAttribute("disabled") &&
+				!node.getAttribute("disabled") &&
+				["text", "search"].includes(`${node.getAttribute("type")}`)
+			) {
 				if (action === "added") {
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : "[DEFAULT]";
@@ -413,7 +430,7 @@
 		focused = false;
 
 		// If force, check if values are valid and if not, revert
-		if (!force) return;
+		if (!force && !multiple) return;
 
 		// First try to find based on search
 		let item = pool.find((item) =>
@@ -457,6 +474,8 @@
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
 
+{open}
+{focused}
 {#if name}
 	{#if multiple}
 		<select {name} multiple hidden>
@@ -470,7 +489,11 @@
 {/if}
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
-		<slot name="search" {clearSearch} isChecked={createIsChecked(values)} />
+		{#if $$slots["display"] && multiple && !focused && !open}
+			<slot name="display" isChecked={createIsChecked(values)} />
+		{:else}
+			<slot name="search" {clearSearch} isChecked={createIsChecked(values)} />
+		{/if}
 		{#if open}
 			<slot name="options" options={filtered} isChecked={createIsChecked(values)} allChecked={createAllChecked(filtered, values)} />
 		{/if}

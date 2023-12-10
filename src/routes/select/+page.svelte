@@ -97,11 +97,40 @@
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
 			<ul class="selector">
 				<li value={null}>
-					<input type="checkbox" checked={allChecked()} />
+					<input tabindex="-1" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
 				</li>
 				{#each options as option}
-					<li value={option.id}><input type="checkbox" checked={isChecked(option)} />{option.name}</li>
+					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
+				{/each}
+			</ul>
+		</div>
+	</EnhancedSelect>
+	<button type="submit">submit</button>
+</form>
+
+<h2>Multiple with simple display</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>
+		<input
+			slot="display"
+			type="text"
+			readonly
+			style="width: 100%"
+			let:isChecked
+			value={users
+				.filter(isChecked)
+				.map((user) => user.username)
+				.join(", ")} />
+		<input slot="search" type="search" style="width: 100%" placeholder="Employee" name="name" />
+		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
+			<ul class="selector">
+				<li value={null}>
+					<input tabindex="-1" type="checkbox" checked={allChecked()} />
+					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
+				</li>
+				{#each options as option}
+					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
 				{/each}
 			</ul>
 		</div>
@@ -132,7 +161,6 @@
 		display: flex;
 		width: 100%;
 		min-width: 4rem;
-		z-index: 1;
 		max-height: 40rem;
 	}
 </style>
