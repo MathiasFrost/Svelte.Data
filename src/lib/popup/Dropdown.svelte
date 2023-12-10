@@ -55,36 +55,3 @@
 		<slot name="content" />
 	</div>
 </div>
-
-<style lang="scss" global>
-	.dropdown {
-		position: relative;
-		display: inline-block;
-
-		&.hover:hover .dropdown-content {
-			display: block;
-		}
-
-		&.right .dropdown-content {
-			right: 0;
-		}
-
-		&.left .dropdown-content {
-			left: 0;
-		}
-	}
-
-	.dropdown-content {
-		display: none;
-		position: absolute;
-		overflow: auto;
-		min-width: fit-content;
-		z-index: 999;
-		max-height: 40rem; /* Adjust as needed */
-		box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-
-		&.open {
-			display: flex;
-		}
-	}
-</style>

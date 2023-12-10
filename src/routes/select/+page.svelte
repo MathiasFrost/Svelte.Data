@@ -61,12 +61,12 @@
 			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
 		<div slot="options" class="dropdown-content" let:options>
-			<udiv class="selector">
+			<div class="selector">
 				<option value={null} />
 				{#each options as option}
 					<option value={option.id}>{option.name}</option>
 				{/each}
-			</udiv>
+			</div>
 		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -97,11 +97,11 @@
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
 			<div class="selector">
 				<option value={null}>
-					<input tabindex="-1" type="checkbox" checked={allChecked()} />
+					<input tabindex="0" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
 				</option>
 				{#each options as option}
-					<option value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</option>
+					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>
 				{/each}
 			</div>
 		</div>
@@ -126,11 +126,11 @@
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
 			<div class="selector">
 				<option value={null}>
-					<input tabindex="-1" type="checkbox" checked={allChecked()} />
+					<input tabindex="0" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
 				</option>
 				{#each options as option}
-					<option value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</option>
+					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>
 				{/each}
 			</div>
 		</div>
@@ -142,7 +142,7 @@
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
 	<EnhancedSelect name="user" pool={users} key="id" value="3">
 		<input slot="search" type="search" readonly let:isChecked value={users.find(isChecked)?.name} />
-		<div slot="options" class="dropdown-content" let:options>
+		<div slot="options" class="dropdown-content open" let:options>
 			<div class="selector">
 				<option value={null} />
 				{#each options as option}
@@ -161,23 +161,12 @@
 	.selector {
 		margin: 1rem;
 		border: 1px solid crimson;
-		overflow-y: auto;
-		max-height: 4rem;
-		width: 100%;
 		background-color: #242425;
-	}
-
-	.dropdown {
-		position: relative;
-		display: inline-block;
+		overflow-y: auto;
+		max-height: 4rem !important;
 	}
 
 	.dropdown-content {
-		position: absolute;
-		z-index: 999;
-		display: flex;
-		width: 100%;
-		min-width: 4rem;
-		max-height: 40rem;
+		max-height: 4rem !important;
 	}
 </style>

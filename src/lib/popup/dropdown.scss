@@ -1,0 +1,49 @@
+.dropdown {
+	position: relative;
+	display: inline-block;
+
+	&.hover:hover .dropdown-content {
+		display: block;
+	}
+
+	&.right .dropdown-content {
+		right: 0;
+	}
+
+	&.left .dropdown-content {
+		left: 0;
+	}
+}
+
+.dropdown-container {
+	display: flex;
+	justify-content: center;
+	overflow: auto;
+	width: 100%;
+}
+
+.dropdown-content {
+	margin-right: auto; /* Pushes the content to the left if it overflows */
+	margin-left: auto; /* Pushes the content to the right if it overflows */
+	display: none;
+	position: absolute;
+	overflow: hidden;
+	min-width: fit-content;
+	z-index: 999;
+	max-height: 40rem; /* Adjust as needed */
+
+	&.open {
+		display: flex;
+	}
+}
+
+.growing-element {
+	position: absolute;
+	background-color: blue;
+	display: none;
+	margin-bottom: 100%;
+
+	&.open {
+		display: flex;
+	}
+}

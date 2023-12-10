@@ -27,11 +27,11 @@ For scenarios when the native `<select>` element does not suffice.
 		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
 			<ul class="selector">
 				<li value={null}>
-					<input tabindex="-1" type="checkbox" checked={allChecked()} />
+					<input tabindex="0" type="checkbox" checked={allChecked()} />
 					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
 				</li>
 				{#each options as option}
-					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
+					<li value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</li>
 				{/each}
 			</ul>
 		</div>
