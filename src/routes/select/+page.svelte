@@ -138,6 +138,21 @@
 	<button type="submit">submit</button>
 </form>
 
+<h2>Stylized select</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="user" pool={users} key="id" value="3">
+		<input slot="search" type="search" readonly let:isChecked value={users.find(isChecked)?.name} />
+		<div slot="options" class="dropdown-content" let:options>
+			<ul class="selector">
+				<li value={null} />
+				{#each options as option}
+					<li value={option.id}>{option.name}</li>
+				{/each}
+			</ul>
+		</div>
+	</EnhancedSelect>
+</form>
+
 <style>
 	:global(.highlighted) {
 		background-color: #363535;

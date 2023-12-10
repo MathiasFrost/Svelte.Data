@@ -10,6 +10,36 @@ Your tsconfig.json [must be set](https://kit.svelte.dev/docs/packaging#typescrip
 
 ## Components
 
+### EnhancedSelect
+
+For scenarios when the native `<select>` element does not suffice.
+
+#### Example
+
+```sveltehtml
+
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="users" bind:self={select} pool={users} key="id" value="3" force multiple>
+		<div slot="search" style="width: 100%;" let:isChecked>
+			<p>Selected: {users.filter((user) => isChecked(user)).map((user) => user.username)}</p>
+			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
+		</div>
+		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
+			<ul class="selector">
+				<li value={null}>
+					<input tabindex="-1" type="checkbox" checked={allChecked()} />
+					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
+				</li>
+				{#each options as option}
+					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
+				{/each}
+			</ul>
+		</div>
+	</EnhancedSelect>
+	<button type="submit">submit</button>
+</form>
+```
+
 ### Syncer
 
 Handle pulling and pushing a value to and from a replication source
@@ -73,8 +103,11 @@ import { ensureObject, ensureDateString, ensureNumber, ensureString } from "@maa
 
 export class WeatherForecast {
 	date: Date;
+
 	temperatureC: number;
+
 	temperatureF: number;
+
 	summary: string | null;
 
 	public constructor(something: unknown) {

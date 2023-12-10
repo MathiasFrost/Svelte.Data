@@ -85,6 +85,9 @@
 	/** TODOC */
 	let open: boolean = false;
 
+	// Convert value to number if it can be
+	$: value = (Number(value) || value) as K;
+
 	// TODOC
 	$: setUpObserver(container);
 
@@ -108,7 +111,7 @@
 	$: self.name = name;
 
 	// Need to blur then display slot is destroyed
-	$: if ($$slots["display"] && multiple) {
+	$: if ($$slots["display"]) {
 		if (open) {
 			const first = Object.keys(search)[0];
 			search[first]?.focus();
@@ -190,20 +193,21 @@
 				} else if (action === "removed" && options.includes(node)) {
 					options.splice(options.indexOf(node), 1);
 				}
-			} else if (
-				node instanceof HTMLInputElement &&
-				!node.hasAttribute("readonly") &&
-				!node.getAttribute("readonly") &&
-				!node.hasAttribute("disabled") &&
-				!node.getAttribute("disabled") &&
-				["text", "search"].includes(`${node.getAttribute("type")}`)
-			) {
+			} else if (node instanceof HTMLInputElement) {
 				if (action === "added") {
-					node.setAttribute("autocomplete", "off");
-					const name = node.name ? node.name : "[DEFAULT]";
-					search[name] = node;
-					updateDisplay(value); // Update display when the input is rendered
-					node.addEventListener("input", onInput);
+					if (
+						!node.hasAttribute("readonly") &&
+						!node.getAttribute("readonly") &&
+						!node.hasAttribute("disabled") &&
+						!node.getAttribute("disabled") &&
+						["text", "search"].includes(`${node.getAttribute("type")}`)
+					) {
+						node.setAttribute("autocomplete", "off");
+						const name = node.name ? node.name : "[DEFAULT]";
+						search[name] = node;
+						updateDisplay(value); // Update display when the input is rendered
+						node.addEventListener("input", onInput);
+					}
 					node.addEventListener("click", openAndFocus);
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 				} else {
@@ -322,7 +326,7 @@
 		} else {
 			const oldValue = value;
 			if (!attributeValue) value = "" as K;
-			else value = (Number(attributeValue) || attributeValue) as K;
+			else value = attributeValue as K;
 
 			// We have to manually update in this case
 			if (value === oldValue) updateDisplay(value);
@@ -361,7 +365,8 @@
 				}
 			});
 		} else if (search["[DEFAULT]"]) {
-			search["[DEFAULT]"].value = `${item}`;
+			const ref = search["[DEFAULT]"];
+			ref.value = `${item}`;
 		}
 	}
 
@@ -443,7 +448,7 @@
 		if (typeof item === "undefined") {
 			updateDisplay(value);
 		} else if (isObject(item)) {
-			value = (Number(item[key]) || item[key]) as K;
+			value = item[key] as K;
 		} else {
 			value = item as K;
 		}
@@ -462,8 +467,10 @@
 	}
 
 	/** TODOC */
-	function createIsChecked(values: K[]): (item: T) => boolean {
-		return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
+	function createIsChecked(multiple: boolean, value: K | null | undefined, values: K[]): (item: T) => boolean {
+		console.log(value);
+		if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
+		else return (item) => (isObject(item) && key ? value === item[key] : value === item);
 	}
 
 	/** TODOC */
@@ -474,8 +481,6 @@
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
 
-{open}
-{focused}
 {#if name}
 	{#if multiple}
 		<select {name} multiple hidden>
@@ -490,12 +495,12 @@
 <div style="display: contents;" bind:this={container}>
 	{#if observer}
 		{#if $$slots["display"] && multiple && !focused && !open}
-			<slot name="display" isChecked={createIsChecked(values)} />
+			<slot name="display" isChecked={createIsChecked(multiple, value, values)} />
 		{:else}
-			<slot name="search" {clearSearch} isChecked={createIsChecked(values)} />
+			<slot name="search" {clearSearch} isChecked={createIsChecked(multiple, value, values)} />
 		{/if}
 		{#if open}
-			<slot name="options" options={filtered} isChecked={createIsChecked(values)} allChecked={createAllChecked(filtered, values)} />
+			<slot name="options" options={filtered} isChecked={createIsChecked(multiple, value, values)} allChecked={createAllChecked(filtered, values)} />
 		{/if}
 	{/if}
 </div>
