@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { outClick } from "$lib/popup/outClick.js";
 	import { autoPopup } from "$lib/popup/autoPopup.js";
+	import Popup from "$lib/popup/Popup.svelte";
 
 	let open = false;
 	let openDd = false;
@@ -14,20 +15,16 @@
 <!--<button popovertarget="mypopover">Toggle the popover</button>-->
 <!--<div id="mypopover" popover>Popover content</div>-->
 
-<div style="display: flex; justify-content: space-between;">
+<div style="display: flex; justify-content: space-between; height: 100rem;">
 	<button on:click={() => (open = true)}>Open</button>
 
-	<div class="dropdown" use:outClick={() => (openDd = false)}>
-		<button style="position: relative; z-index: 1;" on:click={() => (openDd = true)}>Dropdown {openDd}</button>
-		<div class="dropdown-container">
-			<div class="growing-element" class:open={openDd}>
-				<button on:click={() => (openDd = false)}>Option 1</button>
-				<button on:click={() => (openDd = false)}>Option 2</button>
-				<button on:click={() => (openDd = false)}>Option 3</button>
-				<button on:click={() => (openDd = false)}>Option 4</button>
-			</div>
-		</div>
-	</div>
+	<button class="dropbtn" on:click={() => (openDd = true)}>Dropdown</button>
+	<Popup class="" open={openDd}>
+		<button on:click={() => (openDd = false)}>Option 1</button>
+		<button on:click={() => (openDd = false)}>Option 2</button>
+		<button on:click={() => (openDd = false)}>Option 3</button>
+		<button on:click={() => (openDd = false)}>Option 4</button>
+	</Popup>
 
 	<div class="dropdown">
 		<button>Dropdown auto</button>
