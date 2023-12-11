@@ -19,7 +19,7 @@
 	<button on:click={() => (open = true)}>Open</button>
 
 	<button class="dropbtn" on:click={() => (openDd = true)}>Dropdown</button>
-	<Popup class="" open={openDd}>
+	<Popup class="" open={openDd} contain>
 		<button on:click={() => (openDd = false)}>Option 1</button>
 		<button on:click={() => (openDd = false)}>Option 2</button>
 		<button on:click={() => (openDd = false)}>Option 3</button>
@@ -61,8 +61,6 @@
 <h1>Test</h1>
 
 <style lang="scss">
-	@use "../../lib/popup/dropdown";
-
 	@keyframes fade-in {
 		from {
 			opacity: 0;

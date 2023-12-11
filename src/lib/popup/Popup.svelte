@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-	import { onMount, onDestroy, tick } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
 	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 
@@ -21,6 +21,12 @@
 	export let align: "center" | "left" | "right" = "left";
 
 	/** TODOC */
+	export let stretch = false;
+
+	/** TODOC */
+	export let contain = false;
+
+	/** TODOC */
 	let cssClass = "";
 	export { cssClass as class };
 
@@ -30,8 +36,8 @@
 	/** TODOC */
 	let popupContainer: HTMLDivElement | null = null;
 
-	/** TODOC */
-	let container: HTMLDivElement | null = null;
+	// /** TODOC */
+	// let container: HTMLDivElement | null = null;
 
 	/** TODOC */
 	let anchor: Element | null = null;
@@ -58,12 +64,8 @@
 			portalOut(popupsContainer, portalKey);
 		}
 
-		anchor = container?.previousElementSibling ?? null;
-	});
-
-	// cleanup
-	onDestroy(() => {
-		container?.remove();
+		// anchor = container?.previousElementSibling ?? null;
+		anchor = popupContainer?.previousElementSibling ?? null;
 	});
 
 	// TODOC
@@ -75,21 +77,24 @@
 			id = 1;
 			while (activePopups.includes(id)) ++id;
 			activePopups.push(id);
+
 			const rect = await calculateBounds();
 			if (!rect || !anchor || !popupContainer) return;
 
 			const anchorRect = anchor.getBoundingClientRect();
-			console.log(anchorRect);
 
 			let top: null | number = null;
 			let bottom: null | number = null;
 			let left: null | number = null;
 			let right: null | number = null;
+			let height: null | number = null;
+			let width: null | number = null;
+
 			switch (justify) {
 				case "above":
 					break;
 				case "below":
-					top = anchorRect.top + anchorRect.height + anchorRect.y;
+					top = anchorRect.top + anchorRect.height + window.scrollY;
 					break;
 				case "left":
 					break;
@@ -107,10 +112,14 @@
 					break;
 			}
 
+			if (contain) width = anchorRect.width;
+
 			if (top !== null) popupContainer.style.top = top + "px";
 			if (bottom !== null) popupContainer.style.bottom = bottom + "px";
 			if (left !== null) popupContainer.style.left = left + "px";
 			if (right !== null) popupContainer.style.right = right + "px";
+			if (height !== null) popupContainer.style.height = height + "px";
+			if (width !== null) popupContainer.style.width = width + "px";
 
 			popupContainer.style.opacity = "1";
 		} else {
@@ -125,11 +134,12 @@
 	}
 </script>
 
-<div bind:this={container}>
-	<div bind:this={popupContainer} class:none={!open} class="container" use:portalIn={portalKey}>
-		<slot />
-	</div>
+<!--<div bind:this={container}>-->
+<div bind:this={popupContainer} class:none={!open} class="container" use:portalIn={portalKey}>
+	<slot />
 </div>
+
+<!--</div>-->
 
 <style lang="scss">
 	.container {
@@ -139,6 +149,7 @@
 		top: 0;
 		left: 0;
 		opacity: 0;
+		overflow: auto;
 	}
 
 	.none {
