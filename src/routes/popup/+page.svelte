@@ -18,8 +18,8 @@
 <div style="display: flex; justify-content: space-between; height: 100rem; width: 100rem;">
 	<button on:click={() => (open = true)}>Open</button>
 
-	<button class="dropbtn" on:click={() => (openDd = true)}>Dropdown</button>
-	<Popup class="" style="height: 100%" open={openDd} contain justify="right" align="center">
+	<button class="dropbtn" style="padding: 2rem; margin-right: 1rem;" on:click={() => (openDd = true)}>Dropdown</button>
+	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" open={openDd} contain justify="left" align="center">
 		<button on:click={() => (openDd = false)}>Option 1</button>
 		<button on:click={() => (openDd = false)}>Option 2</button>
 		<button on:click={() => (openDd = false)}>Option 3</button>

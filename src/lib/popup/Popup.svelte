@@ -18,10 +18,7 @@
 	export let justify: "above" | "below" | "left" | "right" = "below";
 
 	/** TODOC */
-	export let align: "center" | "start" | "end" = "start";
-
-	/** TODOC */
-	export let stretch = false;
+	export let align: "center" | "start" | "end" | "stretch" | null = null;
 
 	/** TODOC */
 	export let contain = false;
@@ -41,9 +38,6 @@
 
 	/** TODOC */
 	let child: HTMLDivElement | null = null;
-
-	// /** TODOC */
-	// let container: HTMLDivElement | null = null;
 
 	/** TODOC */
 	let anchor: Element | null = null;
@@ -70,14 +64,11 @@
 			portalOut(popupsContainer, portalKey);
 		}
 
-		// anchor = container?.previousElementSibling ?? null;
-		console.log("prev: ", popupContainer, popupContainer?.previousElementSibling);
 		anchor = popupContainer?.previousElementSibling ?? null;
 	});
 
 	// cleanup
 	onDestroy(() => {
-		console.log("destroy");
 		open = false;
 	});
 
@@ -86,14 +77,12 @@
 
 	/** TODOC */
 	async function toggleActive(open: boolean): Promise<void> {
-		console.log(open);
 		if (open) {
 			id = 1;
 			while (activePopups.includes(id)) ++id;
 			activePopups.push(id);
 
 			const rect: DOMRect | null = await calculateBounds();
-			console.log(rect, anchor, popupContainer, child);
 			if (!rect || !anchor || !popupContainer || !child) return;
 
 			const anchorRect = anchor.getBoundingClientRect();
@@ -110,45 +99,33 @@
 			const anchorStyles = window.getComputedStyle(anchor);
 			switch (justify) {
 				case "above":
-					// if (contain) maxWidth = anchorRect.width;
-					// if (stretch) minWidth = anchorRect.width;
-					// bottom = anchorRect.bottom - anchorRect.height + window.scrollY;
-					// switch (align) {
-					// 	case "center":
-					// 		left = anchorRect.left + anchorRect.width / 2 - rect.width / 2;
-					// 		break;
-					// 	case "start":
-					// 		left = anchorRect.left;
-					// 		break;
-					// 	case "end":
-					// 		left = anchorRect.right - rect.width;
-					// 		break;
-					// }
+					{
+						if (contain) maxWidth = anchorRect.width;
+						else minWidth = anchorRect.width;
+						const anchorMarginTop = parseInt(anchorStyles.marginTop, 10);
+						bottom = (window.visualViewport?.height ?? window.innerHeight) - anchorRect.top + window.scrollY + anchorMarginTop;
+
+						left = anchorRect.left + window.scrollX;
+						minWidth = anchorRect.width;
+					}
 					break;
 				case "below":
-					// if (contain) maxWidth = anchorRect.width;
-					// if (stretch) minWidth = anchorRect.width;
-					// top = anchorRect.top + anchorRect.height + window.scrollY;
-					// switch (align) {
-					// 	case "center":
-					// 		left = anchorRect.left + anchorRect.width / 2 - rect.width / 2;
-					// 		break;
-					// 	case "start":
-					// 		left = anchorRect.left;
-					// 		break;
-					// 	case "end":
-					// 		left = anchorRect.right - rect.width;
-					// 		break;
-					// }
+					{
+						if (contain) maxWidth = anchorRect.width;
+						else minWidth = anchorRect.width;
+						const anchorMarginBottom = parseInt(anchorStyles.marginBottom, 10);
+						top = anchorRect.bottom + window.scrollY + anchorMarginBottom;
+
+						left = anchorRect.left + window.scrollX;
+						minWidth = anchorRect.width;
+					}
 					break;
 				case "left":
 					{
-						// if (contain) maxHeight = anchorRect.height;
-						// if (stretch) minHeight = anchorRect.height;
+						if (contain) maxHeight = anchorRect.height;
+						else minHeight = anchorRect.height;
 						const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
-						const anchorPaddingLeft = parseInt(anchorStyles.paddingLeft, 10);
-						const diff = window.innerWidth - window.outerWidth;
-						right = window.innerWidth - anchorRect.left - window.scrollX + diff - anchorMarginLeft - anchorPaddingLeft;
+						right = (window.visualViewport?.width ?? window.innerWidth) - anchorRect.left + window.scrollX + anchorMarginLeft;
 
 						top = anchorRect.top + window.scrollY;
 						minHeight = anchorRect.height;
@@ -156,22 +133,17 @@
 					break;
 				case "right":
 					{
-						// if (contain) maxHeight = anchorRect.height;
-						// if (stretch) minHeight = anchorRect.height;
-						const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
-						const anchorPaddingLeft = parseInt(anchorStyles.paddingLeft, 10);
+						if (contain) maxHeight = anchorRect.height;
+						else minHeight = anchorRect.height;
 						const anchorMarginRight = parseInt(anchorStyles.marginRight, 10);
-						const anchorPaddingRight = parseInt(anchorStyles.paddingRight, 10);
-						const diff = window.innerWidth - window.outerWidth;
-						console.log("diff:", diff, window.innerWidth, window.outerWidth);
-						left = anchorRect.right + window.scrollX - diff - anchorMarginRight - anchorPaddingRight - anchorMarginLeft - anchorPaddingLeft;
+						left = anchorRect.right + window.scrollX + anchorMarginRight;
 
 						top = anchorRect.top + window.scrollY;
 						minHeight = anchorRect.height;
 					}
 					break;
 			}
-			console.log(anchorRect, top, left, bottom, right);
+
 			if (top !== null) popupContainer.style.top = top + "px";
 			else popupContainer.style.top = "";
 			if (bottom !== null) popupContainer.style.bottom = bottom + "px";
@@ -189,7 +161,7 @@
 			if (minWidth !== null) popupContainer.style.minWidth = minWidth + "px";
 			else popupContainer.style.minWidth = "";
 
-			child.style.alignSelf = align;
+			if (align !== null) child.style.alignSelf = align;
 			popupContainer.style.opacity = "1";
 		} else {
 			activePopups = activePopups.filter((num) => num !== id);
@@ -203,18 +175,14 @@
 	}
 </script>
 
-<!--<div bind:this={container}>-->
 <div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container" use:portalIn={portalKey}>
 	<div bind:this={child} class={cssClass} {style}>
 		<slot />
 	</div>
 </div>
 
-<!--</div>-->
-
 <style lang="scss">
 	.container {
-		border: 1px solid crimson;
 		position: absolute;
 		// These is set with style later
 		opacity: 0;
