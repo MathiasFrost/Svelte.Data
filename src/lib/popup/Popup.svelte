@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-	import { onMount, tick } from "svelte";
+	import { onMount, onDestroy, tick } from "svelte";
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
 	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 
@@ -18,7 +18,7 @@
 	export let justify: "above" | "below" | "left" | "right" = "below";
 
 	/** TODOC */
-	export let align: "center" | "left" | "right" = "left";
+	export let align: "center" | "start" | "end" = "start";
 
 	/** TODOC */
 	export let stretch = false;
@@ -31,10 +31,16 @@
 	export { cssClass as class };
 
 	/** TODOC */
+	export let style = "";
+
+	/** TODOC */
 	const portalKey = "BODY";
 
 	/** TODOC */
 	let popupContainer: HTMLDivElement | null = null;
+
+	/** TODOC */
+	let child: HTMLDivElement | null = null;
 
 	// /** TODOC */
 	// let container: HTMLDivElement | null = null;
@@ -65,7 +71,14 @@
 		}
 
 		// anchor = container?.previousElementSibling ?? null;
+		console.log("prev: ", popupContainer, popupContainer?.previousElementSibling);
 		anchor = popupContainer?.previousElementSibling ?? null;
+	});
+
+	// cleanup
+	onDestroy(() => {
+		console.log("destroy");
+		open = false;
 	});
 
 	// TODOC
@@ -73,13 +86,15 @@
 
 	/** TODOC */
 	async function toggleActive(open: boolean): Promise<void> {
+		console.log(open);
 		if (open) {
 			id = 1;
 			while (activePopups.includes(id)) ++id;
 			activePopups.push(id);
 
-			const rect = await calculateBounds();
-			if (!rect || !anchor || !popupContainer) return;
+			const rect: DOMRect | null = await calculateBounds();
+			console.log(rect, anchor, popupContainer, child);
+			if (!rect || !anchor || !popupContainer || !child) return;
 
 			const anchorRect = anchor.getBoundingClientRect();
 
@@ -87,40 +102,94 @@
 			let bottom: null | number = null;
 			let left: null | number = null;
 			let right: null | number = null;
-			let height: null | number = null;
-			let width: null | number = null;
+			let maxHeight: null | number = null;
+			let minHeight: null | number = null;
+			let maxWidth: null | number = null;
+			let minWidth: null | number = null;
 
+			const anchorStyles = window.getComputedStyle(anchor);
 			switch (justify) {
 				case "above":
+					// if (contain) maxWidth = anchorRect.width;
+					// if (stretch) minWidth = anchorRect.width;
+					// bottom = anchorRect.bottom - anchorRect.height + window.scrollY;
+					// switch (align) {
+					// 	case "center":
+					// 		left = anchorRect.left + anchorRect.width / 2 - rect.width / 2;
+					// 		break;
+					// 	case "start":
+					// 		left = anchorRect.left;
+					// 		break;
+					// 	case "end":
+					// 		left = anchorRect.right - rect.width;
+					// 		break;
+					// }
 					break;
 				case "below":
-					top = anchorRect.top + anchorRect.height + window.scrollY;
+					// if (contain) maxWidth = anchorRect.width;
+					// if (stretch) minWidth = anchorRect.width;
+					// top = anchorRect.top + anchorRect.height + window.scrollY;
+					// switch (align) {
+					// 	case "center":
+					// 		left = anchorRect.left + anchorRect.width / 2 - rect.width / 2;
+					// 		break;
+					// 	case "start":
+					// 		left = anchorRect.left;
+					// 		break;
+					// 	case "end":
+					// 		left = anchorRect.right - rect.width;
+					// 		break;
+					// }
 					break;
 				case "left":
+					{
+						// if (contain) maxHeight = anchorRect.height;
+						// if (stretch) minHeight = anchorRect.height;
+						const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
+						const anchorPaddingLeft = parseInt(anchorStyles.paddingLeft, 10);
+						const diff = window.innerWidth - window.outerWidth;
+						right = window.innerWidth - anchorRect.left - window.scrollX + diff - anchorMarginLeft - anchorPaddingLeft;
+
+						top = anchorRect.top + window.scrollY;
+						minHeight = anchorRect.height;
+					}
 					break;
 				case "right":
+					{
+						// if (contain) maxHeight = anchorRect.height;
+						// if (stretch) minHeight = anchorRect.height;
+						const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
+						const anchorPaddingLeft = parseInt(anchorStyles.paddingLeft, 10);
+						const anchorMarginRight = parseInt(anchorStyles.marginRight, 10);
+						const anchorPaddingRight = parseInt(anchorStyles.paddingRight, 10);
+						const diff = window.innerWidth - window.outerWidth;
+						console.log("diff:", diff, window.innerWidth, window.outerWidth);
+						left = anchorRect.right + window.scrollX - diff - anchorMarginRight - anchorPaddingRight - anchorMarginLeft - anchorPaddingLeft;
+
+						top = anchorRect.top + window.scrollY;
+						minHeight = anchorRect.height;
+					}
 					break;
 			}
-
-			switch (align) {
-				case "center":
-					break;
-				case "left":
-					left = anchorRect.left;
-					break;
-				case "right":
-					break;
-			}
-
-			if (contain) width = anchorRect.width;
-
+			console.log(anchorRect, top, left, bottom, right);
 			if (top !== null) popupContainer.style.top = top + "px";
+			else popupContainer.style.top = "";
 			if (bottom !== null) popupContainer.style.bottom = bottom + "px";
+			else popupContainer.style.bottom = "";
 			if (left !== null) popupContainer.style.left = left + "px";
+			else popupContainer.style.left = "";
 			if (right !== null) popupContainer.style.right = right + "px";
-			if (height !== null) popupContainer.style.height = height + "px";
-			if (width !== null) popupContainer.style.width = width + "px";
+			else popupContainer.style.right = "";
+			if (maxHeight !== null) popupContainer.style.maxHeight = maxHeight + "px";
+			else popupContainer.style.maxHeight = "";
+			if (maxWidth !== null) popupContainer.style.maxWidth = maxWidth + "px";
+			else popupContainer.style.maxWidth = "";
+			if (minHeight !== null) popupContainer.style.minHeight = minHeight + "px";
+			else popupContainer.style.minHeight = "";
+			if (minWidth !== null) popupContainer.style.minWidth = minWidth + "px";
+			else popupContainer.style.minWidth = "";
 
+			child.style.alignSelf = align;
 			popupContainer.style.opacity = "1";
 		} else {
 			activePopups = activePopups.filter((num) => num !== id);
@@ -135,21 +204,22 @@
 </script>
 
 <!--<div bind:this={container}>-->
-<div bind:this={popupContainer} class:none={!open} class="container" use:portalIn={portalKey}>
-	<slot />
+<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container" use:portalIn={portalKey}>
+	<div bind:this={child} class={cssClass} {style}>
+		<slot />
+	</div>
 </div>
 
 <!--</div>-->
 
 <style lang="scss">
 	.container {
-		background-color: crimson;
+		border: 1px solid crimson;
 		position: absolute;
 		// These is set with style later
-		top: 0;
-		left: 0;
 		opacity: 0;
-		overflow: auto;
+		overflow: hidden;
+		display: flex;
 	}
 
 	.none {

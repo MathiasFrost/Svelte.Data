@@ -15,11 +15,11 @@
 <!--<button popovertarget="mypopover">Toggle the popover</button>-->
 <!--<div id="mypopover" popover>Popover content</div>-->
 
-<div style="display: flex; justify-content: space-between; height: 100rem;">
+<div style="display: flex; justify-content: space-between; height: 100rem; width: 100rem;">
 	<button on:click={() => (open = true)}>Open</button>
 
 	<button class="dropbtn" on:click={() => (openDd = true)}>Dropdown</button>
-	<Popup class="" open={openDd} contain>
+	<Popup class="" style="height: 100%" open={openDd} contain justify="right" align="center">
 		<button on:click={() => (openDd = false)}>Option 1</button>
 		<button on:click={() => (openDd = false)}>Option 2</button>
 		<button on:click={() => (openDd = false)}>Option 3</button>
