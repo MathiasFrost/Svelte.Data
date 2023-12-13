@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { outClick } from "$lib/popup/outClick.js";
-	import { autoPopup } from "$lib/popup/autoPopup.js";
+	import { autoDialog } from "$lib/popup/autoDialog.js";
 	import Popup from "$lib/popup/Popup.svelte";
 
 	let open = false;
@@ -26,18 +26,6 @@
 
 	<button on:click={() => (open = true)}>Open</button>
 
-	<div class="dropdown">
-		<button>Dropdown auto</button>
-		<div class="dropdown-container" use:autoPopup>
-			<div class="dropdown-content">
-				<button>Option 1</button>
-				<button>Option 2</button>
-				<button>Option 3</button>
-				<button>Option 4</button>
-			</div>
-		</div>
-	</div>
-
 	<dialog bind:this={test} on:close={() => (open = false)} use:outClick={() => test.close()}>
 		<p>Greetings, one and all!</p>
 		<input />
@@ -48,7 +36,7 @@
 	</dialog>
 
 	<button>Auto</button>
-	<dialog use:autoPopup>
+	<dialog use:autoDialog>
 		<p>Greetings, one and all!</p>
 		<input />
 		<form method="dialog">
@@ -57,12 +45,12 @@
 		<button on:click={() => (open = !open)}>test</button>
 	</dialog>
 
-	<button class="dropbtn" style="padding: 2rem;" on:click={() => (openDd = true)}>Dropdown</button>
-	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" open={openDd} contain justify="below" align="center">
-		<button on:click={() => (openDd = false)}>Option 1</button>
-		<button on:click={() => (openDd = false)}>Option 2</button>
-		<button on:click={() => (openDd = false)}>Option 3</button>
-		<button on:click={() => (openDd = false)}>Option 4</button>
+	<button class="dropbtn" style="padding: 2rem;">Dropdown</button>
+	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" contain justify="below" align="center" auto="contextmenu" let:closeClick>
+		<button on:click={closeClick(() => console.log("click"))}>Option 1</button>
+		<button>Option 2</button>
+		<button>Option 3</button>
+		<button>Option 4</button>
 	</Popup>
 </div>
 

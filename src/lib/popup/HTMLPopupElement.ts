@@ -1,7 +1,7 @@
 /** TODOC */
 export interface HTMLPopupElement {
 	/** TODOC */
-	showPopup(element?: HTMLElement | null): void;
+	showPopup(arg?: HTMLElement | null | { x: number; y: number }): void;
 
 	/** TODOC */
 	close(): void;

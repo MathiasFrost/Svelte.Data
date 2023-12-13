@@ -1,25 +1,19 @@
 import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
 /** TODOC */
-export function autoPopup(node: Node): { destroy: () => void } {
+export function autoDialog(node: Node): { destroy: () => void } {
 	const handleWindowClick = (event: MouseEvent): void => {
 		// Check if the click is outside the element
-		if (!PopupHelper.isOutsideClick(event, node)) return;
+		if (!open || !PopupHelper.isOutsideClick(event, node)) return;
 
 		if (node instanceof HTMLDialogElement) {
 			node.close();
-		} else if (node instanceof HTMLElement) {
-			const content = node.classList.contains(".dropdown-content") ? node : node.querySelector(".dropdown-content");
-			content?.classList.remove("open");
 		}
 	};
 
 	const handleClick = () => {
 		if (node instanceof HTMLDialogElement) {
 			node.showModal();
-		} else if (node instanceof HTMLElement) {
-			const content = node.classList.contains(".dropdown-content") ? node : node.querySelector(".dropdown-content");
-			content?.classList.add("open");
 		}
 	};
 
@@ -30,7 +24,7 @@ export function autoPopup(node: Node): { destroy: () => void } {
 		if (above instanceof HTMLElement) {
 			if (!(above instanceof HTMLButtonElement)) {
 				above.setAttribute("tabindex", "0");
-				node.addEventListener("keydown", handleClick);
+				above.addEventListener("keydown", handleClick);
 			}
 			above.addEventListener("click", handleClick);
 		}
