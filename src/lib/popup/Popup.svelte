@@ -105,6 +105,7 @@
 						const anchorMarginTop = parseInt(anchorStyles.marginTop, 10);
 						bottom = (window.visualViewport?.height ?? window.innerHeight) - anchorRect.top + window.scrollY + anchorMarginTop;
 
+						console.log(anchorRect.left, window.scrollX);
 						left = anchorRect.left + window.scrollX;
 						minWidth = anchorRect.width;
 					}
@@ -144,14 +145,38 @@
 					break;
 			}
 
-			if (top !== null) popupContainer.style.top = top + "px";
-			else popupContainer.style.top = "";
-			if (bottom !== null) popupContainer.style.bottom = bottom + "px";
-			else popupContainer.style.bottom = "";
-			if (left !== null) popupContainer.style.left = left + "px";
-			else popupContainer.style.left = "";
-			if (right !== null) popupContainer.style.right = right + "px";
-			else popupContainer.style.right = "";
+			if (top !== null) {
+				const height = (window.visualViewport?.height ?? window.innerHeight) + window.scrollY;
+				if (top + rect.height > height) {
+					const overflow = top + rect.height - height;
+					top -= overflow;
+				}
+				popupContainer.style.top = top + "px";
+			} else popupContainer.style.top = "";
+			if (bottom !== null) {
+				const height = (window.visualViewport?.height ?? window.innerHeight) - window.scrollY;
+				if (bottom + rect.height > height) {
+					const overflow = bottom + rect.height - height;
+					bottom -= overflow;
+				}
+				popupContainer.style.bottom = bottom + "px";
+			} else popupContainer.style.bottom = "";
+			if (left !== null) {
+				const width = (window.visualViewport?.width ?? window.innerWidth) + window.scrollX;
+				if (left + rect.width > width) {
+					const overflow = left + rect.width - width;
+					left -= overflow;
+				}
+				popupContainer.style.left = left + "px";
+			} else popupContainer.style.left = "";
+			if (right !== null) {
+				const width = (window.visualViewport?.width ?? window.innerWidth) - window.scrollX;
+				if (right + rect.width > width) {
+					const overflow = right + rect.width - width;
+					right -= overflow;
+				}
+				popupContainer.style.right = right + "px";
+			} else popupContainer.style.right = "";
 			if (maxHeight !== null) popupContainer.style.maxHeight = maxHeight + "px";
 			else popupContainer.style.maxHeight = "";
 			if (maxWidth !== null) popupContainer.style.maxWidth = maxWidth + "px";
