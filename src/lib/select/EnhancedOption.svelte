@@ -5,11 +5,11 @@
 	/** TODOC */
 	type T = $$Generic;
 
-	/** TODOC */
-	type K = $$Generic;
+	// /** TODOC */
+	// type K = $$Generic;
 
 	/** TODOC */
-	export let value: K | null = null;
+	export let value: unknown | null = null;
 
 	/** TODOC */
 	export let item: T | null = null;
@@ -18,7 +18,7 @@
 	export let togglesAll = false;
 
 	/** TODOC */
-	export let registerOption: (option: HTMLEnhancedOptionElement<T, K>) => void;
+	export let registerOption: (option: HTMLEnhancedOptionElement<T>) => void;
 
 	/** TODOC */
 	let container: HTMLDivElement | null = null;
@@ -27,7 +27,7 @@
 	let checked = false;
 
 	/** TODOC */
-	export const self: HTMLEnhancedOptionElement<T, K> = {
+	export const self: HTMLEnhancedOptionElement<T> = {
 		value,
 		element: container,
 		item,

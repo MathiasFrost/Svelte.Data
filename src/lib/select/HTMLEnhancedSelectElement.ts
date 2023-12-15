@@ -1,15 +1,15 @@
 import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 
 /** TODOC */
-export interface HTMLEnhancedSelectElement<T, K> {
+export interface HTMLEnhancedSelectElement<T> {
 	/** TODOC */
 	name: string;
 
 	/** The value of a non-multiple enhanced select */
-	value: K | null;
+	value: unknown | null;
 
 	/** The values of a multiple enhanced select */
-	values: (K | null)[];
+	values: (unknown | null)[];
 
 	/** Reference to the options pool */
 	pool: T[];
@@ -18,7 +18,7 @@ export interface HTMLEnhancedSelectElement<T, K> {
 	filtered: T[];
 
 	/** Reference to the elements in body with a `value` attribute */
-	options: HTMLEnhancedOptionElement<T, K>[];
+	options: HTMLEnhancedOptionElement<T>[];
 
 	/** The search string */
 	search: Record<string, HTMLInputElement>;

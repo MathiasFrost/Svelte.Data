@@ -1,7 +1,7 @@
 /** TODOC */
-export interface HTMLEnhancedOptionElement<T, K> {
+export interface HTMLEnhancedOptionElement<T> {
 	/** TODOC */
-	value: K | null;
+	value: unknown | null;
 
 	/** TODOC */
 	element: HTMLDivElement | null;

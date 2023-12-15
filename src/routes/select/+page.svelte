@@ -13,10 +13,10 @@
 	}
 
 	/** TODOC */
-	let select1: HTMLEnhancedSelectElement<User, number> | undefined;
+	let select1: HTMLEnhancedSelectElement<User> | undefined;
 
 	/** TODOC */
-	let select2: HTMLEnhancedSelectElement<User, number> | undefined;
+	let select2: HTMLEnhancedSelectElement<User> | undefined;
 
 	/** TODOC */
 	const users: User[] = [
@@ -58,7 +58,7 @@
 <h2>Multiple search props</h2>
 <p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}, filtered: {select1?.filtered.length}</p>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">
-	<EnhancedSelect name="user" bind:self={select1} pool={users} value="3" force>
+	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} force>
 		<svelte:fragment>
 			<input type="search" placeholder="Name" name="name" bind:this={input} />
 			<input type="search" placeholder="Username" name="username" />

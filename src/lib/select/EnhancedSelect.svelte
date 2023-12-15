@@ -1,27 +1,26 @@
 <script lang="ts">
 	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
-	import { onDestroy, tick } from "svelte";
-	import { isObject } from "$lib/types";
-	import { createEventDispatcher } from "svelte";
+	import { createEventDispatcher, onDestroy, tick } from "svelte";
+	import { ensureObject, isObject } from "$lib/types";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement";
 
 	/** TODOC */
 	type T = $$Generic;
 
-	/** TODOC */
-	type K = $$Generic;
+	// /** TODOC */
+	// type K = $$Generic;
 
 	/** TODOC */
 	const DEFAULT_NAME = "[DEFAULT]";
 
 	/** TODOC */
-	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelectElement<T, K> }>();
+	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelectElement<T> }>();
 
 	/** For binding */
-	export let value: K | null = null;
+	export let value: unknown | null = null;
 
 	/** For binding */
-	export let values: (K | null)[] = [];
+	export let values: (unknown | null)[] = [];
 
 	/** TODOC */
 	export let name = "";
@@ -49,7 +48,7 @@
 	export { cssClass as class };
 
 	/** TODOC */
-	export const self: HTMLEnhancedSelectElement<T, K> = {
+	export const self: HTMLEnhancedSelectElement<T> = {
 		name,
 		value: null,
 		values: [],
@@ -74,7 +73,7 @@
 	let filtered: T[] = [];
 
 	/** TODOC */
-	let options: HTMLEnhancedOptionElement<T, K>[] = [];
+	let options: HTMLEnhancedOptionElement<T>[] = [];
 
 	/** TODOC */
 	let selectedIndex = 0;
@@ -147,26 +146,7 @@
 		}
 		options = options;
 
-		if (!open) {
-			// These need to be set up again when re-rendered
-			scrollBox = null;
-			optionContainer = null;
-			return;
-		} else {
-			scrollToOptionIfNeeded();
-		}
-
-		// Check if selectedIndex is still in range
-		const last = options.length - 1;
-		if (hovered >= last) {
-			// Wrap to closest
-			const distanceToZero = Math.abs(hovered);
-			const distanceToB = Math.abs(hovered - last);
-
-			if (distanceToZero < distanceToB) hovered = 0;
-			else hovered = last;
-		}
-		selectedIndex = hovered;
+		if (open) scrollToOptionIfNeeded();
 	}
 
 	/** TODOC */
@@ -181,7 +161,8 @@
 				const style = window.getComputedStyle(node);
 				const canScroll = (overflow: string) => ["auto", "scroll"].includes(overflow);
 				if (canScroll(style.overflow) || canScroll(style.overflowX) || canScroll(style.overflowY)) scrollBox = node;
-			}
+			} else if (action === "removed" && scrollBox === node) scrollBox = null;
+			if (action === "removed" && scrollBox === optionContainer) optionContainer = null;
 
 			if (
 				node instanceof HTMLInputElement &&
@@ -195,6 +176,7 @@
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : DEFAULT_NAME;
 					search[name] = node;
+					searchValues[name] = node.value;
 					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
 					node.addEventListener("click", openAndFocus);
@@ -214,20 +196,21 @@
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
 		if (!focused) return;
-		if (!open && e.key === "Enter") {
+		if ((!open && e.key === "Enter") || (e.key === "Enter" && e.ctrlKey)) {
 			close();
 			return;
 		}
+		open = true;
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
-				if (hovered <= 0) hovered = options.length - 1;
-				else hovered--;
+				if (hovered <= 0) return;
+				hovered--;
 				break;
 			case "ArrowDown":
 				e.preventDefault();
-				if (hovered >= options.length - 1) hovered = 0;
-				else hovered++;
+				if (hovered >= options.filter((o) => !!o.element).length - 1) return;
+				hovered++;
 				break;
 			case "Enter":
 				{
@@ -287,7 +270,7 @@
 	}
 
 	/** Called when the decision has been made to select an option */
-	function selectElement(e: HTMLEnhancedOptionElement<T, K>): void {
+	function selectElement(e: HTMLEnhancedOptionElement<T>): void {
 		if (multiple) {
 			if (e.togglesAll) {
 				const allChecked = options.every((o) => o.checked);
@@ -324,24 +307,24 @@
 	}
 
 	/** TODOC */
-	function updateDisplay(value: K | null): void {
+	function updateDisplay(value: unknown | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
-		const item = options.find((o) => o.value === value);
-		if (isObject(item)) {
-			Object.keys(search).forEach((key) => {
-				if (key in search && key in item) {
-					const ref = search[key];
-					ref.value = `${item[key]}`;
-				}
-			});
-		} else if (search[DEFAULT_NAME]) {
-			const ref = search[DEFAULT_NAME];
-			ref.value = `${item}`;
-		}
+		const option = options.find((o) => o.value === value);
+		Object.keys(search).forEach((key) => {
+			if (key in search) {
+				const ref = search[key];
+				if (key === DEFAULT_NAME) ref.value = `${option?.item}`;
+				else if (isObject(option?.item)) ref.value = `${option.item[key]}`;
+				else ref.value = "";
+				searchValues[key] = ref.value;
+			}
+		});
+
+		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** TODOC */
-	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T, K>[]): void {
+	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T>[]): void {
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i].element;
 			if (!el) continue;
@@ -366,20 +349,12 @@
 		if (!force && !multiple) return;
 
 		// First try to find based on search
-		let item = pool.find((item) =>
-			isObject(item)
-				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
-				: search[DEFAULT_NAME]?.value.toLowerCase() === `${item}`.toLowerCase()
-		);
+		const item = getItemMatchingSearch(pool, searchValues);
+		const option = options.find((o) => o.item === item);
 
 		// If not found, do not change value and explicitly revert display
-		if (typeof item === "undefined") {
-			updateDisplay(value);
-		} else if (isObject(item)) {
-			value = item[key] as K;
-		} else {
-			value = item as K;
-		}
+		if (typeof option === "undefined") updateDisplay(value);
+		else value = option.value;
 	}
 
 	/** TODOC */
@@ -401,20 +376,20 @@
 	}
 
 	/** TODOC */
-	function createIsChecked(multiple: boolean, value: K | null, values: K[]): (item: T) => boolean {
+	function createIsChecked(multiple: boolean, value: unknown | null, values: unknown[]): (item: T) => boolean {
 		return () => false;
 		// if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
 		// else return (item) => (isObject(item) && key ? value === item[key] : value === item);
 	}
 
 	/** TODOC */
-	function createAllChecked(filtered: T[], values: K[]): () => boolean {
+	function createAllChecked(filtered: T[], values: unknown[]): () => boolean {
 		return () => false;
 		// return () => filtered.every((item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K)));
 	}
 
 	/** TODOC */
-	function registerOption(option: HTMLEnhancedOptionElement<T, K>): void {
+	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
 		if (!option.element || options.includes(option)) return;
 
 		option.element.setAttribute("tabindex", "0");
@@ -468,19 +443,40 @@
 	}
 
 	/** TODOC */
+	function getItemMatchingSearch(options: T[], search: Record<string, string>): T | null {
+		return (
+			options.find((item) =>
+				isObject(item)
+					? Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())
+					: search[DEFAULT_NAME]?.toLowerCase() === `${item}`.toLowerCase()
+			) ?? null
+		);
+	}
+
+	/** TODOC */
+	function checkHoverOverflow(): void {
+		const last = options.filter((o) => !!o.element).length - 1;
+		if (hovered >= last) {
+			// Wrap to closest
+			const distanceToZero = Math.abs(hovered);
+			const distanceToB = Math.abs(hovered - last);
+
+			if (distanceToZero < distanceToB) hovered = 0;
+			else hovered = last;
+		}
+		selectedIndex = hovered;
+	}
+
+	/** TODOC */
 	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
 		return (options) => {
 			pool = options;
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
-			const item = options.find((item) =>
-				isObject(item)
-					? Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())
-					: search[DEFAULT_NAME]?.toLowerCase() === `${item}`.toLowerCase()
-			);
+			const item = getItemMatchingSearch(options, search);
 			if (isObject(item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())) {
 				filtered = Array.from(options);
-			} else if (`${item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase() && (item === value || values.includes(item as K))) {
+			} else if (`${item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
 				filtered = Array.from(options);
 			} else {
 				filtered = Object.keys(search).reduce<T[]>(
@@ -493,6 +489,9 @@
 					Array.from(options)
 				);
 			}
+
+			// Check if selectedIndex is still in range
+			tick().then(checkHoverOverflow);
 			return filtered;
 		};
 	}
