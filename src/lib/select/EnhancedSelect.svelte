@@ -1,8 +1,9 @@
 <script lang="ts">
-	import type { HTMLEnhancedSelect } from "$lib/select/HTMLEnhancedSelect";
+	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
 	import { onDestroy, tick } from "svelte";
 	import { isObject } from "$lib/types";
 	import { createEventDispatcher } from "svelte";
+	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement";
 
 	/** TODOC */
 	type T = $$Generic;
@@ -11,16 +12,16 @@
 	type K = $$Generic;
 
 	/** TODOC */
-	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelect<T> }>();
+	const DEFAULT_NAME = "[DEFAULT]";
 
-	/** Property name for value */
-	export let key = "";
-
-	/** For binding */
-	export let value: K | null | undefined = void 0;
+	/** TODOC */
+	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelectElement<T, K> }>();
 
 	/** For binding */
-	export let values: K[] = [];
+	export let value: K | null = null;
+
+	/** For binding */
+	export let values: (K | null)[] = [];
 
 	/** TODOC */
 	export let name = "";
@@ -40,9 +41,6 @@
 	/** Multiple or single select */
 	export let multiple = false;
 
-	/** TODOC */
-	export let open: boolean = false;
-
 	/** Element to focus after closing */
 	export let reFocus: HTMLElement | null = null;
 
@@ -51,9 +49,9 @@
 	export { cssClass as class };
 
 	/** TODOC */
-	export const self: HTMLEnhancedSelect<T> = {
+	export const self: HTMLEnhancedSelectElement<T, K> = {
 		name,
-		value: "",
+		value: null,
 		values: [],
 		pool,
 		filtered: pool,
@@ -69,17 +67,26 @@
 		}
 	};
 
+	/** When the EnhancedSelect expects the container to be open if gated behind an `#if`-block */
+	let open: boolean;
+
 	/** TODOC */
 	let filtered: T[] = [];
 
 	/** TODOC */
-	let options: HTMLElement[] = [];
+	let options: HTMLEnhancedOptionElement<T, K>[] = [];
 
 	/** TODOC */
 	let selectedIndex = 0;
 
 	/** TODOC */
 	let search: Record<string, HTMLInputElement> = {};
+
+	/** TODOC */
+	let searchValues: Record<string, string> = {};
+
+	/** TODOC */
+	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
 
 	/** TODOC */
 	let hovered = selectedIndex;
@@ -99,40 +106,24 @@
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
 
-	// Convert value to number if it can be
-	$: value = (Number(value) || value) as K;
-
 	// TODOC
 	$: setUpObserver(container);
 
 	// TODOC
 	$: updateHighlighted(hovered, options);
 
-	// TODOC
-	$: filtered = getOptions(pool, search);
-
 	// Update display when value changes
 	$: updateDisplay(value);
 
 	// Update all references
-	$: self.value = `${value}`;
-	$: self.values = values.map((value) => `${value}`);
+	$: self.value = value;
+	$: self.values = values;
 	$: self.search = search;
-	$: self.filtered = filtered;
-	$: self.pool = pool;
 	$: self.options = options;
+	$: self.pool = pool;
+	$: self.filtered = filtered;
 	$: self.selectedIndex = selectedIndex;
 	$: self.name = name;
-
-	// Need to blur then display slot is destroyed
-	$: if ($$slots["display"]) {
-		if (open) {
-			const first = Object.keys(search)[0];
-			search[first]?.focus();
-		} else {
-			closeAndBlur();
-		}
-	}
 
 	// TODOC
 	onDestroy(() => {
@@ -150,8 +141,8 @@
 	function mutationCallback(mutationsList: MutationRecord[]): void {
 		for (const mutation of mutationsList) {
 			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach((node) => searchForValueAttribute(node, "added"));
-				mutation.removedNodes.forEach((node) => searchForValueAttribute(node, "removed"));
+				mutation.addedNodes.forEach((node) => searchForOptions(node, "added"));
+				mutation.removedNodes.forEach((node) => searchForOptions(node, "removed"));
 			}
 		}
 		options = options;
@@ -179,11 +170,11 @@
 	}
 
 	/** TODOC */
-	function searchForValueAttribute(node: Node, action: "removed" | "added") {
+	function searchForOptions(node: Node, action: "removed" | "added") {
 		// Check if the node is an Element and has a 'value' attribute; these are options
 		if (node.nodeType === Node.ELEMENT_NODE && node instanceof HTMLElement) {
-			node.addEventListener("blur", onBlur);
-			node.addEventListener("focus", onFocus);
+			// node.addEventListener("blur", onBlur);
+			// node.addEventListener("focus", onFocus);
 
 			// Check if element is scroll box
 			if (!scrollBox) {
@@ -192,21 +183,7 @@
 				if (canScroll(style.overflow) || canScroll(style.overflowX) || canScroll(style.overflowY)) scrollBox = node;
 			}
 
-			if (node.hasAttribute("value")) {
-				if (action === "added" && !options.includes(node)) {
-					options.push(node);
-					node.addEventListener("mouseover", onMouseover);
-					node.addEventListener("click", onClick);
-					node.setAttribute("tabindex", "-1");
-					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
-					if (!optionContainer && node.parentElement) {
-						optionContainer = node.parentElement;
-						optionContainer.addEventListener("mouseout", onMouseout);
-					}
-				} else if (action === "removed" && options.includes(node)) {
-					options.splice(options.indexOf(node), 1);
-				}
-			} else if (
+			if (
 				node instanceof HTMLInputElement &&
 				!node.hasAttribute("readonly") &&
 				!node.getAttribute("readonly") &&
@@ -216,7 +193,7 @@
 			) {
 				if (action === "added") {
 					node.setAttribute("autocomplete", "off");
-					const name = node.name ? node.name : "[DEFAULT]";
+					const name = node.name ? node.name : DEFAULT_NAME;
 					search[name] = node;
 					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
@@ -230,28 +207,17 @@
 
 		// If the node has child nodes, recursively search them
 		if (node.hasChildNodes()) {
-			node.childNodes.forEach((node) => searchForValueAttribute(node, action));
+			node.childNodes.forEach((node) => searchForOptions(node, action));
 		}
-	}
-
-	/** TODOC */
-	function onMouseover(e: Event): void {
-		if (!(e.target instanceof HTMLElement)) return;
-		hovered = options.indexOf(e.target);
-	}
-
-	/** TODOC */
-	function onMouseout(): void {
-		hovered = selectedIndex;
 	}
 
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
-		if (!open && e.target instanceof Node && container?.contains(e.target)) {
-			if (!["Enter", " "].includes(e.key)) open = true;
-			if (!["Enter", "Escape", " "].includes(e.key)) return;
+		if (!focused) return;
+		if (!open && e.key === "Enter") {
+			close();
+			return;
 		}
-		if (!global && !focused) return;
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
@@ -264,14 +230,19 @@
 				else hovered++;
 				break;
 			case "Enter":
+				{
+					e.preventDefault();
+					if (multiple) return;
+					const item = options[hovered];
+					if (item) selectElement(item);
+				}
+				break;
 			case " ":
-				if (e.key === "Enter" && (!open || e.ctrlKey)) return;
-				if (!multiple || (multiple && e.key === " " && e.ctrlKey)) {
+				{
+					if (!multiple || !e.ctrlKey) return;
 					e.preventDefault();
 					const item = options[hovered];
 					if (item) selectElement(item);
-				} else if (multiple && e.key === "Enter") {
-					close();
 				}
 				break;
 			case "Escape":
@@ -289,8 +260,8 @@
 	/** TODOC */
 	function scrollToOptionIfNeeded(): void {
 		const item = options[hovered];
-		if (!item || !scrollBox) return;
-		const rect = item.getBoundingClientRect();
+		if (!item || !scrollBox || !item.element) return;
+		const rect = item.element.getBoundingClientRect();
 		const boxRect = scrollBox.getBoundingClientRect();
 		// Checking visibility with respect to the scroll position
 		const isVisible = rect.top >= boxRect.top && rect.bottom <= boxRect.bottom;
@@ -308,51 +279,38 @@
 	}
 
 	/** TODOC */
-	function onInput(): void {
-		filtered = getOptions(pool, search);
-	}
-
-	/** TODOC */
-	function onClick(this: HTMLElement): void {
-		selectElement(this);
+	function onInput(this: HTMLInputElement): void {
+		const name = this.getAttribute("name")?.toString();
+		if (name) searchValues[name] = this.value;
+		else searchValues[DEFAULT_NAME] = this.value;
+		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** Called when the decision has been made to select an option */
-	function selectElement(e: HTMLElement): void {
-		const attributeValue = e.getAttribute("value");
+	function selectElement(e: HTMLEnhancedOptionElement<T, K>): void {
 		if (multiple) {
-			const val = Number(attributeValue) || attributeValue;
-			// If value does not exist we treat it as a "check all/uncheck all" option
-			const exists = pool.some((item) => (isObject(item) && key ? item[key] === val : item === val));
-			if (exists) {
-				if (!values.includes(val as K)) {
-					values.push(val as K);
-				} else {
-					const index = values.indexOf(val as K);
-					if (index !== -1) values.splice(index, 1);
-				}
-				values = values;
-			} else {
-				const allCheckedFunc = createAllChecked(filtered, values);
-				const allChecked = allCheckedFunc();
+			if (e.togglesAll) {
+				const allChecked = options.every((o) => o.checked);
 				if (allChecked) values = [];
-				else values = filtered.map((item) => (isObject(item) && key ? ((Number(item[key]) || item[key]) as K) : ((Number(item) || item) as K)));
+				else values = options.map((o) => o.value);
+			} else {
+				if (!values.includes(e.value)) values = values.concat(e.value);
+				else values = values.filter((v) => v !== e.value);
 			}
 		} else {
 			const oldValue = value;
-			if (!attributeValue) value = "" as K;
-			else value = attributeValue as K;
+			value = e.value;
 
 			// We have to manually update in this case
 			if (value === oldValue) updateDisplay(value);
 
 			// After selecting we want to display all options again (this needs to happen after the reactive update based on value change)
-			tick().then(() => (filtered = getOptions(pool, search)));
+			// tick().then(() => (filterOptions = getFilterOptions(searchValues)));
 
 			close();
 		}
 
-		hovered = options.indexOf(e);
+		hovered = options.findIndex((o) => o.element === e.element);
 		selectedIndex = hovered;
 
 		// Change must happen after self has been updated
@@ -362,14 +320,13 @@
 	/** TODOC */
 	function clearSearch(): void {
 		Object.keys(search).forEach((key) => (search[key].value = ""));
+		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** TODOC */
-	function updateDisplay(value: K | null | undefined): void {
+	function updateDisplay(value: K | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
-		const item = pool.find((item) =>
-			isObject(item) && key ? `${value}`.toLowerCase() === `${item[key]}`.toLowerCase() : `${item}`.toLowerCase() === `${value}`.toLowerCase()
-		);
+		const item = options.find((o) => o.value === value);
 		if (isObject(item)) {
 			Object.keys(search).forEach((key) => {
 				if (key in search && key in item) {
@@ -377,32 +334,20 @@
 					ref.value = `${item[key]}`;
 				}
 			});
-		} else if (search["[DEFAULT]"]) {
-			const ref = search["[DEFAULT]"];
+		} else if (search[DEFAULT_NAME]) {
+			const ref = search[DEFAULT_NAME];
 			ref.value = `${item}`;
 		}
 	}
 
 	/** TODOC */
-	function updateHighlighted(hovered: number, options: HTMLElement[]): void {
+	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T, K>[]): void {
 		for (let i = 0; i < options.length; ++i) {
-			if (i === hovered) options[i].classList.add("highlighted");
-			else options[i].classList.remove("highlighted");
+			const el = options[i].element;
+			if (!el) continue;
+			if (i === hovered) el.classList.add("highlighted");
+			else el.classList.remove("highlighted");
 		}
-	}
-
-	/** TODOC */
-	function onBlur(e: FocusEvent): void {
-		if (!container) return;
-		if (e.relatedTarget instanceof Node) {
-			if (container.contains(e.relatedTarget)) return;
-		}
-		closeAndBlur();
-	}
-
-	/** TODOC */
-	function onFocus(): void {
-		openAndFocus();
 	}
 
 	/** TODOC */
@@ -410,36 +355,6 @@
 		if (!container) return;
 		if (e.target instanceof Node && container.contains(e.target)) return;
 		open = false; // This should always close even if keepOpen
-	}
-
-	/** TODOC */
-	function getOptions(pool: T[], search: Record<string, HTMLInputElement>): T[] {
-		// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
-		const item = pool.find((item) =>
-			isObject(item)
-				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
-				: search["[DEFAULT]"]?.value.toLowerCase() === `${item}`.toLowerCase()
-		);
-		if (
-			isObject(item) &&
-			key &&
-			(item[key] === value || values.includes(item[key] as K)) &&
-			Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
-		) {
-			return Array.from(pool);
-		} else if (`${item}`.toLowerCase() === search["[DEFAULT]"]?.value.toLowerCase() && (item === value || values.includes(item as K))) {
-			return Array.from(pool);
-		}
-
-		return Object.keys(search).reduce<T[]>(
-			(prev, curr) =>
-				prev.filter((item) => {
-					const val = search[curr].value.toLowerCase();
-					if (!val) return true; // If no search, display all
-					return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
-				}),
-			Array.from(pool)
-		);
 	}
 
 	/** TODOC */
@@ -454,7 +369,7 @@
 		let item = pool.find((item) =>
 			isObject(item)
 				? Object.keys(search).every((key) => search[key].value.toLowerCase() === `${item[key]}`.toLowerCase())
-				: search["[DEFAULT]"]?.value.toLowerCase() === `${item}`.toLowerCase()
+				: search[DEFAULT_NAME]?.value.toLowerCase() === `${item}`.toLowerCase()
 		);
 
 		// If not found, do not change value and explicitly revert display
@@ -486,14 +401,100 @@
 	}
 
 	/** TODOC */
-	function createIsChecked(multiple: boolean, value: K | null | undefined, values: K[]): (item: T) => boolean {
-		if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
-		else return (item) => (isObject(item) && key ? value === item[key] : value === item);
+	function createIsChecked(multiple: boolean, value: K | null, values: K[]): (item: T) => boolean {
+		return () => false;
+		// if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
+		// else return (item) => (isObject(item) && key ? value === item[key] : value === item);
 	}
 
 	/** TODOC */
 	function createAllChecked(filtered: T[], values: K[]): () => boolean {
-		return () => filtered.every((item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K)));
+		return () => false;
+		// return () => filtered.every((item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K)));
+	}
+
+	/** TODOC */
+	function registerOption(option: HTMLEnhancedOptionElement<T, K>): void {
+		if (!option.element || options.includes(option)) return;
+
+		option.element.setAttribute("tabindex", "0");
+		option.element.addEventListener("click", onClick);
+		option.element.addEventListener("mouseover", onMouseover);
+		option.element.addEventListener("mouseout", onMouseout);
+
+		options = options
+			.concat(option)
+			.filter((o) => o.element !== null)
+			.sort((a, b) => {
+				if (typeof document === "undefined") return 0;
+				if (a.element!.compareDocumentPosition(b.element!) & Node.DOCUMENT_POSITION_PRECEDING) {
+					return 1;
+				} else {
+					return -1;
+				}
+			});
+	}
+
+	/** TODOC */
+	function onClick(this: HTMLDivElement): void {
+		const option = options.find((o) => o.element === this);
+		if (!option) return;
+		selectElement(option);
+	}
+
+	/** TODOC */
+	function onMouseover(e: Event): void {
+		if (!(e.target instanceof HTMLElement)) return;
+		hovered = options.findIndex((o) => o.element === <HTMLDivElement>e.target);
+	}
+
+	/** TODOC */
+	function onMouseout(): void {
+		hovered = selectedIndex;
+	}
+
+	/** TODOC */
+	function onBlur(e: FocusEvent): void {
+		if (!container) return;
+		if (e.relatedTarget instanceof Node) {
+			if (container.contains(e.relatedTarget)) return;
+		}
+		closeAndBlur();
+	}
+
+	/** TODOC */
+	function onFocus(): void {
+		openAndFocus();
+	}
+
+	/** TODOC */
+	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
+		return (options) => {
+			pool = options;
+
+			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
+			const item = options.find((item) =>
+				isObject(item)
+					? Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())
+					: search[DEFAULT_NAME]?.toLowerCase() === `${item}`.toLowerCase()
+			);
+			if (isObject(item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())) {
+				filtered = Array.from(options);
+			} else if (`${item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase() && (item === value || values.includes(item as K))) {
+				filtered = Array.from(options);
+			} else {
+				filtered = Object.keys(search).reduce<T[]>(
+					(prev, curr) =>
+						prev.filter((item) => {
+							const val = search[curr].toLowerCase();
+							if (!val) return true; // If no search, display all
+							return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
+						}),
+					Array.from(options)
+				);
+			}
+			return filtered;
+		};
 	}
 </script>
 
@@ -512,14 +513,8 @@
 {/if}
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
 	{#if observer}
-		{#if $$slots["display"] && multiple && !focused && !open}
-			<slot name="display" {clearSearch} isChecked={createIsChecked(multiple, value, values)} />
-		{:else}
-			<slot name="search" {clearSearch} isChecked={createIsChecked(multiple, value, values)} />
-		{/if}
-		{#if open}
-			<slot name="options" options={filtered} isChecked={createIsChecked(multiple, value, values)} allChecked={createAllChecked(filtered, values)} />
-		{/if}
+		<slot {clearSearch} />
+		<slot name="options" {registerOption} {filterOptions} {container} {open} />
 	{/if}
 </div>
 

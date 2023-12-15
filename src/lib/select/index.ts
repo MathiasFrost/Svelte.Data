@@ -1,1 +1,1 @@
-export type { HTMLEnhancedSelect } from "$lib/select/HTMLEnhancedSelect.js";
+export type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";

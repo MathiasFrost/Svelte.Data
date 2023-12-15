@@ -1,6 +1,9 @@
 <script lang="ts">
 	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
-	import type { HTMLEnhancedSelect } from "$lib/select/HTMLEnhancedSelect";
+	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
+	import EnhancedOption from "$lib/select/EnhancedOption.svelte";
+	import Popup from "$lib/popup/Popup.svelte";
+	import { fade } from "svelte/transition";
 
 	/** TODOC */
 	interface User {
@@ -10,10 +13,10 @@
 	}
 
 	/** TODOC */
-	let select1: HTMLEnhancedSelect<User> | undefined;
+	let select1: HTMLEnhancedSelectElement<User, number> | undefined;
 
 	/** TODOC */
-	let select2: HTMLEnhancedSelect<User> | undefined;
+	let select2: HTMLEnhancedSelectElement<User, number> | undefined;
 
 	/** TODOC */
 	const users: User[] = [
@@ -53,105 +56,103 @@
 </select>
 
 <h2>Multiple search props</h2>
-<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}</p>
+<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}, filtered: {select1?.filtered.length}</p>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">
-	<EnhancedSelect name="user" bind:self={select1} pool={users} key="id" value="3" force>
-		<svelte:fragment slot="search">
+	<EnhancedSelect name="user" bind:self={select1} pool={users} value="3" force>
+		<svelte:fragment>
 			<input type="search" placeholder="Name" name="name" bind:this={input} />
 			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
-		<div slot="options" class="dropdown-content" let:options>
-			<div class="selector">
-				<option value={null} />
-				{#each options as option}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</div>
+		<div slot="options" class="selector" let:registerOption let:filterOptions>
+			<EnhancedOption {registerOption} togglesAll />
+			{#each filterOptions(users) as user}
+				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
+			{/each}
 		</div>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
 </form>
 
-<h2>Simple</h2>
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} key="id" value="3" force>
-		<input slot="search" type="search" placeholder="Employee" name="name" style="width: 100%;" />
-		<div slot="options" class="dropdown-content" let:options>
-			<div class="selector">
-				<option value={null} />
-				{#each options as option}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</div>
-		</div>
-	</EnhancedSelect>
-</form>
+<!--<h2>Simple</h2>-->
+<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
+<!--	<EnhancedSelect name="user" pool={users} key="id" value="3" force>-->
+<!--		<input slot="search" type="search" placeholder="Employee" name="name" style="width: 100%;" />-->
+<!--		<div slot="options" class="dropdown-content" let:options>-->
+<!--			<div class="selector">-->
+<!--				<option value={null} />-->
+<!--				{#each options as option}-->
+<!--					<option value={option.id}>{option.name}</option>-->
+<!--				{/each}-->
+<!--			</div>-->
+<!--		</div>-->
+<!--	</EnhancedSelect>-->
+<!--</form>-->
 
-<h2>Multiple</h2>
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>
-		<div slot="search" style="width: 100%;" let:isChecked>
-			<p>Selected: {users.filter((user) => isChecked(user)).map((user) => user.username)}</p>
-			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
-		</div>
-		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
-			<div class="selector">
-				<option value={null}>
-					<input tabindex="0" type="checkbox" checked={allChecked()} />
-					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
-				</option>
-				{#each options as option}
-					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>
-				{/each}
-			</div>
-		</div>
-	</EnhancedSelect>
-	<button type="submit">submit</button>
-</form>
+<!--<h2>Multiple</h2>-->
+<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
+<!--	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>-->
+<!--		<div slot="search" style="width: 100%;" let:isChecked>-->
+<!--			<p>Selected: {users.filter((user) => isChecked(user)).map((user) => user.username)}</p>-->
+<!--			<input type="search" style="width: 100%" placeholder="Employee" name="name" />-->
+<!--		</div>-->
+<!--		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>-->
+<!--			<div class="selector">-->
+<!--				<option value={null}>-->
+<!--					<input tabindex="0" type="checkbox" checked={allChecked()} />-->
+<!--					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})-->
+<!--				</option>-->
+<!--				{#each options as option}-->
+<!--					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>-->
+<!--				{/each}-->
+<!--			</div>-->
+<!--		</div>-->
+<!--	</EnhancedSelect>-->
+<!--	<button type="submit">submit</button>-->
+<!--</form>-->
 
-<h2>Multiple with simple display</h2>
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>
-		<input
-			slot="display"
-			type="text"
-			readonly
-			style="width: 100%"
-			let:isChecked
-			value={users
-				.filter(isChecked)
-				.map((user) => user.username)
-				.join(", ")} />
-		<input slot="search" type="search" style="width: 100%" placeholder="Employee" name="name" />
-		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
-			<div class="selector">
-				<option value={null}>
-					<input tabindex="0" type="checkbox" checked={allChecked()} />
-					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
-				</option>
-				{#each options as option}
-					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>
-				{/each}
-			</div>
-		</div>
-	</EnhancedSelect>
-	<button type="submit">submit</button>
-</form>
+<!--<h2>Multiple with simple display</h2>-->
+<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
+<!--	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" value="3" force multiple>-->
+<!--		<input-->
+<!--			slot="display"-->
+<!--			type="text"-->
+<!--			readonly-->
+<!--			style="width: 100%"-->
+<!--			let:isChecked-->
+<!--			value={users-->
+<!--				.filter(isChecked)-->
+<!--				.map((user) => user.username)-->
+<!--				.join(", ")} />-->
+<!--		<input slot="search" type="search" style="width: 100%" placeholder="Employee" name="name" />-->
+<!--		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>-->
+<!--			<div class="selector">-->
+<!--				<option value={null}>-->
+<!--					<input tabindex="0" type="checkbox" checked={allChecked()} />-->
+<!--					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})-->
+<!--				</option>-->
+<!--				{#each options as option}-->
+<!--					<option value={option.id}><input tabindex="0" type="checkbox" checked={isChecked(option)} />{option.name}</option>-->
+<!--				{/each}-->
+<!--			</div>-->
+<!--		</div>-->
+<!--	</EnhancedSelect>-->
+<!--	<button type="submit">submit</button>-->
+<!--</form>-->
 
-<h2>Stylized select</h2>
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} key="id" value="3">
-		<input slot="search" type="search" readonly let:isChecked value={users.find(isChecked)?.name} />
-		<div slot="options" class="dropdown-content open" let:options>
-			<div class="selector">
-				<option value={null} />
-				{#each options as option}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</div>
-		</div>
-	</EnhancedSelect>
-</form>
+<!--<h2>Stylized select</h2>-->
+<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
+<!--	<EnhancedSelect name="user" pool={users} key="id" value="3">-->
+<!--		<input slot="search" type="search" readonly let:isChecked value={users.find(isChecked)?.name} />-->
+<!--		<div slot="options" class="dropdown-content open" let:options>-->
+<!--			<div class="selector">-->
+<!--				<enhanced-option value={null} />-->
+<!--				{#each options as option}-->
+<!--					<enhanced-option value={option.id}>{option.name}</enhanced-option>-->
+<!--				{/each}-->
+<!--			</div>-->
+<!--		</div>-->
+<!--	</EnhancedSelect>-->
+<!--</form>-->
 
 <style>
 	:global(.highlighted) {

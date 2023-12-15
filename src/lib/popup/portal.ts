@@ -17,7 +17,7 @@ export function portalOut(node: HTMLElement, id = "default") {
 }
 
 /** Mount a new Svelte component */
-function mount(node: HTMLElement, key: string) {
+export function mount(node: HTMLElement, key: string) {
 	if (!portalMap.has(key)) throw `unknown portal ${key}`;
 	const host = portalMap.get(key);
 	host?.insertBefore(node, null as Node | null);
@@ -35,6 +35,3 @@ export function portalIn(node: HTMLElement, id = "default") {
 	else destroy = mount(node, key);
 	return { destroy: () => destroy?.() };
 }
-
-/** Make element respawn at original location */
-export function pullBack() {}

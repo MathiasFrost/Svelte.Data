@@ -19,6 +19,9 @@
 	export let open = false;
 
 	/** TODOC */
+	export let modalSmall = false;
+
+	/** TODOC */
 	export let anchor: Element | null = null;
 
 	/** TODOC */
@@ -64,6 +67,9 @@
 	/** TODOC */
 	let position: { x: number; y: number } | null = null;
 
+	/** TODOC */
+	let destroy: (() => void) | undefined;
+
 	/** @see HTMLPopupElement */
 	export const self: HTMLPopupElement = {
 		showPopup(arg: HTMLElement | null | { x: number; y: number }) {
@@ -91,7 +97,21 @@
 			portalOut(popupsContainer, portalKey);
 		}
 
-		anchor = popupContainer?.previousElementSibling ?? null;
+		anchor ??= popupContainer?.previousElementSibling ?? null;
+
+		// Check if the anchor is null and popupContainer is not null
+		if (!anchor && popupContainer) {
+			let currentElement: Element | null = popupContainer;
+
+			// Loop until you find a previous sibling or reach the body element
+			while (currentElement.parentElement && currentElement.parentElement !== document.body) {
+				currentElement = currentElement.parentElement;
+				if (currentElement.previousElementSibling) {
+					anchor = currentElement.previousElementSibling;
+					break;
+				}
+			}
+		}
 	});
 
 	// cleanup
@@ -118,6 +138,7 @@
 				anchor.removeEventListener("mouseout", onMouseout);
 				break;
 		}
+		destroy?.();
 	});
 
 	// TODOC
@@ -126,6 +147,7 @@
 	// TODOC
 	$: setUpAnchor(anchor, auto);
 
+	/** TODOC */
 	function setUpAnchor(anchor: Element | null, auto: boolean | "contextmenu" | "hover"): void {
 		if (typeof window !== "undefined" && [auto, "contextmenu"].includes(auto)) {
 			window.addEventListener("click", onWindowClick);
@@ -195,10 +217,14 @@
 			while (activePopups.includes(id)) ++id;
 			activePopups.push(id);
 
-			const rect: DOMRect | null = await calculateBounds();
-			if (!rect || !anchor || !popupContainer || !child) return;
+			await tick(); // Wait for child
+			if (!anchor || !popupContainer || !child) return;
 
-			const anchorRect = anchor.getBoundingClientRect();
+			destroy = portalIn(popupContainer, portalKey).destroy;
+			const rect: DOMRect | null = await calculateBounds();
+			if (!rect) return;
+
+			const anchorRect = PopupHelper.getBoundsOfDisplayContents(anchor);
 
 			const targetTop: number = position ? position.y : anchorRect.top;
 			const targetBottom: number = position ? position.y : anchorRect.bottom;
@@ -214,56 +240,61 @@
 			let maxWidth: null | number = null;
 			let minWidth: null | number = null;
 
-			const anchorStyles = window.getComputedStyle(anchor);
-			switch (justify) {
-				case "above":
-					{
-						if (contain) maxWidth = anchorRect.width;
-						else minWidth = anchorRect.width;
-						const anchorMarginTop = parseInt(anchorStyles.marginTop, 10);
-						bottom = (window.visualViewport?.height ?? window.innerHeight) - targetTop + window.scrollY + anchorMarginTop;
+			const viewWidth = window.visualViewport?.width ?? window.innerWidth;
+			const viewHeight = window.visualViewport?.height ?? window.innerHeight;
 
-						left = targetLeft + window.scrollX;
-						minWidth = anchorRect.width;
-					}
-					break;
-				case "below":
-					{
-						if (contain) maxWidth = anchorRect.width;
-						else minWidth = anchorRect.width;
-						const anchorMarginBottom = parseInt(anchorStyles.marginBottom, 10);
-						top = targetBottom + window.scrollY + anchorMarginBottom;
+			if (!modalSmall || viewWidth > 600) {
+				const anchorStyles = window.getComputedStyle(anchor);
+				switch (justify) {
+					case "above":
+						{
+							if (contain) maxWidth = anchorRect.width;
+							else minWidth = anchorRect.width;
+							const anchorMarginTop = parseInt(anchorStyles.marginTop, 10);
+							bottom = viewHeight - targetTop + window.scrollY + anchorMarginTop;
 
-						left = targetLeft + window.scrollX;
-						minWidth = anchorRect.width;
-					}
-					break;
-				case "left":
-					{
-						if (contain) maxHeight = anchorRect.height;
-						else minHeight = anchorRect.height;
-						const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
-						right = (window.visualViewport?.width ?? window.innerWidth) - targetLeft + window.scrollX + anchorMarginLeft;
+							left = targetLeft + window.scrollX;
+							minWidth = anchorRect.width;
+						}
+						break;
+					case "below":
+						{
+							if (contain) maxWidth = anchorRect.width;
+							else minWidth = anchorRect.width;
+							const anchorMarginBottom = parseInt(anchorStyles.marginBottom, 10);
+							top = targetBottom + window.scrollY + anchorMarginBottom;
 
-						top = targetTop + window.scrollY;
-						minHeight = anchorRect.height;
-					}
-					break;
-				case "right":
-					{
-						if (contain) maxHeight = anchorRect.height;
-						else minHeight = anchorRect.height;
-						const anchorMarginRight = parseInt(anchorStyles.marginRight, 10);
-						left = targetRight + window.scrollX + anchorMarginRight;
+							left = targetLeft + window.scrollX;
+							minWidth = anchorRect.width;
+						}
+						break;
+					case "left":
+						{
+							if (contain) maxHeight = anchorRect.height;
+							else minHeight = anchorRect.height;
+							const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
+							right = viewWidth - targetLeft + window.scrollX + anchorMarginLeft;
 
-						top = targetTop + window.scrollY;
-						minHeight = anchorRect.height;
-					}
-					break;
+							top = targetTop + window.scrollY;
+							minHeight = anchorRect.height;
+						}
+						break;
+					case "right":
+						{
+							if (contain) maxHeight = anchorRect.height;
+							else minHeight = anchorRect.height;
+							const anchorMarginRight = parseInt(anchorStyles.marginRight, 10);
+							left = targetRight + window.scrollX + anchorMarginRight;
+
+							top = targetTop + window.scrollY;
+							minHeight = anchorRect.height;
+						}
+						break;
+				}
 			}
 
 			if (top !== null) {
-				const height = (window.visualViewport?.height ?? window.innerHeight) + window.scrollY;
+				const height = viewHeight + window.scrollY;
 				if (top + rect.height > height) {
 					const overflow = top + rect.height - height;
 					top -= overflow;
@@ -271,7 +302,7 @@
 				popupContainer.style.top = top + "px";
 			} else popupContainer.style.top = "";
 			if (bottom !== null) {
-				const height = (window.visualViewport?.height ?? window.innerHeight) - window.scrollY;
+				const height = viewHeight - window.scrollY;
 				if (bottom + rect.height > height) {
 					const overflow = bottom + rect.height - height;
 					bottom -= overflow;
@@ -279,7 +310,7 @@
 				popupContainer.style.bottom = bottom + "px";
 			} else popupContainer.style.bottom = "";
 			if (left !== null) {
-				const width = (window.visualViewport?.width ?? window.innerWidth) + window.scrollX;
+				const width = viewWidth + window.scrollX;
 				if (left + rect.width > width) {
 					const overflow = left + rect.width - width;
 					left -= overflow;
@@ -287,7 +318,7 @@
 				popupContainer.style.left = left + "px";
 			} else popupContainer.style.left = "";
 			if (right !== null) {
-				const width = (window.visualViewport?.width ?? window.innerWidth) - window.scrollX;
+				const width = viewWidth - window.scrollX;
 				if (right + rect.width > width) {
 					const overflow = right + rect.width - width;
 					right -= overflow;
@@ -317,6 +348,7 @@
 			activePopups = activePopups.filter((num) => num !== id);
 			showing = false;
 			dispatch("close");
+			destroy?.();
 		}
 	}
 
@@ -335,10 +367,12 @@
 	}
 </script>
 
-<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container" use:portalIn={portalKey}>
-	<div bind:this={child} class={cssClass} {style}>
-		<slot {showing} {closeClick} />
-	</div>
+<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container" class:modal-small={modalSmall}>
+	{#if open}
+		<div bind:this={child} class={cssClass} {style}>
+			<slot {showing} {closeClick} />
+		</div>
+	{/if}
 </div>
 
 <style lang="scss">
@@ -352,5 +386,17 @@
 
 	.none {
 		display: none;
+	}
+
+	@media only screen and (max-width: 600px) {
+		.modal-small {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 80%;
+			max-width: 400px;
+			height: auto;
+		}
 	}
 </style>
