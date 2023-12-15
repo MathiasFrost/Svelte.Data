@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
+	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
-	import { ensureObject, isObject } from "$lib/types";
-	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement";
+	import { isObject } from "$lib/types";
+	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 
 	/** TODOC */
 	type T = $$Generic;
@@ -58,8 +58,8 @@
 		selectedIndex: 0,
 		search: {},
 		focus() {
-			openAndFocus();
 			reFocus?.blur();
+			openAndFocus();
 		},
 		close() {
 			close();
@@ -95,6 +95,9 @@
 
 	/** TODOC */
 	let observer: MutationObserver | null = null;
+
+	/** TODOC */
+	let lastFocused: HTMLElement | null = null;
 
 	/** TODOC */
 	let optionContainer: HTMLElement | null = null;
@@ -153,15 +156,17 @@
 	function searchForOptions(node: Node, action: "removed" | "added") {
 		// Check if the node is an Element and has a 'value' attribute; these are options
 		if (node.nodeType === Node.ELEMENT_NODE && node instanceof HTMLElement) {
-			// node.addEventListener("blur", onBlur);
-			// node.addEventListener("focus", onFocus);
-
 			// Check if element is scroll box
 			if (!scrollBox) {
 				const style = window.getComputedStyle(node);
 				const canScroll = (overflow: string) => ["auto", "scroll"].includes(overflow);
-				if (canScroll(style.overflow) || canScroll(style.overflowX) || canScroll(style.overflowY)) scrollBox = node;
-			} else if (action === "removed" && scrollBox === node) scrollBox = null;
+				if (canScroll(style.overflow) || canScroll(style.overflowX) || canScroll(style.overflowY)) {
+					node.setAttribute("tabindex", "-1");
+					scrollBox = node;
+				}
+			} else if (action === "removed" && scrollBox === node) {
+				scrollBox = null;
+			}
 			if (action === "removed" && scrollBox === optionContainer) optionContainer = null;
 
 			if (
@@ -180,9 +185,12 @@
 					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
 					node.addEventListener("click", openAndFocus);
+					node.addEventListener("blur", onBlur);
+					node.addEventListener("focus", onFocus);
 					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
 				} else {
 					delete search[name];
+					delete searchValues[name];
 				}
 			}
 		}
@@ -200,7 +208,6 @@
 			close();
 			return;
 		}
-		open = true;
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
@@ -236,6 +243,7 @@
 				return;
 		}
 
+		open = true;
 		selectedIndex = hovered;
 		scrollToOptionIfNeeded();
 	}
@@ -362,9 +370,13 @@
 		if (keepOpen) return;
 		if (reFocus) {
 			reFocus.focus();
-		} else {
-			const first = Object.keys(search)[0];
-			if (search[first]) search[first].focus();
+		} else if (container?.contains(document.activeElement)) {
+			if (lastFocused) {
+				lastFocused.focus();
+			} else {
+				const first = Object.keys(search)[0];
+				if (search[first]) search[first].focus();
+			}
 		}
 		open = false;
 	}
@@ -392,7 +404,7 @@
 	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
 		if (!option.element || options.includes(option)) return;
 
-		option.element.setAttribute("tabindex", "0");
+		option.element.setAttribute("tabindex", "-1");
 		option.element.addEventListener("click", onClick);
 		option.element.addEventListener("mouseover", onMouseover);
 		option.element.addEventListener("mouseout", onMouseout);
@@ -431,14 +443,15 @@
 	/** TODOC */
 	function onBlur(e: FocusEvent): void {
 		if (!container) return;
-		if (e.relatedTarget instanceof Node) {
-			if (container.contains(e.relatedTarget)) return;
+		if (e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) {
+			return;
 		}
 		closeAndBlur();
 	}
 
 	/** TODOC */
-	function onFocus(): void {
+	function onFocus(e: FocusEvent): void {
+		if (e.target instanceof HTMLElement) lastFocused = e.target;
 		openAndFocus();
 	}
 

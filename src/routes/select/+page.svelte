@@ -63,8 +63,8 @@
 			<input type="search" placeholder="Name" name="name" bind:this={input} />
 			<input type="search" placeholder="Username" name="username" />
 		</svelte:fragment>
-		<div slot="options" class="selector" let:registerOption let:filterOptions>
-			<EnhancedOption {registerOption} togglesAll />
+		<div slot="options" class="selector" let:registerOption let:filterOptions let:open>
+			<EnhancedOption {registerOption} togglesAll>{open}</EnhancedOption>
 			{#each filterOptions(users) as user}
 				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
 			{/each}
@@ -164,10 +164,6 @@
 		border: 1px solid crimson;
 		background-color: #242425;
 		overflow-y: auto;
-		max-height: 4rem !important;
-	}
-
-	.dropdown-content {
 		max-height: 4rem !important;
 	}
 </style>
