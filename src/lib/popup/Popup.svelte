@@ -47,6 +47,10 @@
 	const portalKey = "BODY";
 
 	/** TODOC */
+	let anchors: Element[] = [];
+	$: anchors = PopupHelper.getEffectiveElements(anchor).filter((e) => e !== popupContainer);
+
+	/** TODOC */
 	let popupContainer: HTMLDivElement | null = null;
 
 	/** TODOC */
@@ -149,7 +153,7 @@
 
 	/** TODOC */
 	function setUpAnchor(anchor: Element | null, auto: boolean | "contextmenu" | "hover"): void {
-		if (typeof window !== "undefined" && [auto, "contextmenu"].includes(auto)) {
+		if (typeof window !== "undefined" && [true, "contextmenu"].includes(auto)) {
 			window.addEventListener("click", onWindowClick);
 		}
 		if (!anchor) return;
@@ -218,13 +222,13 @@
 			activePopups.push(id);
 
 			await tick(); // Wait for child
-			if (!anchor || !popupContainer || !child) return;
+			if (!anchors.length || !anchor || !popupContainer || !child) return;
 
 			destroy = portalIn(popupContainer, portalKey).destroy;
 			const rect: DOMRect | null = await calculateBounds();
 			if (!rect) return;
 
-			const anchorRect = PopupHelper.getBoundsOfDisplayContents(anchor);
+			const anchorRect = PopupHelper.getMultipleElementBounds(anchors);
 
 			const targetTop: number = position ? position.y : anchorRect.top;
 			const targetBottom: number = position ? position.y : anchorRect.bottom;
@@ -244,14 +248,18 @@
 			const viewHeight = window.visualViewport?.height ?? window.innerHeight;
 
 			if (!modalSmall || viewWidth > 600) {
-				const anchorStyles = window.getComputedStyle(anchor);
+				const anchorStyles = anchors.map((el) => window.getComputedStyle(el));
+				const maxMarginTop = Math.max(...anchorStyles.map((styles) => parseInt(styles.marginTop, 10)));
+				const maxMarginBottom = Math.max(...anchorStyles.map((styles) => parseInt(styles.marginBottom, 10)));
+				const maxMarginLeft = Math.max(...anchorStyles.map((styles) => parseInt(styles.marginLeft, 10)));
+				const maxMarginRight = Math.max(...anchorStyles.map((styles) => parseInt(styles.marginRight, 10)));
+
 				switch (justify) {
 					case "above":
 						{
 							if (contain) maxWidth = anchorRect.width;
 							else minWidth = anchorRect.width;
-							const anchorMarginTop = parseInt(anchorStyles.marginTop, 10);
-							bottom = viewHeight - targetTop + window.scrollY + anchorMarginTop;
+							bottom = viewHeight - targetTop + window.scrollY + maxMarginTop;
 
 							left = targetLeft + window.scrollX;
 							minWidth = anchorRect.width;
@@ -261,8 +269,7 @@
 						{
 							if (contain) maxWidth = anchorRect.width;
 							else minWidth = anchorRect.width;
-							const anchorMarginBottom = parseInt(anchorStyles.marginBottom, 10);
-							top = targetBottom + window.scrollY + anchorMarginBottom;
+							top = targetBottom + window.scrollY + maxMarginBottom;
 
 							left = targetLeft + window.scrollX;
 							minWidth = anchorRect.width;
@@ -272,8 +279,7 @@
 						{
 							if (contain) maxHeight = anchorRect.height;
 							else minHeight = anchorRect.height;
-							const anchorMarginLeft = parseInt(anchorStyles.marginLeft, 10);
-							right = viewWidth - targetLeft + window.scrollX + anchorMarginLeft;
+							right = viewWidth - targetLeft + window.scrollX + maxMarginLeft;
 
 							top = targetTop + window.scrollY;
 							minHeight = anchorRect.height;
@@ -283,8 +289,7 @@
 						{
 							if (contain) maxHeight = anchorRect.height;
 							else minHeight = anchorRect.height;
-							const anchorMarginRight = parseInt(anchorStyles.marginRight, 10);
-							left = targetRight + window.scrollX + anchorMarginRight;
+							left = targetRight + window.scrollX + maxMarginRight;
 
 							top = targetTop + window.scrollY;
 							minHeight = anchorRect.height;
@@ -367,9 +372,9 @@
 	}
 </script>
 
-<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container" class:modal-small={modalSmall}>
+<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container">
 	{#if open}
-		<div bind:this={child} class={cssClass} {style}>
+		<div bind:this={child} class={cssClass} {style} class:modal-small={modalSmall}>
 			<slot {showing} {closeClick} />
 		</div>
 	{/if}
@@ -382,6 +387,16 @@
 		opacity: 0;
 		overflow: hidden;
 		display: flex;
+
+		@media only screen and (max-width: 600px) {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background-color: rgba(0, 0, 0, 0.16);
+			backdrop-filter: blur(2px);
+		}
 	}
 
 	.none {

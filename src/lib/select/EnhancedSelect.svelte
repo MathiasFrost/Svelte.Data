@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
-	import { isObject } from "$lib/types";
+	import { ensureObject, isObject } from "$lib/types";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 
 	/** TODOC */
@@ -69,14 +69,14 @@
 	/** When the EnhancedSelect expects the container to be open if gated behind an `#if`-block */
 	let open: boolean;
 
-	/** TODOC */
-	let filtered: T[] = [];
-
-	/** TODOC */
-	let options: HTMLEnhancedOptionElement<T>[] = [];
+	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
+	let focused: boolean = false;
 
 	/** TODOC */
 	let selectedIndex = 0;
+
+	/** TODOC */
+	let hovered = selectedIndex;
 
 	/** TODOC */
 	let search: Record<string, HTMLInputElement> = {};
@@ -88,7 +88,10 @@
 	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
 
 	/** TODOC */
-	let hovered = selectedIndex;
+	let filtered: T[] = [];
+
+	/** TODOC */
+	let options: HTMLEnhancedOptionElement<T>[] = [];
 
 	/** TODOC */
 	let container: HTMLDivElement | null = null;
@@ -104,9 +107,6 @@
 
 	/** TODOC */
 	let scrollBox: HTMLElement | null = null;
-
-	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
-	let focused: boolean = false;
 
 	// TODOC
 	$: setUpObserver(container);
@@ -203,7 +203,7 @@
 
 	/** TODOC */
 	function onKeydown(e: KeyboardEvent): void {
-		if (!focused) return;
+		if (!focused && !global) return;
 		if ((!open && e.key === "Enter") || (e.key === "Enter" && e.ctrlKey)) {
 			close();
 			return;
@@ -357,11 +357,10 @@
 		if (!force && !multiple) return;
 
 		// First try to find based on search
-		const item = getItemMatchingSearch(pool, searchValues);
-		const option = options.find((o) => o.item === item);
+		const option = getItemMatchingSearch(searchValues);
 
 		// If not found, do not change value and explicitly revert display
-		if (typeof option === "undefined") updateDisplay(value);
+		if (!option) updateDisplay(value);
 		else value = option.value;
 	}
 
@@ -456,13 +455,13 @@
 	}
 
 	/** TODOC */
-	function getItemMatchingSearch(options: T[], search: Record<string, string>): T | null {
+	function getItemMatchingSearch(search: Record<string, string>): HTMLEnhancedOptionElement<T> | null {
 		return (
-			options.find((item) =>
-				isObject(item)
-					? Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())
-					: search[DEFAULT_NAME]?.toLowerCase() === `${item}`.toLowerCase()
-			) ?? null
+			options.find((o) => {
+				if (o.item === null) return Object.keys(search).every((key) => !search[key]);
+				if (isObject(o.item)) return Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(o.item)[key]}`.toLowerCase());
+				return search[DEFAULT_NAME]?.toLowerCase() === `${o}`.toLowerCase();
+			}) ?? null
 		);
 	}
 
@@ -486,7 +485,7 @@
 			pool = options;
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
-			const item = getItemMatchingSearch(options, search);
+			const item = getItemMatchingSearch(search);
 			if (isObject(item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())) {
 				filtered = Array.from(options);
 			} else if (`${item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {

@@ -55,38 +55,40 @@
 	{/each}
 </select>
 
-<h2>Multiple search props</h2>
-<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}, filtered: {select1?.filtered.length}</p>
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">
-	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} force>
-		<svelte:fragment>
-			<input type="search" placeholder="Name" name="name" bind:this={input} />
-			<input type="search" placeholder="Username" name="username" />
-		</svelte:fragment>
-		<div slot="options" class="selector" let:registerOption let:filterOptions let:open>
-			<EnhancedOption {registerOption} togglesAll>{open}</EnhancedOption>
-			{#each filterOptions(users) as user}
-				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
-			{/each}
-		</div>
-	</EnhancedSelect>
-	<button type="submit">submit</button>
-</form>
-
-<!--<h2>Simple</h2>-->
-<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
-<!--	<EnhancedSelect name="user" pool={users} key="id" value="3" force>-->
-<!--		<input slot="search" type="search" placeholder="Employee" name="name" style="width: 100%;" />-->
-<!--		<div slot="options" class="dropdown-content" let:options>-->
-<!--			<div class="selector">-->
-<!--				<option value={null} />-->
-<!--				{#each options as option}-->
-<!--					<option value={option.id}>{option.name}</option>-->
-<!--				{/each}-->
-<!--			</div>-->
+<!--<h2>Multiple search props</h2>-->
+<!--<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}, filtered: {select1?.filtered.length}</p>-->
+<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown">-->
+<!--	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} force>-->
+<!--		<svelte:fragment>-->
+<!--			<input type="search" placeholder="Name" name="name" bind:this={input} />-->
+<!--			<input type="search" placeholder="Username" name="username" />-->
+<!--		</svelte:fragment>-->
+<!--		<div slot="options" class="selector" let:registerOption let:filterOptions let:open>-->
+<!--			<EnhancedOption {registerOption}>{open}</EnhancedOption>-->
+<!--			{#each filterOptions(users) as user}-->
+<!--				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>-->
+<!--			{/each}-->
 <!--		</div>-->
 <!--	</EnhancedSelect>-->
+<!--	<button type="submit">submit</button>-->
 <!--</form>-->
+
+<h2>Simple</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<EnhancedSelect name="user" pool={users} value={3} force>
+		<input type="search" placeholder="Employee" name="name" style="width: 100%;" />
+		<svelte:fragment slot="options" let:container let:registerOption let:filterOptions let:open>
+			<Popup style="width: 100%;" anchor={container} open auto modalSmall>
+				<div class="selector">
+					<EnhancedOption {registerOption} value={null} />
+					{#each filterOptions(users) as user}
+						<EnhancedOption {registerOption} value={user.id}>{user.name}</EnhancedOption>
+					{/each}
+				</div>
+			</Popup>
+		</svelte:fragment>
+	</EnhancedSelect>
+</form>
 
 <!--<h2>Multiple</h2>-->
 <!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
