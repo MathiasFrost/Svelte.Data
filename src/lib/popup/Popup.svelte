@@ -36,6 +36,9 @@
 	/** For use in conjunction with `EnhancedSelect` */
 	export let registerPopup: ((popup: HTMLPopupElement) => void) | null = null;
 
+	/** Element to focus after closing */
+	export let reFocus: HTMLElement | null = null;
+
 	/** If we should automatically set up event listeners for interaction and source `anchor` from previous element */
 	export let auto: boolean | "contextmenu" | "hover" = false;
 
@@ -61,6 +64,9 @@
 
 	/** True if the popup is actually visible */
 	let showing = false;
+
+	/** Element focused before element was opened */
+	let focused: Element | null = null;
 
 	/** True if we are hovering over the `anchor` or popup */
 	let hovering = false;
@@ -121,6 +127,8 @@
 				}
 			}
 		}
+
+		focused = anchor;
 	});
 
 	// cleanup
@@ -224,6 +232,8 @@
 		showing = false;
 		dispatch("close");
 		destroy?.();
+		if (reFocus) reFocus?.focus();
+		else if (typeof window !== "undefined" && focused instanceof HTMLElement) focused.focus();
 	}
 
 	/** Open the popup */
@@ -233,6 +243,9 @@
 			if (arg === null || arg instanceof HTMLElement) anchor = arg;
 			else position = arg;
 		}
+
+		if (typeof document !== "undefined" && document.activeElement !== document.body) focused = document.activeElement;
+		else focused = anchor;
 
 		await tick(); // Wait for child
 		if (!anchors.length || !anchor || !popupContainer || !child) return;
@@ -387,6 +400,8 @@
 		popupContainer.style.opacity = "1";
 		showing = true;
 		dispatch("show");
+		const first = child.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+		if (first instanceof HTMLElement) first.focus();
 	}
 
 	/** Get bounds of `child` after rendered */

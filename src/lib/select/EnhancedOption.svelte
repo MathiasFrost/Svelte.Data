@@ -2,31 +2,31 @@
 	import { onDestroy } from "svelte";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement";
 
-	/** TODOC */
+	/** Type of the array element */
 	type T = $$Generic;
 
-	// /** TODOC */
+	// /** Type of the value */
 	// type K = $$Generic;
 
-	/** TODOC */
+	/** Unique value representing this option */
 	export let value: unknown | null = null;
 
-	/** TODOC */
+	/** The array element this option represents */
 	export let item: T | null = null;
 
-	/** TODOC */
+	/** Set to true if this options should toggle all for multiple select */
 	export let togglesAll = false;
 
-	/** TODOC */
+	/** Pass down from `EnhancedSelect` */
 	export let registerOption: (option: HTMLEnhancedOptionElement<T>) => void;
 
-	/** TODOC */
+	/** Container for the option */
 	let container: HTMLDivElement | null = null;
 
-	/** TODOC */
+	/** Passed down to slot as a convenient way to conditionally render something based on multiple `EnhancedSelect`'s values */
 	let checked = false;
 
-	/** TODOC */
+	/** @see HTMLEnhancedOptionElement */
 	export const self: HTMLEnhancedOptionElement<T> = {
 		value,
 		element: container,
@@ -45,7 +45,7 @@
 	$: self.togglesAll = togglesAll;
 	$: self.checked = checked;
 
-	// TODOC
+	// Call register option when available
 	$: registerOption(self);
 
 	// cleanup

@@ -6,6 +6,7 @@
 	let open = false;
 	let openDd = false;
 	let test: HTMLDialogElement;
+	let test2: HTMLElement;
 	$: if (open && test) test.showModal();
 	else if (!open && test) test.close();
 </script>
@@ -16,7 +17,7 @@
 <!--<div id="mypopover" popover>Popover content</div>-->
 
 <button class="dropbtn" style="padding: 2rem; margin-right: 1rem; width: 10rem; height: 20rem;">Dropdown</button>
-<Popup style="background-color: crimson" auto open keepOpen justify="below" align="center" let:closeClick>
+<Popup style="background-color: crimson" auto open keepOpen justify="below" align="center" reFocus={test2} let:closeClick>
 	<button on:click={closeClick()}>Option 1</button>
 	<button on:click={closeClick()}>Option 2</button>
 	<button on:click={closeClick()}>Option 3</button>
@@ -24,7 +25,7 @@
 </Popup>
 
 <div style="display: flex; justify-content: space-between; height: 100rem; width: 100rem;">
-	<button class="dropbtn" style="padding: 2rem; margin-right: 1rem;" on:click={() => (openDd = true)}>Dropdown</button>
+	<button bind:this={test2} class="dropbtn" style="padding: 2rem; margin-right: 1rem;" on:click={() => (openDd = true)}>Dropdown</button>
 	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" open={openDd} contain justify="left" align="center">
 		<button on:click={() => (openDd = false)}>Option 1</button>
 		<button on:click={() => (openDd = false)}>Option 2</button>

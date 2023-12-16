@@ -5,28 +5,28 @@
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 	import type { HTMLPopupElement } from "$lib/popup";
 
-	/** TODOC */
+	/** Type of the array element */
 	type T = $$Generic;
 
-	// /** TODOC */
+	// /** Type of the value */
 	// type K = $$Generic;
 
-	/** TODOC */
+	/** Name for the default input element for `search` */
 	const DEFAULT_NAME = "[DEFAULT]";
 
 	/** TODOC */
 	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelectElement<T> }>();
 
-	/** For binding */
+	/** Current value */
 	export let value: unknown | null = null;
 
-	/** For binding */
+	/** Current value for multiple select */
 	export let values: (unknown | null)[] = [];
 
-	/** TODOC */
+	/** Name of this select as a form input */
 	export let name = "";
 
-	/** TODOC */
+	/** Option pool */
 	export let pool: T[] = [];
 
 	/** Do not auto-close */
