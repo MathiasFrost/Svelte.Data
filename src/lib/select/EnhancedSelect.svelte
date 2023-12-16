@@ -3,6 +3,7 @@
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
 	import { ensureObject, isObject } from "$lib/types";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
+	import type { HTMLPopupElement } from "$lib/popup";
 
 	/** TODOC */
 	type T = $$Generic;
@@ -62,7 +63,7 @@
 			openAndFocus();
 		},
 		close() {
-			close();
+			open = false;
 		}
 	};
 
@@ -71,6 +72,9 @@
 
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
+
+	/** TODOC */
+	let popup: HTMLPopupElement | null = null;
 
 	/** TODOC */
 	let selectedIndex = 0;
@@ -94,10 +98,16 @@
 	let options: HTMLEnhancedOptionElement<T>[] = [];
 
 	/** TODOC */
+	let getChecked: () => T[] = createGetChecked(options, values);
+
+	/** TODOC */
 	let container: HTMLDivElement | null = null;
 
 	/** TODOC */
 	let observer: MutationObserver | null = null;
+
+	/** TODOC */
+	let popupObserver: MutationObserver | null = null;
 
 	/** TODOC */
 	let lastFocused: HTMLElement | null = null;
@@ -108,6 +118,15 @@
 	/** TODOC */
 	let scrollBox: HTMLElement | null = null;
 
+	/** TODOC */
+	let allChecked = false;
+
+	// TODOC
+	$: allChecked = updateAllChecked(options, values);
+
+	// TODOC
+	$: getChecked = createGetChecked(options, values);
+
 	// TODOC
 	$: setUpObserver(container);
 
@@ -116,6 +135,9 @@
 
 	// Update display when value changes
 	$: updateDisplay(value);
+
+	// TODOC
+	$: updateValues(options, values);
 
 	// Update all references
 	$: self.value = value;
@@ -130,7 +152,16 @@
 	// TODOC
 	onDestroy(() => {
 		observer?.disconnect();
+		popupObserver?.disconnect();
 	});
+
+	/** TODOC */
+	function registerPopup(selectPopup: HTMLPopupElement): void {
+		popup = selectPopup;
+		if (!popup.popupContainer) return;
+		popupObserver = new MutationObserver(mutationCallback);
+		popupObserver.observe(popup.popupContainer, { attributes: false, childList: true, subtree: true });
+	}
 
 	/** TODOC */
 	function setUpObserver(container: HTMLDivElement | null): void {
@@ -222,9 +253,15 @@
 			case "Enter":
 				{
 					e.preventDefault();
-					if (multiple) return;
+					if (multiple) {
+						close();
+						return;
+					}
 					const item = options[hovered];
-					if (item) selectElement(item);
+					if (item) {
+						selectElement(item);
+						return;
+					}
 				}
 				break;
 			case " ":
@@ -240,6 +277,7 @@
 				clearSearch();
 				break;
 			default:
+				open = true;
 				return;
 		}
 
@@ -309,6 +347,14 @@
 	}
 
 	/** TODOC */
+	function updateValues(options: HTMLEnhancedOptionElement<T>[], values: (unknown | null)[]): void {
+		for (const option of options) {
+			if (values.includes(option.value)) option.setChecked(true);
+			else option.setChecked(false);
+		}
+	}
+
+	/** TODOC */
 	function clearSearch(): void {
 		Object.keys(search).forEach((key) => (search[key].value = ""));
 		filterOptions = getFilterOptions(searchValues);
@@ -344,20 +390,19 @@
 	/** TODOC */
 	function onWindowClick(e: MouseEvent): void {
 		if (!container) return;
-		if (e.target instanceof Node && container.contains(e.target)) return;
-		open = false; // This should always close even if keepOpen
+		if (e.target instanceof Node && (container.contains(e.target) || (popup?.popupContainer && popup.popupContainer.contains(e.target)))) return;
+		closeAndBlur();
 	}
 
 	/** TODOC */
 	function closeAndBlur(): void {
 		close();
 		focused = false;
-
 		// If force, check if values are valid and if not, revert
 		if (!force && !multiple) return;
 
 		// First try to find based on search
-		const option = getItemMatchingSearch(searchValues);
+		const option = getOptionMatchingSearch(searchValues);
 
 		// If not found, do not change value and explicitly revert display
 		if (!option) updateDisplay(value);
@@ -382,21 +427,9 @@
 
 	/** TODOC */
 	function openAndFocus(): void {
+		console.log("open");
 		open = true;
 		focused = true;
-	}
-
-	/** TODOC */
-	function createIsChecked(multiple: boolean, value: unknown | null, values: unknown[]): (item: T) => boolean {
-		return () => false;
-		// if (multiple) return (item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K));
-		// else return (item) => (isObject(item) && key ? value === item[key] : value === item);
-	}
-
-	/** TODOC */
-	function createAllChecked(filtered: T[], values: unknown[]): () => boolean {
-		return () => false;
-		// return () => filtered.every((item) => (isObject(item) && key ? values.includes(item[key] as K) : values.includes(item as unknown as K)));
 	}
 
 	/** TODOC */
@@ -442,7 +475,10 @@
 	/** TODOC */
 	function onBlur(e: FocusEvent): void {
 		if (!container) return;
-		if (e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) {
+		if (
+			(e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) ||
+			options.some((o) => o.element === <HTMLElement | null>e.relatedTarget)
+		) {
 			return;
 		}
 		closeAndBlur();
@@ -455,7 +491,7 @@
 	}
 
 	/** TODOC */
-	function getItemMatchingSearch(search: Record<string, string>): HTMLEnhancedOptionElement<T> | null {
+	function getOptionMatchingSearch(search: Record<string, string>): HTMLEnhancedOptionElement<T> | null {
 		return (
 			options.find((o) => {
 				if (o.item === null) return Object.keys(search).every((key) => !search[key]);
@@ -485,10 +521,10 @@
 			pool = options;
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
-			const item = getItemMatchingSearch(search);
-			if (isObject(item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${item[key]}`.toLowerCase())) {
+			const option = getOptionMatchingSearch(search);
+			if (isObject(option?.item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option.item)[key]}`.toLowerCase())) {
 				filtered = Array.from(options);
-			} else if (`${item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
+			} else if (`${option?.item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
 				filtered = Array.from(options);
 			} else {
 				filtered = Object.keys(search).reduce<T[]>(
@@ -507,6 +543,16 @@
 			return filtered;
 		};
 	}
+
+	/** TODOC */
+	function updateAllChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): boolean {
+		return options.every((o) => values.includes(o.value));
+	}
+
+	/** TODOC */
+	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
+		return () => options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
+	}
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
@@ -524,8 +570,8 @@
 {/if}
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
 	{#if observer}
-		<slot {clearSearch} />
-		<slot name="options" {registerOption} {filterOptions} {container} {open} />
+		<slot {clearSearch} {allChecked} {filtered} {getChecked} />
+		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {filtered} {allChecked} />
 	{/if}
 </div>
 

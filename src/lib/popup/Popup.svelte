@@ -34,6 +34,12 @@
 	export let contain = false;
 
 	/** TODOC */
+	export let keepOpen = false;
+
+	/** TODOC */
+	export let registerPopup: ((popup: HTMLPopupElement) => void) | null = null;
+
+	/** TODOC */
 	export let auto: boolean | "contextmenu" | "hover" = false;
 
 	/** TODOC */
@@ -76,11 +82,13 @@
 
 	/** @see HTMLPopupElement */
 	export const self: HTMLPopupElement = {
+		popupContainer,
 		showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			if (typeof arg !== "undefined") {
 				if (arg === null || arg instanceof HTMLElement) anchor = arg;
 				else position = arg;
 			}
+			console.log("open", open);
 			open = true;
 		},
 		close() {
@@ -92,6 +100,12 @@
 			}
 		}
 	};
+
+	// Update props
+	$: self.popupContainer = popupContainer;
+
+	// TODOC
+	$: if (registerPopup) registerPopup(self);
 
 	// ctor
 	onMount(() => {
@@ -179,12 +193,13 @@
 
 	/** TODOC */
 	function onWindowClick(e: MouseEvent): void {
-		if (!open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
+		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
 		self.close();
 	}
 
 	/** TODOC */
 	function onClick(): void {
+		console.log("onclick");
 		self.showPopup();
 	}
 
