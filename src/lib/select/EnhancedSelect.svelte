@@ -44,11 +44,11 @@
 	/** Element to focus after closing */
 	export let reFocus: HTMLElement | null = null;
 
-	/** TODOC */
+	/** CSS class for the container */
 	let cssClass = "";
 	export { cssClass as class };
 
-	/** TODOC */
+	/** @see HTMLEnhancedSelectElement */
 	export const self: HTMLEnhancedSelectElement<T> = {
 		name,
 		value: null,
@@ -73,70 +73,67 @@
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
 
-	/** TODOC */
+	/** The popup element if any is registered */
 	let popup: HTMLPopupElement | null = null;
 
-	/** TODOC */
+	/** The current option index that will be selected when pressing enter */
 	let selectedIndex = 0;
 
-	/** TODOC */
+	/** The current option index that is either selected with keyboard or hovered with mouse */
 	let hovered = selectedIndex;
 
-	/** TODOC */
+	/** The search elements inside the container */
 	let search: Record<string, HTMLInputElement> = {};
 
-	/** TODOC */
+	/** The search values of `search` */
 	let searchValues: Record<string, string> = {};
 
-	/** TODOC */
+	/** Filter options passed in and register them internally */
 	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
 
-	/** TODOC */
+	/** The filtered `pool` */
 	let filtered: T[] = [];
 
-	/** TODOC */
+	/** The found `EnhancedOption` elements inside the container */
 	let options: HTMLEnhancedOptionElement<T>[] = [];
 
-	/** TODOC */
+	/** Function passed to slot that can be called to retrieve references to checked elements */
 	let getChecked: () => T[] = createGetChecked(options, values);
 
-	/** TODOC */
+	/** Container of all content */
 	let container: HTMLDivElement | null = null;
 
-	/** TODOC */
+	/** Observer for `container` */
 	let observer: MutationObserver | null = null;
 
-	/** TODOC */
+	/** Observer for `popup.popupContainer` */
 	let popupObserver: MutationObserver | null = null;
 
-	/** TODOC */
+	/** Last focused `search` element that can be refocused after selecting a value */
 	let lastFocused: HTMLElement | null = null;
 
-	/** TODOC */
-	let optionContainer: HTMLElement | null = null;
-
-	/** TODOC */
+	/** First element found that scrolls. Assumed to be the main scroll box for options */
 	let scrollBox: HTMLElement | null = null;
 
-	/** TODOC */
+	/** If all options are checked when `multiple` */
 	let allChecked = false;
 
-	// TODOC
+	// Update `allChecked` when options and values changes
 	$: allChecked = updateAllChecked(options, values);
 
-	// TODOC
+	// Update `getChecked` when options and values changes
 	$: getChecked = createGetChecked(options, values);
 
-	// TODOC
+	// Set up observer for container when bound
 	$: setUpObserver(container);
 
-	// TODOC
+	// Update highlighted option when options and hovered changes
 	$: updateHighlighted(hovered, options);
 
 	// Update display when value changes
 	$: updateDisplay(value);
 
-	// TODOC
+	// Update the checked value for `EnhancedOption` elements to match values
 	$: updateValues(options, values);
 
 	// Update all references
@@ -149,13 +146,13 @@
 	$: self.selectedIndex = selectedIndex;
 	$: self.name = name;
 
-	// TODOC
+	// cleanup
 	onDestroy(() => {
 		observer?.disconnect();
 		popupObserver?.disconnect();
 	});
 
-	/** TODOC */
+	/** Register popup and apply observer */
 	function registerPopup(selectPopup: HTMLPopupElement): void {
 		popup = selectPopup;
 		if (!popup.popupContainer) return;
@@ -163,19 +160,19 @@
 		popupObserver.observe(popup.popupContainer, { attributes: false, childList: true, subtree: true });
 	}
 
-	/** TODOC */
+	/** Set up observer on the `container` */
 	function setUpObserver(container: HTMLDivElement | null): void {
 		if (!container || observer) return;
 		observer = new MutationObserver(mutationCallback);
 		observer.observe(container, { attributes: false, childList: true, subtree: true });
 	}
 
-	/** TODOC */
+	/** Handler for `observer`s */
 	function mutationCallback(mutationsList: MutationRecord[]): void {
 		for (const mutation of mutationsList) {
 			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach((node) => searchForOptions(node, "added"));
-				mutation.removedNodes.forEach((node) => searchForOptions(node, "removed"));
+				mutation.addedNodes.forEach((node) => searchForElements(node, "added"));
+				mutation.removedNodes.forEach((node) => searchForElements(node, "removed"));
 			}
 		}
 		options = options;
@@ -183,8 +180,8 @@
 		if (open) scrollToOptionIfNeeded();
 	}
 
-	/** TODOC */
-	function searchForOptions(node: Node, action: "removed" | "added") {
+	/** Search for relevant elements among the mutated elements (`search`, `scrollBox`) */
+	function searchForElements(node: Node, action: "removed" | "added") {
 		// Check if the node is an Element and has a 'value' attribute; these are options
 		if (node.nodeType === Node.ELEMENT_NODE && node instanceof HTMLElement) {
 			// Check if element is scroll box
@@ -198,7 +195,6 @@
 			} else if (action === "removed" && scrollBox === node) {
 				scrollBox = null;
 			}
-			if (action === "removed" && scrollBox === optionContainer) optionContainer = null;
 
 			if (
 				node instanceof HTMLInputElement &&
@@ -228,11 +224,11 @@
 
 		// If the node has child nodes, recursively search them
 		if (node.hasChildNodes()) {
-			node.childNodes.forEach((node) => searchForOptions(node, action));
+			node.childNodes.forEach((node) => searchForElements(node, action));
 		}
 	}
 
-	/** TODOC */
+	/** Handle global keyboard events */
 	function onKeydown(e: KeyboardEvent): void {
 		if (!focused && !global) return;
 		if ((!open && e.key === "Enter") || (e.key === "Enter" && e.ctrlKey)) {
@@ -286,7 +282,7 @@
 		scrollToOptionIfNeeded();
 	}
 
-	/** TODOC */
+	/** Scroll to option if it is out of view */
 	function scrollToOptionIfNeeded(): void {
 		const item = options[hovered];
 		if (!item || !scrollBox || !item.element) return;
@@ -307,7 +303,7 @@
 		}
 	}
 
-	/** TODOC */
+	/** Handle `search` element inputs */
 	function onInput(this: HTMLInputElement): void {
 		const name = this.getAttribute("name")?.toString();
 		if (name) searchValues[name] = this.value;
@@ -346,7 +342,7 @@
 		tick().then(() => dispatch("change", self));
 	}
 
-	/** TODOC */
+	/** Update the `checked` value of `EnhancedOption`s */
 	function updateValues(options: HTMLEnhancedOptionElement<T>[], values: (unknown | null)[]): void {
 		for (const option of options) {
 			if (values.includes(option.value)) option.setChecked(true);
@@ -354,13 +350,13 @@
 		}
 	}
 
-	/** TODOC */
+	/** Clear the `search` values */
 	function clearSearch(): void {
 		Object.keys(search).forEach((key) => (search[key].value = ""));
 		filterOptions = getFilterOptions(searchValues);
 	}
 
-	/** TODOC */
+	/** Update the `search` element's search value to match current value */
 	function updateDisplay(value: unknown | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
 		const option = options.find((o) => o.value === value);
@@ -377,7 +373,7 @@
 		filterOptions = getFilterOptions(searchValues);
 	}
 
-	/** TODOC */
+	/** Add `highlighted` class to `hovere`d element */
 	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T>[]): void {
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i].element;
@@ -387,14 +383,14 @@
 		}
 	}
 
-	/** TODOC */
+	/** Handle global click events */
 	function onWindowClick(e: MouseEvent): void {
 		if (!container) return;
 		if (e.target instanceof Node && (container.contains(e.target) || (popup?.popupContainer && popup.popupContainer.contains(e.target)))) return;
 		closeAndBlur();
 	}
 
-	/** TODOC */
+	/** Handle closing and blurring of this component */
 	function closeAndBlur(): void {
 		close();
 		focused = false;
@@ -409,7 +405,7 @@
 		else value = option.value;
 	}
 
-	/** TODOC */
+	/** Handle closing of this component */
 	function close(): void {
 		if (keepOpen) return;
 		if (reFocus) {
@@ -425,13 +421,13 @@
 		open = false;
 	}
 
-	/** TODOC */
+	/** Handle opening and focusing of this component */
 	function openAndFocus(): void {
 		open = true;
 		focused = true;
 	}
 
-	/** TODOC */
+	/** Register an `EnhancedOption` element */
 	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
 		if (!option.element || options.includes(option)) return;
 
@@ -453,25 +449,25 @@
 			});
 	}
 
-	/** TODOC */
+	/** Handle `search` element click */
 	function onClick(this: HTMLDivElement): void {
 		const option = options.find((o) => o.element === this);
 		if (!option) return;
 		selectElement(option);
 	}
 
-	/** TODOC */
+	/** Handle `search` element mouseover */
 	function onMouseover(e: Event): void {
 		if (!(e.target instanceof HTMLElement)) return;
 		hovered = options.findIndex((o) => o.element === <HTMLDivElement>e.target);
 	}
 
-	/** TODOC */
+	/** Handle `search` element mouseout */
 	function onMouseout(): void {
 		hovered = selectedIndex;
 	}
 
-	/** TODOC */
+	/** Handle `search` element blur */
 	function onBlur(e: FocusEvent): void {
 		if (!container) return;
 		if (
@@ -483,13 +479,13 @@
 		closeAndBlur();
 	}
 
-	/** TODOC */
+	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
 		if (e.target instanceof HTMLElement) lastFocused = e.target;
 		openAndFocus();
 	}
 
-	/** TODOC */
+	/** Get the option fully matching search strings */
 	function getOptionMatchingSearch(search: Record<string, string>): HTMLEnhancedOptionElement<T> | null {
 		return (
 			options.find((o) => {
@@ -500,7 +496,7 @@
 		);
 	}
 
-	/** TODOC */
+	/** Check if the currently `hovered` option gone from view */
 	function checkHoverOverflow(): void {
 		const last = options.filter((o) => !!o.element).length - 1;
 		if (hovered >= last) {
@@ -514,7 +510,7 @@
 		selectedIndex = hovered;
 	}
 
-	/** TODOC */
+	/** Construct the function that should filter the pool of options based on `search` values */
 	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
 		return (options) => {
 			pool = options;
@@ -543,12 +539,12 @@
 		};
 	}
 
-	/** TODOC */
+	/** Check if all pool options are contained in `values` */
 	function updateAllChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): boolean {
 		return options.every((o) => values.includes(o.value));
 	}
 
-	/** TODOC */
+	/** Create the function that gets all pool options contained in `values` */
 	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
 		return () => options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
 	}

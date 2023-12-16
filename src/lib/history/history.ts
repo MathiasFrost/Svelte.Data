@@ -69,7 +69,6 @@ function setAction(): void {
 		const event = new Event("change", { bubbles: true, cancelable: true });
 		action.element.dispatchEvent(event);
 		customEvent = false;
-		console.log(actionIndex, action.value);
 	}
 }
 
