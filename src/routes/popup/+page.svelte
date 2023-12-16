@@ -15,6 +15,14 @@
 <!--<button popovertarget="mypopover">Toggle the popover</button>-->
 <!--<div id="mypopover" popover>Popover content</div>-->
 
+<button class="dropbtn" style="padding: 2rem; margin-right: 1rem; width: 10rem; height: 20rem;">Dropdown</button>
+<Popup style="background-color: crimson" auto open keepOpen justify="below" align="center" let:closeClick>
+	<button on:click={closeClick()}>Option 1</button>
+	<button on:click={closeClick()}>Option 2</button>
+	<button on:click={closeClick()}>Option 3</button>
+	<button on:click={closeClick()}>Option 4</button>
+</Popup>
+
 <div style="display: flex; justify-content: space-between; height: 100rem; width: 100rem;">
 	<button class="dropbtn" style="padding: 2rem; margin-right: 1rem;" on:click={() => (openDd = true)}>Dropdown</button>
 	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" open={openDd} contain justify="left" align="center">
@@ -46,7 +54,7 @@
 	</dialog>
 
 	<button class="dropbtn" style="padding: 2rem;">Dropdown</button>
-	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" contain justify="below" align="center" auto="contextmenu" let:closeClick>
+	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" contain justify="below" align="start" auto="contextmenu" let:closeClick>
 		<button on:click={closeClick(() => console.log("click"))}>Option 1</button>
 		<button>Option 2</button>
 		<button>Option 3</button>

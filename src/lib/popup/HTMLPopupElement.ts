@@ -4,7 +4,7 @@ export interface HTMLPopupElement {
 	popupContainer: HTMLDivElement | null;
 
 	/** TODOC */
-	showPopup(arg?: HTMLElement | null | { x: number; y: number }): void;
+	showPopup(arg?: HTMLElement | null | { x: number; y: number }): Promise<void>;
 
 	/** TODOC */
 	close(): void;

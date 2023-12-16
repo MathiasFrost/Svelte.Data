@@ -75,10 +75,10 @@
 
 <h2>Simple</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} force keepOpen>
+	<EnhancedSelect name="user" pool={users} value={3} force>
 		<input type="search" placeholder="Employee" name="name" style="width: 100%;" />
 		<svelte:fragment slot="options" let:container let:registerOption let:registerPopup let:filterOptions let:open>
-			<Popup style="width: 100%;" anchor={container} {open} {registerPopup} auto modalSmall keepOpen>
+			<Popup anchor={container} {open} {registerPopup} align="stretch" auto modalSmall keepOpen>
 				<div class="selector">
 					<EnhancedOption {registerOption}>{open}</EnhancedOption>
 					{#each filterOptions(users) as user}
@@ -102,7 +102,7 @@
 			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
 		</div>
 		<svelte:fragment slot="options" let:container let:registerOption let:registerPopup let:filterOptions let:open let:allChecked>
-			<Popup style="width: 100%;" anchor={container} {open} {registerPopup} auto modalSmall keepOpen>
+			<Popup anchor={container} {open} {registerPopup} align="stretch" auto modalSmall keepOpen>
 				{@const filtered = filterOptions(users)}
 				<div class="selector">
 					<EnhancedOption {registerOption} togglesAll>

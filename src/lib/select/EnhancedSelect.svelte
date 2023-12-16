@@ -427,7 +427,6 @@
 
 	/** TODOC */
 	function openAndFocus(): void {
-		console.log("open");
 		open = true;
 		focused = true;
 	}
