@@ -48,25 +48,6 @@
 	let cssClass = "";
 	export { cssClass as class };
 
-	/** @see HTMLEnhancedSelectElement */
-	export const self: HTMLEnhancedSelectElement<T> = {
-		name,
-		value: null,
-		values: [],
-		pool,
-		filtered: pool,
-		options: [],
-		selectedIndex: 0,
-		search: {},
-		focus() {
-			reFocus?.blur();
-			openAndFocus();
-		},
-		close() {
-			open = false;
-		}
-	};
-
 	/** When the EnhancedSelect expects the container to be open if gated behind an `#if`-block */
 	let open: boolean;
 
@@ -117,6 +98,29 @@
 
 	/** If all options are checked when `multiple` */
 	let allChecked = false;
+
+	/** @see HTMLEnhancedSelectElement */
+	export const self: HTMLEnhancedSelectElement<T> = {
+		name,
+		value,
+		values,
+		pool,
+		filtered,
+		options,
+		selectedIndex,
+		search,
+		focus() {
+			reFocus?.blur();
+			openAndFocus();
+		},
+		open() {
+			reFocus?.blur();
+			openAndFocus();
+		},
+		close() {
+			open = false;
+		}
+	};
 
 	// Update `allChecked` when options and values changes
 	$: allChecked = updateAllChecked(options, values);

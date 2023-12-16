@@ -12,27 +12,27 @@ export class PopupHelper {
 
 	/** TODOC */
 	public static getMultipleElementBounds(elements: Element[]): DOMRect {
-		let bounds = elements[0].getBoundingClientRect();
+		if (elements.length === 0) {
+			return new DOMRect();
+		}
 
-		elements.slice(1).forEach((child) => {
-			const rect = child.getBoundingClientRect();
-			bounds = {
-				top: Math.min(bounds.top, rect.top),
-				right: Math.max(bounds.right, rect.right),
-				bottom: Math.max(bounds.bottom, rect.bottom),
-				left: Math.min(bounds.left, rect.left),
-				width: 0, // width and height will be calculated later
-				height: 0,
-				x: 0,
-				y: 0
-			};
+		let minX = Infinity;
+		let minY = Infinity;
+		let maxX = -Infinity;
+		let maxY = -Infinity;
+
+		elements.forEach((element) => {
+			const rect = element.getBoundingClientRect();
+			minX = Math.min(minX, rect.left);
+			minY = Math.min(minY, rect.top);
+			maxX = Math.max(maxX, rect.right);
+			maxY = Math.max(maxY, rect.bottom);
 		});
 
-		// Calculate width and height based on the computed bounds
-		bounds.width = bounds.right - bounds.left;
-		bounds.height = bounds.bottom - bounds.top;
+		const width = maxX - minX;
+		const height = maxY - minY;
 
-		return bounds;
+		return new DOMRect(minX, minY, width, height);
 	}
 
 	/** TODOC */

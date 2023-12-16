@@ -54,7 +54,7 @@
 
 	/** Effective anchors based on `anchor` */
 	let anchors: Element[] = [];
-	$: anchors = PopupHelper.getEffectiveElements(anchor).filter((e) => e !== popupContainer);
+	$: anchors = PopupHelper.getEffectiveElements(anchor).filter((e) => e !== <Element>popupContainer);
 
 	/** Container for popup that should fill the height or width of the `anchor` */
 	let popupContainer: HTMLDivElement | null = null;

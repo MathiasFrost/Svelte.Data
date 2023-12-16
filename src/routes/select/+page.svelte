@@ -3,7 +3,6 @@
 	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
 	import EnhancedOption from "$lib/select/EnhancedOption.svelte";
 	import Popup from "$lib/popup/Popup.svelte";
-	import { fade } from "svelte/transition";
 
 	/** TODOC */
 	interface User {

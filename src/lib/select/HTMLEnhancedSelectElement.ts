@@ -30,5 +30,8 @@ export interface HTMLEnhancedSelectElement<T> {
 	focus(): void;
 
 	/** TODOC */
+	open(): void;
+
+	/** TODOC */
 	close(): void;
 }
