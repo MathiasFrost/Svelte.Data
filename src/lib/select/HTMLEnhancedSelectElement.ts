@@ -14,9 +14,6 @@ export interface HTMLEnhancedSelectElement<T> {
 	/** Reference to the options pool */
 	pool: T[];
 
-	/** Reference to the filtered options pool (what the user actually sees currently) */
-	filtered: T[];
-
 	/** Reference to the elements in body with a `value` attribute */
 	options: HTMLEnhancedOptionElement<T>[];
 
@@ -30,7 +27,7 @@ export interface HTMLEnhancedSelectElement<T> {
 	focus(): void;
 
 	/** TODOC */
-	open(): void;
+	showOptions(): void;
 
 	/** TODOC */
 	close(): void;

@@ -83,6 +83,7 @@
 	/** @see HTMLPopupElement */
 	export const self: HTMLPopupElement = {
 		popupContainer,
+		child,
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
@@ -93,6 +94,7 @@
 
 	// Update props
 	$: self.popupContainer = popupContainer;
+	$: self.child = child;
 
 	// Call `registerPopup` when available
 	$: if (registerPopup) registerPopup(self);
@@ -187,19 +189,19 @@
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
-		self.close();
+		close();
 	}
 
 	/** Handle `anchor` clicks */
 	function onClick(): void {
-		self.showPopup();
+		showPopup();
 	}
 
 	/** Handle `anchor` contextmenu events */
 	function onContextMenu(e: Event): void {
 		if (e instanceof MouseEvent) {
 			e.preventDefault();
-			self.showPopup({ x: e.clientX, y: e.clientY });
+			showPopup({ x: e.clientX, y: e.clientY });
 		}
 	}
 
@@ -207,7 +209,7 @@
 	function onMouseover(): void {
 		if (hoverCooldown) return;
 		hovering = true;
-		self.showPopup();
+		showPopup();
 	}
 
 	/** Handle `anchor` mouseout events */
@@ -216,7 +218,7 @@
 		if (typeof window === "undefined") return;
 		window.setTimeout(() => {
 			if (hovering) return;
-			self.close();
+			close();
 			hoverCooldown = false;
 		}, 300);
 	}
@@ -414,7 +416,7 @@
 	function closeClick(onClick?: () => void): () => void {
 		return () => {
 			onClick?.();
-			self.close();
+			close();
 		};
 	}
 </script>

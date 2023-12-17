@@ -1,6 +1,7 @@
 /** @static */
 export class PopupHelper {
-	public static isOutsideClick(e: MouseEvent, bounds: Node | null): boolean {
+	/** TODOC */
+	public static isOutsideClick(e: MouseEvent, bounds: Node | null | undefined): boolean {
 		if (!(bounds instanceof HTMLElement)) return true;
 
 		// Get the bounding rectangle of the element

@@ -3,7 +3,7 @@
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
 	import { ensureObject, isObject } from "$lib/types";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
-	import type { HTMLPopupElement } from "$lib/popup";
+	import { type HTMLPopupElement, PopupHelper } from "$lib/popup";
 
 	/** Type of the array element */
 	type T = $$Generic;
@@ -49,7 +49,7 @@
 	export { cssClass as class };
 
 	/** When the EnhancedSelect expects the container to be open if gated behind an `#if`-block */
-	let open: boolean;
+	let open: boolean = false;
 
 	/** Passed as a slot prop for implementation to potentially hide options when not reasonable */
 	let focused: boolean = false;
@@ -64,16 +64,13 @@
 	let hovered = selectedIndex;
 
 	/** The search elements inside the container */
-	let search: Record<string, HTMLInputElement> = {};
+	let searchInputs: Record<string, HTMLInputElement> = {};
 
 	/** The search values of `search` */
 	let searchValues: Record<string, string> = {};
 
 	/** Filter options passed in and register them internally */
 	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
-
-	/** The filtered `pool` */
-	let filtered: T[] = [];
 
 	/** The found `EnhancedOption` elements inside the container */
 	let options: HTMLEnhancedOptionElement<T>[] = [];
@@ -105,20 +102,20 @@
 		value,
 		values,
 		pool,
-		filtered,
 		options,
 		selectedIndex,
-		search,
+		search: searchInputs,
+		// TODO: Should focus the first search element and/or set `focused` to true, enabling further interaction
 		focus() {
-			reFocus?.blur();
-			openAndFocus();
+			focus();
 		},
-		open() {
-			reFocus?.blur();
-			openAndFocus();
+		// TODO: Should set `open` to true and show popup if any is registered
+		showOptions() {
+			showOptions();
 		},
+		// TODO: Set `open` to false and close popup if any is registered, along with refocusing some element
 		close() {
-			open = false;
+			close();
 		}
 	};
 
@@ -143,10 +140,9 @@
 	// Update all references
 	$: self.value = value;
 	$: self.values = values;
-	$: self.search = search;
+	$: self.search = searchInputs;
 	$: self.options = options;
 	$: self.pool = pool;
-	$: self.filtered = filtered;
 	$: self.selectedIndex = selectedIndex;
 	$: self.name = name;
 
@@ -200,27 +196,27 @@
 				scrollBox = null;
 			}
 
+			// Find search inputs
 			if (
 				node instanceof HTMLInputElement &&
 				!node.hasAttribute("readonly") &&
-				!node.getAttribute("readonly") &&
 				!node.hasAttribute("disabled") &&
-				!node.getAttribute("disabled") &&
 				["text", "search"].includes(`${node.getAttribute("type")}`)
 			) {
 				if (action === "added") {
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : DEFAULT_NAME;
-					search[name] = node;
+					searchInputs[name] = node;
 					searchValues[name] = node.value;
 					updateDisplay(value); // Update display when the input is rendered
 					node.addEventListener("input", onInput);
-					node.addEventListener("click", openAndFocus);
+					node.addEventListener("click", showOptions);
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
-					if (typeof document !== "undefined" && document.activeElement === node) openAndFocus();
+					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement)
+						lastFocused = document.activeElement;
 				} else {
-					delete search[name];
+					delete searchInputs[name];
 					delete searchValues[name];
 				}
 			}
@@ -234,7 +230,9 @@
 
 	/** Handle global keyboard events */
 	function onKeydown(e: KeyboardEvent): void {
-		if (!focused && !global) return;
+		console.log(focused);
+		if (!focused) return;
+		// Check if enter should pass through to a possible submit event
 		if ((!open && e.key === "Enter") || (e.key === "Enter" && e.ctrlKey)) {
 			close();
 			return;
@@ -265,23 +263,27 @@
 				}
 				break;
 			case " ":
-				{
-					if (!multiple || !e.ctrlKey) return;
+				if (multiple && e.ctrlKey) {
 					e.preventDefault();
 					const item = options[hovered];
 					if (item) selectElement(item);
 				}
 				break;
-			case "Escape":
+			case "Delete":
 				e.preventDefault();
 				clearSearch();
 				break;
+			case "Escape":
+				if (!open) return;
+				e.preventDefault();
+				close();
+				break;
 			default:
-				open = true;
+				showOptions();
 				return;
 		}
 
-		open = true;
+		showOptions();
 		selectedIndex = hovered;
 		scrollToOptionIfNeeded();
 	}
@@ -319,9 +321,10 @@
 	function selectElement(e: HTMLEnhancedOptionElement<T>): void {
 		if (multiple) {
 			if (e.togglesAll) {
-				const allChecked = options.every((o) => o.checked);
+				const visible = options.filter((o) => !!o.element);
+				const allChecked = visible.every((o) => o.checked);
 				if (allChecked) values = [];
-				else values = options.map((o) => o.value);
+				else values = visible.map((o) => o.value);
 			} else {
 				if (!values.includes(e.value)) values = values.concat(e.value);
 				else values = values.filter((v) => v !== e.value);
@@ -331,12 +334,12 @@
 			value = e.value;
 
 			// We have to manually update in this case
-			if (value === oldValue) updateDisplay(value);
+			if (value === oldValue) {
+				updateDisplay(value);
+				filterOptions = getFilterOptions(searchValues);
+			}
 
-			// After selecting we want to display all options again (this needs to happen after the reactive update based on value change)
-			// tick().then(() => (filterOptions = getFilterOptions(searchValues)));
-
-			close();
+			if (!keepOpen) close();
 		}
 
 		hovered = options.findIndex((o) => o.element === e.element);
@@ -356,7 +359,7 @@
 
 	/** Clear the `search` values */
 	function clearSearch(): void {
-		Object.keys(search).forEach((key) => (search[key].value = ""));
+		Object.keys(searchInputs).forEach((key) => (searchInputs[key].value = ""));
 		filterOptions = getFilterOptions(searchValues);
 	}
 
@@ -364,17 +367,15 @@
 	function updateDisplay(value: unknown | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
 		const option = options.find((o) => o.value === value);
-		Object.keys(search).forEach((key) => {
-			if (key in search) {
-				const ref = search[key];
+		Object.keys(searchInputs).forEach((key) => {
+			if (key in searchInputs) {
+				const ref = searchInputs[key];
 				if (key === DEFAULT_NAME) ref.value = `${option?.item}`;
 				else if (isObject(option?.item)) ref.value = `${option.item[key]}`;
 				else ref.value = "";
 				searchValues[key] = ref.value;
 			}
 		});
-
-		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** Add `highlighted` class to `hovere`d element */
@@ -389,14 +390,16 @@
 
 	/** Handle global click events */
 	function onWindowClick(e: MouseEvent): void {
-		if (!container) return;
-		if (e.target instanceof Node && (container.contains(e.target) || (popup?.popupContainer && popup.popupContainer.contains(e.target)))) return;
-		closeAndBlur();
+		if (keepOpen) return;
+		const outside = !PopupHelper.isOutsideClick(e, popup?.child) || !PopupHelper.isOutsideClick(e, container);
+		if (!outside) return;
+		close();
+		blur();
 	}
 
-	/** Handle closing and blurring of this component */
-	function closeAndBlur(): void {
-		close();
+	/** Handle blurring of this component */
+	function blur(): void {
+		console.log("blur");
 		focused = false;
 		// If force, check if values are valid and if not, revert
 		if (!force && !multiple) return;
@@ -405,30 +408,43 @@
 		const option = getOptionMatchingSearch(searchValues);
 
 		// If not found, do not change value and explicitly revert display
-		if (!option) updateDisplay(value);
-		else value = option.value;
+		if (!option) {
+			updateDisplay(value);
+			filterOptions = getFilterOptions(searchValues);
+		} else {
+			value = option.value;
+		}
 	}
 
 	/** Handle closing of this component */
 	function close(): void {
-		if (keepOpen) return;
 		if (reFocus) {
 			reFocus.focus();
-		} else if (container?.contains(document.activeElement)) {
+		} else {
 			if (lastFocused) {
 				lastFocused.focus();
 			} else {
-				const first = Object.keys(search)[0];
-				if (search[first]) search[first].focus();
+				const first = Object.keys(searchInputs)[0];
+				if (searchInputs[first]) searchInputs[first].focus();
 			}
 		}
 		open = false;
+		console.log("close");
 	}
 
 	/** Handle opening and focusing of this component */
-	function openAndFocus(): void {
-		open = true;
+	function focus(): void {
+		const first = Object.keys(searchInputs)[0];
+		if (searchInputs[first]) searchInputs[first].focus();
 		focused = true;
+		console.log("focus");
+	}
+
+	/** Handle opening and focusing of this component */
+	function showOptions(): void {
+		popup?.showPopup(container);
+		open = true;
+		console.log("show");
 	}
 
 	/** Register an `EnhancedOption` element */
@@ -474,19 +490,23 @@
 	/** Handle `search` element blur */
 	function onBlur(e: FocusEvent): void {
 		if (!container) return;
+		// Don't close if new target is inside either popup or container
 		if (
 			(e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) ||
 			options.some((o) => o.element === <HTMLElement | null>e.relatedTarget)
 		) {
 			return;
 		}
-		closeAndBlur();
+		close();
+		blur();
 	}
 
 	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
 		if (e.target instanceof HTMLElement) lastFocused = e.target;
-		openAndFocus();
+		focused = true;
+		console.log("native focus");
+		showOptions();
 	}
 
 	/** Get the option fully matching search strings */
@@ -518,6 +538,7 @@
 	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
 		return (options) => {
 			pool = options;
+			let filtered: T[] = [];
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
 			const option = getOptionMatchingSearch(search);
@@ -552,6 +573,8 @@
 	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
 		return () => options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
 	}
+
+	console.log(open);
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
@@ -569,8 +592,8 @@
 {/if}
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
 	{#if observer}
-		<slot {clearSearch} {allChecked} {filtered} {getChecked} />
-		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {filtered} {allChecked} />
+		<slot {clearSearch} {allChecked} {getChecked} />
+		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {allChecked} />
 	{/if}
 </div>
 
