@@ -30,5 +30,5 @@ export interface HTMLEnhancedSelectElement<T> {
 	showOptions(): void;
 
 	/** TODOC */
-	close(): void;
+	close(ignoreReFocus?: boolean): void;
 }

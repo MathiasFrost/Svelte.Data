@@ -10,5 +10,5 @@ export interface HTMLPopupElement {
 	showPopup(arg?: HTMLElement | null | { x: number; y: number }): Promise<void>;
 
 	/** TODOC */
-	close(): void;
+	close(ignoreReFocus?: boolean): void;
 }

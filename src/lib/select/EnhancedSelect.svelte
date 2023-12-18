@@ -3,7 +3,8 @@
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
 	import { ensureObject, isObject } from "$lib/types";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
-	import { type HTMLPopupElement, PopupHelper } from "$lib/popup";
+	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
+	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
 	/** Type of the array element */
 	type T = $$Generic;
@@ -31,9 +32,6 @@
 
 	/** Do not auto-close */
 	export let keepOpen = false;
-
-	/** If keyboard events should be global */
-	export let global = false;
 
 	/** Force display text to be valid when blurred */
 	export let force = false;
@@ -114,8 +112,8 @@
 			showOptions();
 		},
 		// TODO: Set `open` to false and close popup if any is registered, along with refocusing some element
-		close() {
-			close();
+		close(ignoreReFocus) {
+			close(ignoreReFocus);
 		}
 	};
 
@@ -154,6 +152,7 @@
 
 	/** Register popup and apply observer */
 	function registerPopup(selectPopup: HTMLPopupElement): void {
+		if (popup?.popupContainer === selectPopup.popupContainer) return;
 		popup = selectPopup;
 		if (!popup.popupContainer) return;
 		popupObserver = new MutationObserver(mutationCallback);
@@ -213,8 +212,10 @@
 					node.addEventListener("click", showOptions);
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
-					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement)
+					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement) {
 						lastFocused = document.activeElement;
+						focused = true;
+					}
 				} else {
 					delete searchInputs[name];
 					delete searchValues[name];
@@ -230,7 +231,6 @@
 
 	/** Handle global keyboard events */
 	function onKeydown(e: KeyboardEvent): void {
-		console.log(focused);
 		if (!focused) return;
 		// Check if enter should pass through to a possible submit event
 		if ((!open && e.key === "Enter") || (e.key === "Enter" && e.ctrlKey)) {
@@ -240,13 +240,11 @@
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
-				if (hovered <= 0) return;
-				hovered--;
+				if (hovered > 0) hovered--;
 				break;
 			case "ArrowDown":
 				e.preventDefault();
-				if (hovered >= options.filter((o) => !!o.element).length - 1) return;
-				hovered++;
+				if (hovered < options.filter((o) => !!o.element).length - 1) hovered++;
 				break;
 			case "Enter":
 				{
@@ -292,11 +290,12 @@
 	function scrollToOptionIfNeeded(): void {
 		const item = options[hovered];
 		if (!item || !scrollBox || !item.element) return;
+
 		const rect = item.element.getBoundingClientRect();
 		const boxRect = scrollBox.getBoundingClientRect();
+
 		// Checking visibility with respect to the scroll position
 		const isVisible = rect.top >= boxRect.top && rect.bottom <= boxRect.bottom;
-
 		if (!isVisible) {
 			// Determine the correct scroll position
 			if (rect.top < boxRect.top) {
@@ -336,9 +335,9 @@
 			// We have to manually update in this case
 			if (value === oldValue) {
 				updateDisplay(value);
-				filterOptions = getFilterOptions(searchValues);
 			}
 
+			filterOptions = getFilterOptions(searchValues);
 			if (!keepOpen) close();
 		}
 
@@ -391,15 +390,13 @@
 	/** Handle global click events */
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen) return;
-		const outside = !PopupHelper.isOutsideClick(e, popup?.child) || !PopupHelper.isOutsideClick(e, container);
-		if (!outside) return;
-		close();
+		if (!PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popup?.child)) return;
+		close(true);
 		blur();
 	}
 
 	/** Handle blurring of this component */
 	function blur(): void {
-		console.log("blur");
 		focused = false;
 		// If force, check if values are valid and if not, revert
 		if (!force && !multiple) return;
@@ -417,19 +414,24 @@
 	}
 
 	/** Handle closing of this component */
-	function close(): void {
-		if (reFocus) {
-			reFocus.focus();
-		} else {
-			if (lastFocused) {
-				lastFocused.focus();
+	function close(ignoreReFocus = false): void {
+		if (!ignoreReFocus) {
+			if (reFocus) {
+				reFocus.focus();
+				console.log("refocuse2");
 			} else {
-				const first = Object.keys(searchInputs)[0];
-				if (searchInputs[first]) searchInputs[first].focus();
+				if (lastFocused) {
+					lastFocused.focus();
+					console.log("lastfocused");
+				} else {
+					const first = Object.keys(searchInputs)[0];
+					if (searchInputs[first]) searchInputs[first].focus();
+					console.log("first");
+				}
 			}
 		}
+		popup?.close(true);
 		open = false;
-		console.log("close");
 	}
 
 	/** Handle opening and focusing of this component */
@@ -437,18 +439,17 @@
 		const first = Object.keys(searchInputs)[0];
 		if (searchInputs[first]) searchInputs[first].focus();
 		focused = true;
-		console.log("focus");
 	}
 
 	/** Handle opening and focusing of this component */
 	function showOptions(): void {
 		popup?.showPopup(container);
 		open = true;
-		console.log("show");
 	}
 
 	/** Register an `EnhancedOption` element */
 	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
+		console.log(option.item, option.value);
 		if (!option.element || options.includes(option)) return;
 
 		option.element.setAttribute("tabindex", "-1");
@@ -492,12 +493,12 @@
 		if (!container) return;
 		// Don't close if new target is inside either popup or container
 		if (
-			(e.relatedTarget instanceof Node && container.contains(e.relatedTarget)) ||
+			(e.relatedTarget instanceof Node && (container.contains(e.relatedTarget) || popup?.popupContainer?.contains(e.relatedTarget))) ||
 			options.some((o) => o.element === <HTMLElement | null>e.relatedTarget)
 		) {
 			return;
 		}
-		close();
+		close(true);
 		blur();
 	}
 
@@ -505,7 +506,6 @@
 	function onFocus(e: FocusEvent): void {
 		if (e.target instanceof HTMLElement) lastFocused = e.target;
 		focused = true;
-		console.log("native focus");
 		showOptions();
 	}
 
@@ -566,15 +566,16 @@
 
 	/** Check if all pool options are contained in `values` */
 	function updateAllChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): boolean {
-		return options.every((o) => values.includes(o.value));
+		return options.filter((o) => !!o.element).every((o) => values.includes(o.value));
 	}
 
 	/** Create the function that gets all pool options contained in `values` */
 	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
-		return () => options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
+		return () => {
+			console.log(options);
+			return options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
+		};
 	}
-
-	console.log(open);
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />

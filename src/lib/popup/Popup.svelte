@@ -78,7 +78,7 @@
 	let position: { x: number; y: number } | null = null;
 
 	/** Called when component is destroyed */
-	let destroy: (() => void) | undefined;
+	let destroy: (() => void) | null = null;
 
 	/** @see HTMLPopupElement */
 	export const self: HTMLPopupElement = {
@@ -87,8 +87,9 @@
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
-		close() {
-			close();
+		close(ignoreReFocus) {
+			console.log("invoke", ignoreReFocus);
+			close(ignoreReFocus);
 		}
 	};
 
@@ -97,7 +98,7 @@
 	$: self.child = child;
 
 	// Call `registerPopup` when available
-	$: if (registerPopup) registerPopup(self);
+	$: if (registerPopup && self.popupContainer) registerPopup(self);
 
 	// Call functions when open changes
 	$: if (open) showPopup();
@@ -163,23 +164,29 @@
 	/** Set up event listeners */
 	function setUpAnchor(anchor: Element | null, auto: boolean | "contextmenu" | "hover"): void {
 		if (typeof window !== "undefined" && [true, "contextmenu"].includes(auto)) {
+			window.removeEventListener("click", onWindowClick);
 			window.addEventListener("click", onWindowClick);
 		}
 		if (!anchor) return;
-		if (!(anchor instanceof HTMLButtonElement) && [true, "contextmenu"].includes(auto)) {
+		if (!(anchor instanceof HTMLButtonElement) && [true, "contextmenu"].includes(auto) && !anchor.hasAttribute("tabindex")) {
 			anchor.setAttribute("tabindex", "0");
 		}
 		switch (auto) {
 			case true:
 				if (!(anchor instanceof HTMLButtonElement)) {
+					anchor.removeEventListener("keydown", onClick);
 					anchor.addEventListener("keydown", onClick);
 				}
+				anchor.removeEventListener("click", onClick);
 				anchor.addEventListener("click", onClick);
 				break;
 			case "contextmenu":
+				anchor.removeEventListener("contextmenu", onContextMenu);
 				anchor.addEventListener("contextmenu", onContextMenu);
 				break;
 			case "hover":
+				anchor.removeEventListener("mouseover", onMouseover);
+				anchor.removeEventListener("mouseout", onMouseout);
 				anchor.addEventListener("mouseover", onMouseover);
 				anchor.addEventListener("mouseout", onMouseout);
 				break;
@@ -189,7 +196,7 @@
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
-		close();
+		close(true);
 	}
 
 	/** Handle `anchor` clicks */
@@ -224,7 +231,7 @@
 	}
 
 	/** TODOC */
-	function close(): void {
+	function close(ignoreReFocus = false): void {
 		open = false;
 		position = null;
 		if (auto === "hover" && typeof window !== "undefined") {
@@ -234,8 +241,15 @@
 		showing = false;
 		dispatch("close");
 		destroy?.();
-		if (reFocus) reFocus?.focus();
-		else if (typeof window !== "undefined" && focused instanceof HTMLElement) focused.focus();
+		destroy = null;
+		if (ignoreReFocus) return;
+		if (reFocus) {
+			reFocus?.focus();
+			console.log("refocus");
+		} else if (typeof window !== "undefined" && focused instanceof HTMLElement) {
+			focused.focus();
+			console.log("focused");
+		}
 	}
 
 	/** Open the popup */
@@ -243,7 +257,7 @@
 		open = true;
 		if (typeof arg !== "undefined") {
 			if (arg === null || arg instanceof HTMLElement) anchor = arg;
-			else position = arg;
+			else if ("x" in arg && "y" in arg) position = arg;
 		}
 
 		if (typeof document !== "undefined" && document.activeElement !== document.body) focused = document.activeElement;
@@ -252,7 +266,9 @@
 		await tick(); // Wait for child
 		if (!anchors.length || !anchor || !popupContainer || !child) return;
 
-		destroy = portalIn(popupContainer, portalKey).destroy;
+		// Portal the container to body container
+		if (!destroy) destroy = portalIn(popupContainer, portalKey).destroy;
+
 		const rect: DOMRect | null = await calculateBounds();
 		if (!rect) return;
 
@@ -400,10 +416,16 @@
 		}
 
 		popupContainer.style.opacity = "1";
+		const firstShow = showing !== open;
 		showing = true;
 		dispatch("show");
+
+		if (!firstShow) return;
 		const first = child.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-		if (first instanceof HTMLElement) first.focus();
+		if (first instanceof HTMLElement && first.getAttribute("tabindex") !== "-1") {
+			first.focus();
+			console.log(first);
+		}
 	}
 
 	/** Get bounds of `child` after rendered */
