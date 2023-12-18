@@ -102,7 +102,7 @@
 
 	// Call functions when open changes
 	$: if (open) showPopup();
-	else close();
+	else close(true);
 
 	// Set up event listeners on `anchor`
 	$: setUpAnchor(anchor, auto);
@@ -196,6 +196,7 @@
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
+		console.log("window");
 		close(true);
 	}
 
@@ -242,6 +243,7 @@
 		dispatch("close");
 		destroy?.();
 		destroy = null;
+		console.log(ignoreReFocus);
 		if (ignoreReFocus) return;
 		if (reFocus) {
 			reFocus?.focus();

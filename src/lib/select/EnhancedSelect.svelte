@@ -391,6 +391,7 @@
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen) return;
 		if (!PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popup?.child)) return;
+		console.log("window");
 		close(true);
 		blur();
 	}
@@ -449,7 +450,6 @@
 
 	/** Register an `EnhancedOption` element */
 	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
-		console.log(option.item, option.value);
 		if (!option.element || options.includes(option)) return;
 
 		option.element.setAttribute("tabindex", "-1");
@@ -572,8 +572,18 @@
 	/** Create the function that gets all pool options contained in `values` */
 	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
 		return () => {
-			console.log(options);
-			return options.filter((o) => values.includes(o.value) && !!o.item).map((o) => o.item!);
+			console.log(
+				options.filter((o) => values.includes(o.value)),
+				values
+			);
+			return options
+				.filter((o) => values.includes(o.value) && !!o.item)
+				.reduce<HTMLEnhancedOptionElement<T>[]>((prev, curr) => {
+					console.log(curr.item);
+					if (!prev.some((o) => o.value === curr.value)) prev.push(curr);
+					return prev;
+				}, [])
+				.map((o) => o.item!);
 		};
 	}
 </script>
