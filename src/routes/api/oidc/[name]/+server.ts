@@ -8,6 +8,6 @@ export const GET: RequestHandler = async ({ cookies, params }) => {
 
 /** TODOC */
 export const PUT: RequestHandler = async ({ cookies, params, request }) => {
-	cookies.set(params.name, await request.text());
+	cookies.set(params.name, await request.text(), { path: "/" });
 	return new Response();
 };

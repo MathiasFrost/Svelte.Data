@@ -17,24 +17,27 @@ For scenarios when the native `<select>` element does not suffice.
 #### Example
 
 ```sveltehtml
-
-<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select} pool={users} key="id" value="3" force multiple>
-		<div slot="search" style="width: 100%;" let:isChecked>
-			<p>Selected: {users.filter((user) => isChecked(user)).map((user) => user.username)}</p>
-			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
-		</div>
-		<div slot="options" class="dropdown-content" let:options let:isChecked let:allChecked>
-			<ul class="selector">
-				<li value={null}>
-					<input tabindex="-1" type="checkbox" checked={allChecked()} />
-					{#if allChecked()}Uncheck all{:else}Check all{/if} ({options.length})
-				</li>
-				{#each options as option}
-					<li value={option.id}><input tabindex="-1" type="checkbox" checked={isChecked(option)} />{option.name}</li>
-				{/each}
-			</ul>
-		</div>
+<form on:submit|preventDefault={onSubmit} style="width: 100%;">
+	<EnhancedSelect name="users" pool={users} values={[1, 3]} force multiple let:values let:pool>
+		{@const filtered = pool.filter((user) => values.includes(user.id))}
+		<input type="text" readonly style="width: 100%" value={filtered.map((user) => user.username).join(", ")} />
+		<svelte:fragment slot="options" let:registerOption let:registerPopup let:filterOptions let:allChecked>
+			<Popup {registerPopup} align="stretch" modalSmall>
+				{@const filtered = filterOptions(users)}
+				<div class="selector">
+					<input type="search" style="width: 100%" placeholder="Employee" name="name" />
+					<input type="search" style="width: 100%" placeholder="Employee" name="username" />
+					<EnhancedOption {registerOption} togglesAll>
+						<input tabindex="-1" type="checkbox" checked={allChecked} />
+						{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
+					</EnhancedOption>
+					{#each filtered as user (user.id)}
+						<EnhancedOption {registerOption} value={user.id} item={user} let:checked
+							><input tabindex="-1" type="checkbox" {checked} />{user.name}</EnhancedOption>
+					{/each}
+				</div>
+			</Popup>
+		</svelte:fragment>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
 </form>
