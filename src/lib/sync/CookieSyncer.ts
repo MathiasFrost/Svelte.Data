@@ -97,6 +97,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** @inheritdoc */
 	public override push(value: T, cookies?: Cookies): void {
 		if (cookies) {
+			if (!this.path) throw new Error("Server-side cookies requires path");
 			cookies.set(this.key, this.serializer.serialize(value), {
 				domain: this.domain,
 				expires: this.expires,
@@ -128,7 +129,7 @@ export class CookieSyncer<T> extends Syncer<T> implements ICookieOptions {
 	/** @inheritdoc */
 	public override clear(cookies?: Cookies): void {
 		if (cookies) {
-			cookies.delete(this.key);
+			cookies.delete(this.key, { path: "/" });
 			return;
 		}
 		if (typeof document === "undefined") return;
