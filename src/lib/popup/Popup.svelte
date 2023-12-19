@@ -88,7 +88,6 @@
 			await showPopup(arg);
 		},
 		close(ignoreReFocus) {
-			console.log("invoke", ignoreReFocus);
 			close(ignoreReFocus);
 		}
 	};
@@ -196,7 +195,6 @@
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
-		console.log("window");
 		close(true);
 	}
 
@@ -243,15 +241,9 @@
 		dispatch("close");
 		destroy?.();
 		destroy = null;
-		console.log(ignoreReFocus);
 		if (ignoreReFocus) return;
-		if (reFocus) {
-			reFocus?.focus();
-			console.log("refocus");
-		} else if (typeof window !== "undefined" && focused instanceof HTMLElement) {
-			focused.focus();
-			console.log("focused");
-		}
+		if (reFocus) reFocus?.focus();
+		else if (typeof window !== "undefined" && focused instanceof HTMLElement) focused.focus();
 	}
 
 	/** Open the popup */
@@ -424,9 +416,8 @@
 
 		if (!firstShow) return;
 		const first = child.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-		if (first instanceof HTMLElement && first.getAttribute("tabindex") !== "-1") {
+		if (first instanceof HTMLElement && first.getAttribute("tabindex") !== "-1" && !first.hidden) {
 			first.focus();
-			console.log(first);
 		}
 	}
 

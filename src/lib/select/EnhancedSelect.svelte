@@ -73,9 +73,6 @@
 	/** The found `EnhancedOption` elements inside the container */
 	let options: HTMLEnhancedOptionElement<T>[] = [];
 
-	/** Function passed to slot that can be called to retrieve references to checked elements */
-	let getChecked: () => T[] = createGetChecked(options, values);
-
 	/** Container of all content */
 	let container: HTMLDivElement | null = null;
 
@@ -103,15 +100,12 @@
 		options,
 		selectedIndex,
 		search: searchInputs,
-		// TODO: Should focus the first search element and/or set `focused` to true, enabling further interaction
 		focus() {
 			focus();
 		},
-		// TODO: Should set `open` to true and show popup if any is registered
 		showOptions() {
 			showOptions();
 		},
-		// TODO: Set `open` to false and close popup if any is registered, along with refocusing some element
 		close(ignoreReFocus) {
 			close(ignoreReFocus);
 		}
@@ -119,9 +113,6 @@
 
 	// Update `allChecked` when options and values changes
 	$: allChecked = updateAllChecked(options, values);
-
-	// Update `getChecked` when options and values changes
-	$: getChecked = createGetChecked(options, values);
 
 	// Set up observer for container when bound
 	$: setUpObserver(container);
@@ -196,24 +187,23 @@
 			}
 
 			// Find search inputs
-			if (
-				node instanceof HTMLInputElement &&
-				!node.hasAttribute("readonly") &&
-				!node.hasAttribute("disabled") &&
-				["text", "search"].includes(`${node.getAttribute("type")}`)
-			) {
+			if (node instanceof HTMLInputElement && !node.hasAttribute("disabled") && ["text", "search"].includes(`${node.getAttribute("type")}`)) {
 				if (action === "added") {
 					node.setAttribute("autocomplete", "off");
 					const name = node.name ? node.name : DEFAULT_NAME;
 					searchInputs[name] = node;
-					searchValues[name] = node.value;
-					updateDisplay(value); // Update display when the input is rendered
-					node.addEventListener("input", onInput);
+					if (!node.hasAttribute("readonly")) {
+						searchValues[name] = node.value;
+						node.addEventListener("input", onInput);
+					}
 					node.addEventListener("click", showOptions);
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
+					node.addEventListener("keydown", searchKeydown);
 					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement) {
-						lastFocused = document.activeElement;
+						if (popup?.popupContainer?.contains(node)) {
+							lastFocused = node;
+						}
 						focused = true;
 					}
 				} else {
@@ -226,6 +216,38 @@
 		// If the node has child nodes, recursively search them
 		if (node.hasChildNodes()) {
 			node.childNodes.forEach((node) => searchForElements(node, action));
+		}
+	}
+
+	/** Make sure tabbing works */
+	function searchKeydown(e: KeyboardEvent): void {
+		if (e.key !== "Tab") return;
+		if (!(e.target instanceof HTMLElement)) return;
+
+		const name = e.target.getAttribute("name")?.toString() ?? DEFAULT_NAME;
+		const keys = Object.keys(searchInputs);
+		const index = keys.indexOf(name);
+		if (!e.shiftKey && index < keys.length - 1) {
+			e.preventDefault();
+			searchInputs[keys[index + 1]].focus();
+			return;
+		} else if (e.shiftKey && index > 0) {
+			e.preventDefault();
+			searchInputs[keys[index - 1]].focus();
+			return;
+		}
+
+		if (lastFocused) {
+			const focusableElements = Array.from(document.querySelectorAll('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(
+				(item) => item instanceof HTMLElement && item.getAttribute("tabindex") !== "-1" && !item.hidden
+			);
+			const currentIndex = focusableElements.indexOf(lastFocused);
+			const next = e.shiftKey ? focusableElements[currentIndex - 1] : focusableElements[currentIndex + 1];
+			if (next instanceof HTMLElement) {
+				e.preventDefault();
+				next.focus();
+				return;
+			}
 		}
 	}
 
@@ -391,7 +413,7 @@
 	function onWindowClick(e: MouseEvent): void {
 		if (keepOpen) return;
 		if (!PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popup?.child)) return;
-		console.log("window");
+		if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) && e.target.type === "submit") return;
 		close(true);
 		blur();
 	}
@@ -419,15 +441,12 @@
 		if (!ignoreReFocus) {
 			if (reFocus) {
 				reFocus.focus();
-				console.log("refocuse2");
 			} else {
 				if (lastFocused) {
 					lastFocused.focus();
-					console.log("lastfocused");
 				} else {
 					const first = Object.keys(searchInputs)[0];
 					if (searchInputs[first]) searchInputs[first].focus();
-					console.log("first");
 				}
 			}
 		}
@@ -498,13 +517,13 @@
 		) {
 			return;
 		}
-		close(true);
+		if (!keepOpen) close(true);
 		blur();
 	}
 
 	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
-		if (e.target instanceof HTMLElement) lastFocused = e.target;
+		if (e.target instanceof HTMLElement && !popup?.popupContainer?.contains(document.activeElement)) lastFocused = e.target;
 		focused = true;
 		showOptions();
 	}
@@ -568,24 +587,6 @@
 	function updateAllChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): boolean {
 		return options.filter((o) => !!o.element).every((o) => values.includes(o.value));
 	}
-
-	/** Create the function that gets all pool options contained in `values` */
-	function createGetChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): () => T[] {
-		return () => {
-			console.log(
-				options.filter((o) => values.includes(o.value)),
-				values
-			);
-			return options
-				.filter((o) => values.includes(o.value) && !!o.item)
-				.reduce<HTMLEnhancedOptionElement<T>[]>((prev, curr) => {
-					console.log(curr.item);
-					if (!prev.some((o) => o.value === curr.value)) prev.push(curr);
-					return prev;
-				}, [])
-				.map((o) => o.item!);
-		};
-	}
 </script>
 
 <svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
@@ -603,8 +604,8 @@
 {/if}
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
 	{#if observer}
-		<slot {clearSearch} {allChecked} {getChecked} />
-		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {allChecked} />
+		<slot {clearSearch} {allChecked} {pool} {value} {values} />
+		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {allChecked} {pool} {value} {values} />
 	{/if}
 </div>
 

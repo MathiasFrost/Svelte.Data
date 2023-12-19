@@ -10,11 +10,10 @@
 
 	/** Unique value representing this option */
 	export let value: unknown | null = null;
-	$: console.log(value);
 
 	/** The array element this option represents */
 	export let item: T | null = null;
-	$: console.log(item);
+
 	/** Set to true if this options should toggle all for multiple select */
 	export let togglesAll = false;
 
