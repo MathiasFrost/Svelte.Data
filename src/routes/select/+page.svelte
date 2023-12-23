@@ -2,7 +2,6 @@
 	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
 	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement";
 	import EnhancedOption from "$lib/select/EnhancedOption.svelte";
-	import Popup from "$lib/popup/Popup.svelte";
 
 	/** TODOC */
 	interface User {
@@ -57,14 +56,14 @@
 <h2>Multiple search props</h2>
 <p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}</p>
 <form on:submit|preventDefault={onSubmit}>
-	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} force let:value let:pool>
-		<svelte:fragment>
+	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} force let:registerOption let:filterOptions>
+		<svelte:fragment slot="summary" let:pool let:value>
 			{@const selected = pool.find((user) => user.id === value)}
 			<input type="search" placeholder="Name" name="name" bind:this={input} value={selected?.name ?? ""} />
 			<input type="search" placeholder="Username" name="username" value={selected?.username ?? ""} />
 		</svelte:fragment>
-		<div slot="options" class="selector" let:registerOption let:filterOptions let:open>
-			<EnhancedOption {registerOption}>{open}</EnhancedOption>
+		<div class="selector">
+			<EnhancedOption {registerOption} />
 			{#each filterOptions(users) as user}
 				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
 			{/each}
@@ -75,44 +74,40 @@
 
 <h2>Simple</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} force let:pool let:value>
-		{@const selected = pool.find((user) => user.id === value)}
-		<input type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name ?? ""} />
-		<svelte:fragment slot="options" let:registerOption let:registerPopup let:filterOptions let:open>
-			<Popup {registerPopup} align="stretch" modalSmall>
-				<div class="selector">
-					<EnhancedOption {registerOption}>{open}</EnhancedOption>
-					{#each filterOptions(users) as user}
-						<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
-					{/each}
-				</div>
-			</Popup>
+	<EnhancedSelect name="user" pool={users} value={3} force popup let:registerOption let:filterOptions>
+		<svelte:fragment slot="summary" let:pool let:value>
+			{@const selected = pool.find((user) => user.id === value)}
+			<input type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name} />
 		</svelte:fragment>
+		<div class="selector">
+			<EnhancedOption {registerOption} />
+			{#each filterOptions(users) as user}
+				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
+			{/each}
+		</div>
 	</EnhancedSelect>
 </form>
 
 <h2>Multiple</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[3, 1]} force multiple let:values let:pool>
-		{@const filtered = pool.filter((user) => values.includes(user.id))}
-		<div style="width: 100%;">
+	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[3, 1]} force multiple popup>
+		<div style="width: 100%;" slot="summary" let:pool let:values>
+			{@const filtered = pool.filter((user) => values.includes(user.id))}
 			<p>Selected: {filtered.map((user) => user.username).join(", ")}{filtered.length}</p>
 			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
 		</div>
-		<svelte:fragment slot="options" let:registerOption let:registerPopup let:filterOptions let:allChecked>
-			<Popup {registerPopup} align="stretch" modalSmall keepOpen>
-				{@const filtered = filterOptions(users)}
-				<div class="selector">
-					<EnhancedOption {registerOption} togglesAll>
-						<input tabindex="-1" type="checkbox" checked={allChecked} />
-						{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
-					</EnhancedOption>
-					{#each filtered as user (user.id)}
-						<EnhancedOption {registerOption} value={user.id} item={user} let:checked
-							><input tabindex="-1" type="checkbox" {checked} />{user.name}</EnhancedOption>
-					{/each}
-				</div>
-			</Popup>
+		<svelte:fragment let:registerOption let:filterOptions let:allChecked>
+			{@const filtered = filterOptions(users)}
+			<div class="selector">
+				<EnhancedOption {registerOption} togglesAll>
+					<input tabindex="-1" type="checkbox" checked={allChecked} />
+					{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
+				</EnhancedOption>
+				{#each filtered as user (user.id)}
+					<EnhancedOption {registerOption} value={user.id} item={user} let:checked
+						><input tabindex="-1" type="checkbox" {checked} />{user.name}</EnhancedOption>
+				{/each}
+			</div>
 		</svelte:fragment>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -120,25 +115,25 @@
 
 <h2>Multiple with simple display</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[1, 3]} force multiple let:values let:pool>
-		{@const filtered = pool.filter((user) => values.includes(user.id))}
-		<input type="text" readonly style="width: 100%" value={filtered.map((user) => user.username).join(", ")} />
-		<svelte:fragment slot="options" let:registerOption let:registerPopup let:filterOptions let:allChecked>
-			<Popup {registerPopup} align="stretch" modalSmall>
-				{@const filtered = filterOptions(users)}
-				<div class="selector">
-					<input type="search" style="width: 100%" placeholder="Employee" name="name" />
-					<input type="search" style="width: 100%" placeholder="Employee" name="username" />
-					<EnhancedOption {registerOption} togglesAll>
-						<input tabindex="-1" type="checkbox" checked={allChecked} />
-						{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
-					</EnhancedOption>
-					{#each filtered as user (user.id)}
-						<EnhancedOption {registerOption} value={user.id} item={user} let:checked
-							><input tabindex="-1" type="checkbox" {checked} />{user.name}</EnhancedOption>
-					{/each}
-				</div>
-			</Popup>
+	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[1, 3]} force multiple popup>
+		<svelte:fragment slot="summary" let:values let:pool>
+			{@const filtered = pool.filter((user) => values.includes(user.id))}
+			<input type="text" readonly style="width: 100%" value={filtered.map((user) => user.username).join(", ")} />
+		</svelte:fragment>
+		<svelte:fragment let:registerOption let:filterOptions let:allChecked>
+			{@const filtered = filterOptions(users)}
+			<div class="selector">
+				<input type="search" placeholder="Employee" name="name" />
+				<input type="search" placeholder="Username" name="username" />
+				<EnhancedOption {registerOption} togglesAll>
+					<input tabindex="-1" type="checkbox" checked={allChecked} />
+					{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
+				</EnhancedOption>
+				{#each filtered as user (user.id)}
+					<EnhancedOption {registerOption} value={user.id} item={user} let:checked
+						><input tabindex="-1" type="checkbox" {checked} />{user.name}</EnhancedOption>
+				{/each}
+			</div>
 		</svelte:fragment>
 	</EnhancedSelect>
 	<button type="submit">submit</button>
@@ -146,18 +141,17 @@
 
 <h2>Stylized select</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} let:value>
-		<input type="text" readonly style="width: 100%;" value={users.find((user) => user.id === value)?.name} name="name" />
-		<svelte:fragment slot="options" let:registerOption let:registerPopup>
-			<Popup {registerPopup} align="stretch" modalSmall>
-				<div class="selector">
-					<EnhancedOption {registerOption} />
-					{#each users as user (user.id)}
-						<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
-					{/each}
-				</div>
-			</Popup>
+	<EnhancedSelect name="user" pool={users} value={3} let:registerOption popup>
+		<svelte:fragment slot="summary" let:pool let:value>
+			{@const selected = pool.find((user) => user.id === value)}
+			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name} />
 		</svelte:fragment>
+		<div class="selector">
+			<EnhancedOption {registerOption} />
+			{#each users as user (user.id)}
+				<EnhancedOption {registerOption} value={user.id} item={user}>{user.name}</EnhancedOption>
+			{/each}
+		</div>
 	</EnhancedSelect>
 </form>
 

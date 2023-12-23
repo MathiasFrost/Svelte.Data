@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement";
+	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 
 	/** Type of the array element */
 	type T = $$Generic;
@@ -19,6 +19,13 @@
 
 	/** Pass down from `EnhancedSelect` */
 	export let registerOption: (option: HTMLEnhancedOptionElement<T>) => void;
+
+	/** CSS class for container */
+	let cssClass = "";
+	export { cssClass as class };
+
+	/** CSS style for container */
+	export let style = "";
 
 	/** Container for the option */
 	let container: HTMLDivElement | null = null;
@@ -54,6 +61,6 @@
 	});
 </script>
 
-<div bind:this={container}>
+<div bind:this={container} class={cssClass} {style}>
 	<slot {checked}>&nbsp;</slot>
 </div>

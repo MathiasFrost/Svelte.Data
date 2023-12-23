@@ -3,10 +3,10 @@ import { PopupHelper } from "$lib/popup/PopupHelper.js";
 /** TODOC */
 export function autoDialog(node: Node): { destroy: () => void } {
 	const handleWindowClick = (event: MouseEvent): void => {
-		// Check if the click is outside the element
-		if (!open || !PopupHelper.isOutsideClick(event, node)) return;
-
 		if (node instanceof HTMLDialogElement) {
+			// Check if the click is outside the element
+			if (!node.open || !PopupHelper.isOutsideClick(event, node)) return;
+
 			node.close();
 		}
 	};

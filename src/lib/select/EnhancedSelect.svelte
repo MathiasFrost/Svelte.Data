@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
-	import { ensureObject, isObject } from "$lib/types";
+	import { ensureObject, isObject } from "$lib/types/unknown.js";
 	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
 	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+	import Popup from "$lib/popup/Popup.svelte";
 
 	/** Type of the array element */
 	type T = $$Generic;
@@ -30,17 +31,17 @@
 	/** Option pool */
 	export let pool: T[] = [];
 
-	/** Do not auto-close */
-	export let keepOpen = false;
-
 	/** Force display text to be valid when blurred */
 	export let force = false;
 
 	/** Multiple or single select */
 	export let multiple = false;
 
-	/** Element to focus after closing */
-	export let reFocus: HTMLElement | null = null;
+	/** If options should be wrapped in a <Popup> */
+	export let popup = false;
+
+	/** If popup should be a centered modal on small screens */
+	export let modalSmall = false;
 
 	/** CSS class for the container */
 	let cssClass = "";
@@ -53,7 +54,7 @@
 	let focused: boolean = false;
 
 	/** The popup element if any is registered */
-	let popup: HTMLPopupElement | null = null;
+	let popupElement: HTMLPopupElement | null = null;
 
 	/** The current option index that will be selected when pressing enter */
 	let selectedIndex = 0;
@@ -106,8 +107,8 @@
 		showOptions() {
 			showOptions();
 		},
-		close(ignoreReFocus) {
-			close(ignoreReFocus);
+		close() {
+			close();
 		}
 	};
 
@@ -142,32 +143,44 @@
 	});
 
 	/** Register popup and apply observer */
-	function registerPopup(selectPopup: HTMLPopupElement): void {
-		if (popup?.popupContainer === selectPopup.popupContainer) return;
-		popup = selectPopup;
-		if (!popup.popupContainer) return;
+	function registerPopup(selectPopup: HTMLPopupElement | null): void {
+		popupElement = selectPopup;
+
+		if (!popupElement?.innerContainer) return;
+
+		// First run is manual
+		if (!popupObserver) {
+			searchForElements(popupElement.innerContainer, "added");
+		}
+
 		popupObserver = new MutationObserver(mutationCallback);
-		popupObserver.observe(popup.popupContainer, { attributes: false, childList: true, subtree: true });
+		popupObserver.observe(popupElement.innerContainer, { childList: true, subtree: true });
 	}
 
 	/** Set up observer on the `container` */
 	function setUpObserver(container: HTMLDivElement | null): void {
-		if (!container || observer) return;
+		if (!container) return;
+
+		// First run is manual
+		if (!observer) {
+			container.addEventListener("click", showOptions);
+			searchForElements(container, "added");
+		}
+
 		observer = new MutationObserver(mutationCallback);
-		observer.observe(container, { attributes: false, childList: true, subtree: true });
+		observer.observe(container, { childList: true, subtree: true });
 	}
 
 	/** Handler for `observer`s */
 	function mutationCallback(mutationsList: MutationRecord[]): void {
 		for (const mutation of mutationsList) {
 			if (mutation.type === "childList") {
-				mutation.addedNodes.forEach((node) => searchForElements(node, "added"));
 				mutation.removedNodes.forEach((node) => searchForElements(node, "removed"));
+				mutation.addedNodes.forEach((node) => searchForElements(node, "added"));
 			}
 		}
 		options = options;
-
-		if (open) scrollToOptionIfNeeded();
+		if (focused) scrollToOptionIfNeeded();
 	}
 
 	/** Search for relevant elements among the mutated elements (`search`, `scrollBox`) */
@@ -196,12 +209,11 @@
 						searchValues[name] = node.value;
 						node.addEventListener("input", onInput);
 					}
-					node.addEventListener("click", showOptions);
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
 					node.addEventListener("keydown", searchKeydown);
 					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement) {
-						if (popup?.popupContainer?.contains(node)) {
+						if (popupElement?.innerContainer?.contains(node)) {
 							lastFocused = node;
 						}
 						focused = true;
@@ -245,6 +257,7 @@
 			const next = e.shiftKey ? focusableElements[currentIndex - 1] : focusableElements[currentIndex + 1];
 			if (next instanceof HTMLElement) {
 				e.preventDefault();
+				close();
 				next.focus();
 				return;
 			}
@@ -287,6 +300,8 @@
 					e.preventDefault();
 					const item = options[hovered];
 					if (item) selectElement(item);
+				} else if (!open) {
+					e.preventDefault();
 				}
 				break;
 			case "Delete":
@@ -299,13 +314,19 @@
 				close();
 				break;
 			default:
-				showOptions();
 				return;
 		}
 
-		showOptions();
-		selectedIndex = hovered;
-		scrollToOptionIfNeeded();
+		showOptions().then(() => {
+			selectedIndex = hovered;
+			scrollToOptionIfNeeded();
+		});
+	}
+
+	/** Handle window clicks */
+	function onWindowClick(e: MouseEvent): void {
+		if (!focused || !PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popupElement?.innerContainer)) return;
+		blur();
 	}
 
 	/** Scroll to option if it is out of view */
@@ -324,7 +345,7 @@
 				// If the item is above the visible area, scroll to its top
 				scrollBox.scrollTo({ behavior: "instant", top: scrollBox.scrollTop + rect.top - boxRect.top });
 			} else {
-				// If the item is below the visible area, scroll so it's at the bottom
+				// If the item is below the visible area, scroll, so it's at the bottom
 				scrollBox.scrollTo({ behavior: "instant", top: scrollBox.scrollTop + rect.bottom - boxRect.bottom });
 			}
 		}
@@ -360,7 +381,7 @@
 			}
 
 			filterOptions = getFilterOptions(searchValues);
-			if (!keepOpen) close();
+			close();
 		}
 
 		hovered = options.findIndex((o) => o.element === e.element);
@@ -399,7 +420,7 @@
 		});
 	}
 
-	/** Add `highlighted` class to `hovere`d element */
+	/** Add `highlighted` class to `hover`d element */
 	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T>[]): void {
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i].element;
@@ -409,19 +430,11 @@
 		}
 	}
 
-	/** Handle global click events */
-	function onWindowClick(e: MouseEvent): void {
-		if (keepOpen) return;
-		if (!PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popup?.child)) return;
-		if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) && e.target.type === "submit") return;
-		close(true);
-		blur();
-	}
-
 	/** Handle blurring of this component */
 	function blur(): void {
 		focused = false;
-		// If force, check if values are valid and if not, revert
+
+		// If ´force´, check if values are valid and if not, revert
 		if (!force && !multiple) return;
 
 		// First try to find based on search
@@ -436,24 +449,6 @@
 		}
 	}
 
-	/** Handle closing of this component */
-	function close(ignoreReFocus = false): void {
-		if (!ignoreReFocus) {
-			if (reFocus) {
-				reFocus.focus();
-			} else {
-				if (lastFocused) {
-					lastFocused.focus();
-				} else {
-					const first = Object.keys(searchInputs)[0];
-					if (searchInputs[first]) searchInputs[first].focus();
-				}
-			}
-		}
-		popup?.close(true);
-		open = false;
-	}
-
 	/** Handle opening and focusing of this component */
 	function focus(): void {
 		const first = Object.keys(searchInputs)[0];
@@ -462,9 +457,29 @@
 	}
 
 	/** Handle opening and focusing of this component */
-	function showOptions(): void {
-		popup?.showPopup(container);
+	async function showOptions(): Promise<void> {
+		if (open) return;
+		if (popup) {
+			await popupElement?.showPopup();
+			registerPopup(popupElement);
+		}
 		open = true;
+		focused = true;
+	}
+
+	/** Handle opening and focusing of this component */
+	function close(): void {
+		if (!open) return;
+		if (!Object.keys(searchInputs).length) focused = false;
+		if (popup) {
+			Object.keys(searchInputs).forEach((key) => {
+				if (popupElement?.innerContainer?.contains(searchInputs[key])) delete searchInputs[key];
+			});
+			popupElement?.close();
+			popupObserver?.disconnect();
+			popupObserver = null;
+		}
+		open = false;
 	}
 
 	/** Register an `EnhancedOption` element */
@@ -512,20 +527,21 @@
 		if (!container) return;
 		// Don't close if new target is inside either popup or container
 		if (
-			(e.relatedTarget instanceof Node && (container.contains(e.relatedTarget) || popup?.popupContainer?.contains(e.relatedTarget))) ||
-			options.some((o) => o.element === <HTMLElement | null>e.relatedTarget)
+			!e.relatedTarget ||
+			(e.relatedTarget instanceof Node && (container.contains(e.relatedTarget) || popupElement?.innerContainer?.contains(e.relatedTarget))) ||
+			options.some((o) => <Element>o.element === <Element>e.relatedTarget)
 		) {
 			return;
 		}
-		if (!keepOpen) close(true);
+		close();
 		blur();
 	}
 
 	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
-		if (e.target instanceof HTMLElement && !popup?.popupContainer?.contains(document.activeElement)) lastFocused = e.target;
+		if (e.target instanceof HTMLElement && !popupElement?.innerContainer?.contains(document.activeElement)) lastFocused = e.target;
+		if (!focused) showOptions();
 		focused = true;
-		showOptions();
 	}
 
 	/** Get the option fully matching search strings */
@@ -602,12 +618,18 @@
 		<input type="hidden" hidden {name} {value} />
 	{/if}
 {/if}
+
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
-	{#if observer}
-		<slot {clearSearch} {allChecked} {pool} {value} {values} />
-		<slot name="options" {registerOption} {registerPopup} {filterOptions} {container} {open} {allChecked} {pool} {value} {values} />
+	<slot name="summary" {clearSearch} {allChecked} {pool} {value} {values} {open} />
+	{#if !popup}
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
 	{/if}
 </div>
+{#if popup}
+	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
+	</Popup>
+{/if}
 
 <style>
 	.contents {
