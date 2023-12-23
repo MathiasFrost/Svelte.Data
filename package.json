@@ -1,6 +1,6 @@
 {
 	"name": "@maal/svelte-data",
-	"version": "0.4.4",
+	"version": "0.4.5",
 	"description": "Package aiming to make it easier to manage data with advanced features in Svelte apps",
 	"author": "Mathias Amandus Andvik Løken",
 	"license": "MIT",
@@ -53,7 +53,7 @@
 			"svelte": "./dist/popup/index.js"
 		},
 		"./popup/Popup.svelte": {
-			"types": "./dist/popup/Popup.svelte",
+			"types": "./dist/popup/Popup.svelte.d.ts",
 			"svelte": "./dist/popup/Popup.svelte"
 		},
 		"./select": {
