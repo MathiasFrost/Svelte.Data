@@ -620,14 +620,14 @@
 {/if}
 
 <div class:contents={!cssClass} class={cssClass} bind:this={container}>
-	<slot name="summary" {clearSearch} {allChecked} {pool} {value} {values} />
+	<slot name="summary" {clearSearch} {allChecked} {pool} {value} {values} {open} />
 	{#if !popup}
-		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {value} {values} />
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
 	{/if}
 </div>
 {#if popup}
 	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
-		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {value} {values} />
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
 	</Popup>
 {/if}
 
