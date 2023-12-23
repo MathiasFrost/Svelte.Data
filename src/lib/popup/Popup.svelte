@@ -43,7 +43,7 @@
 	/** CSS style for container */
 	export let style = "";
 
-	/** TODOC */
+	/** Reference to definitive anchor element */
 	export let anchor: Element | null = null;
 
 	/** Container */
@@ -70,10 +70,10 @@
 	/** Called when component is destroyed */
 	let destroy: (() => void) | null = null;
 
-	/** TODOC */
+	/** The element we will use as anchor. Can be set from `anchor`, `arg` in `showPopup` or the default: `container` */
 	let effectiveAnchor: Element | null = null;
 
-	/** TODOC */
+	/** The first scroll box */
 	let scrollBox: Element | null = null;
 
 	/** @see HTMLPopupElement */
@@ -97,7 +97,7 @@
 		close();
 	}
 
-	// TODOC
+	// Set up event listeners
 	$: initialize(container, auto);
 
 	// ctor
@@ -137,7 +137,7 @@
 		}
 	}
 
-	/** TODOC */
+	/** Remove all event listeners */
 	function removeListeners(anchor: Element): void {
 		anchor.removeEventListener("keydown", onClick);
 		anchor.removeEventListener("click", onClick);
@@ -252,7 +252,7 @@
 		if (isFirstShow) PopupHelper.firstFocusable(innerContainer)?.focus();
 	}
 
-	/** TODOC */
+	/** Stuff that should only happen on first show (reset after close) */
 	async function firstShow(outerContainer: HTMLDivElement): Promise<void> {
 		if (typeof document !== "undefined") lastFocused = document.activeElement;
 
@@ -270,7 +270,7 @@
 		if (scrollBox) scrollBox.addEventListener("scroll", calculatePosition);
 	}
 
-	/** TODOC */
+	/** Set positional styles on element */
 	function calculatePosition(): void {
 		if (!effectiveAnchor || !outerContainer || !innerContainer) return;
 		const anchors = PopupHelper.getEffectiveElements(effectiveAnchor).filter((e) => e !== <Element>outerContainer);
@@ -415,7 +415,7 @@
 		else outerContainer.style.minWidth = "";
 	}
 
-	/** TODOC */
+	/** Handle closing of the popup */
 	function close(): void {
 		if (!open) return; // No logic here that makes sense to run when already closed
 

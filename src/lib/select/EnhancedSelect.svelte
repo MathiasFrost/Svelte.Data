@@ -37,8 +37,11 @@
 	/** Multiple or single select */
 	export let multiple = false;
 
-	/** TODOC */
+	/** If options should be wrapped in a <Popup> */
 	export let popup = false;
+
+	/** If popup should be a centered modal on small screens */
+	export let modalSmall = false;
 
 	/** CSS class for the container */
 	let cssClass = "";
@@ -160,6 +163,7 @@
 
 		// First run is manual
 		if (!observer) {
+			container.addEventListener("click", showOptions);
 			searchForElements(container, "added");
 		}
 
@@ -205,7 +209,6 @@
 						searchValues[name] = node.value;
 						node.addEventListener("input", onInput);
 					}
-					node.addEventListener("click", showOptions);
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
 					node.addEventListener("keydown", searchKeydown);
@@ -467,6 +470,7 @@
 	/** Handle opening and focusing of this component */
 	function close(): void {
 		if (!open) return;
+		if (!Object.keys(searchInputs).length) focused = false;
 		if (popup) {
 			Object.keys(searchInputs).forEach((key) => {
 				if (popupElement?.innerContainer?.contains(searchInputs[key])) delete searchInputs[key];
@@ -622,7 +626,7 @@
 	{/if}
 </div>
 {#if popup}
-	<Popup bind:self={popupElement} anchor={container} align="stretch" contain on:close={close}>
+	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
 		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {value} {values} />
 	</Popup>
 {/if}

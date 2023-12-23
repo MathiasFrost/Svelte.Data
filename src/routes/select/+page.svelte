@@ -75,7 +75,10 @@
 <h2>Simple</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
 	<EnhancedSelect name="user" pool={users} value={3} force popup let:registerOption let:filterOptions>
-		<input slot="summary" type="search" placeholder="Employee" name="name" style="width: 100%;" />
+		<svelte:fragment slot="summary" let:pool let:value>
+			{@const selected = pool.find((user) => user.id === value)}
+			<input type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name} />
+		</svelte:fragment>
 		<div class="selector">
 			<EnhancedOption {registerOption} />
 			{#each filterOptions(users) as user}
@@ -139,7 +142,10 @@
 <h2>Stylized select</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
 	<EnhancedSelect name="user" pool={users} value={3} let:registerOption popup>
-		<input slot="summary" type="text" readonly style="width: 100%;" name="name" />
+		<svelte:fragment slot="summary" let:pool let:value>
+			{@const selected = pool.find((user) => user.id === value)}
+			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name} />
+		</svelte:fragment>
 		<div class="selector">
 			<EnhancedOption {registerOption} />
 			{#each users as user (user.id)}
