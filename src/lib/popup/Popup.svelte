@@ -73,7 +73,7 @@
 	let scrollBox: Element | null = null;
 
 	/** @see HTMLPopupElement */
-	export const self: HTMLPopupElement | null = {
+	export const self: HTMLPopupElement = {
 		innerContainer,
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
