@@ -17,7 +17,7 @@
 <!--<div id="mypopover" popover>Popover content</div>-->
 
 <button class="dropbtn" style="padding: 2rem; margin-right: 1rem; width: 10rem; height: 20rem;">Dropdown</button>
-<Popup style="background-color: crimson" auto open keepOpen justify="below" align="center" reFocus={test2} let:closeClick>
+<Popup style="background-color: crimson" auto open justify="below" align="center" let:closeClick>
 	<button on:click={closeClick()}>Option 1</button>
 	<button on:click={closeClick()}>Option 2</button>
 	<button on:click={closeClick()}>Option 3</button>

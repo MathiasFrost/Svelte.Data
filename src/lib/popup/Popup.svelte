@@ -9,6 +9,9 @@
 	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
+	/** For portal */
+	const portalKey = "BODY";
+
 	/** TODOC */
 	const dispatch = createEventDispatcher<{ close: void; show: void }>();
 
@@ -18,11 +21,11 @@
 	/** If popup should be a centered modal on small screens */
 	export let modalSmall = false;
 
-	/** Anchor for the popup */
-	export let anchor: Element | null = null;
-
 	/** Placement of the popup from `anchor` */
 	export let justify: "above" | "below" | "left" | "right" = "below";
+
+	/** If popup should grow from start or end */
+	export let float: "start" | "end" = "start";
 
 	/** Alignment of popup from `anchor` */
 	export let align: "center" | "start" | "end" | "stretch" | null = null;
@@ -30,43 +33,30 @@
 	/** If overflow should be hidden based on `anchor` */
 	export let contain = false;
 
-	/** If we should not automatically close the popup */
-	export let keepOpen = false;
-
-	/** For use in conjunction with `EnhancedSelect` */
-	export let registerPopup: ((popup: HTMLPopupElement) => void) | null = null;
-
-	/** Element to focus after closing */
-	export let reFocus: HTMLElement | null = null;
-
 	/** If we should automatically set up event listeners for interaction and source `anchor` from previous element */
 	export let auto: boolean | "contextmenu" | "hover" = false;
 
-	/** CSS class for immediate parent of this component's content */
+	/** CSS class for container */
 	let cssClass = "";
 	export { cssClass as class };
 
-	/** CSS style for immediate parent of this component's content */
+	/** CSS style for container */
 	export let style = "";
 
-	/** For portal */
-	const portalKey = "BODY";
+	/** TODOC */
+	export let anchor: Element | null = null;
 
-	/** Effective anchors based on `anchor` */
-	let anchors: Element[] = [];
-	$: anchors = PopupHelper.getEffectiveElements(anchor).filter((e) => e !== <Element>popupContainer);
+	/** Container */
+	let container: HTMLDivElement | null = null;
 
 	/** Container for popup that should fill the height or width of the `anchor` */
-	let popupContainer: HTMLDivElement | null = null;
+	let outerContainer: HTMLDivElement | null = null;
 
 	/** Immediate parent of this component's content and immediate child of `popupContainer` */
-	let child: HTMLDivElement | null = null;
-
-	/** True if the popup is actually visible */
-	let showing = false;
+	let innerContainer: HTMLDivElement | null = null;
 
 	/** Element focused before element was opened */
-	let focused: Element | null = null;
+	let lastFocused: Element | null = null;
 
 	/** True if we are hovering over the `anchor` or popup */
 	let hovering = false;
@@ -80,31 +70,35 @@
 	/** Called when component is destroyed */
 	let destroy: (() => void) | null = null;
 
+	/** TODOC */
+	let effectiveAnchor: Element | null = null;
+
+	/** TODOC */
+	let scrollBox: Element | null = null;
+
 	/** @see HTMLPopupElement */
-	export const self: HTMLPopupElement = {
-		popupContainer,
-		child,
+	export const self: HTMLPopupElement | null = {
+		innerContainer,
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
-		close(ignoreReFocus) {
-			close(ignoreReFocus);
+		close() {
+			close();
 		}
 	};
 
 	// Update props
-	$: self.popupContainer = popupContainer;
-	$: self.child = child;
-
-	// Call `registerPopup` when available
-	$: if (registerPopup && self.popupContainer) registerPopup(self);
+	$: self.innerContainer = innerContainer;
 
 	// Call functions when open changes
-	$: if (open) showPopup();
-	else close(true);
+	$: if (open) {
+		if (outerContainer && innerContainer) showPopup();
+	} else {
+		close();
+	}
 
-	// Set up event listeners on `anchor`
-	$: setUpAnchor(anchor, auto);
+	// TODOC
+	$: initialize(container, auto);
 
 	// ctor
 	onMount(() => {
@@ -113,93 +107,61 @@
 			document.body.appendChild(popupsContainer);
 			portalOut(popupsContainer, portalKey);
 		}
-
-		anchor ??= popupContainer?.previousElementSibling ?? null;
-
-		// Check if the anchor is null and popupContainer is not null
-		if (!anchor && popupContainer) {
-			let currentElement: Element | null = popupContainer;
-
-			// Loop until you find a previous sibling or reach the body element
-			while (currentElement.parentElement && currentElement.parentElement !== document.body) {
-				currentElement = currentElement.parentElement;
-				if (currentElement.previousElementSibling) {
-					anchor = currentElement.previousElementSibling;
-					break;
-				}
-			}
-		}
-
-		focused = anchor;
 	});
 
 	// cleanup
 	onDestroy(() => {
-		if (typeof window !== "undefined" && [auto, "contextmenu"].includes(auto)) {
-			window.removeEventListener("click", onWindowClick);
-		}
-		if (!anchor) return;
-		if (!(anchor instanceof HTMLButtonElement) && [true, "contextmenu"].includes(auto)) {
-			anchor.removeAttribute("tabindex");
-		}
-		switch (auto) {
-			case true:
-				if (!(anchor instanceof HTMLButtonElement)) {
-					anchor.removeEventListener("keydown", onClick);
-				}
-				anchor.removeEventListener("click", onClick);
-				break;
-			case "contextmenu":
-				anchor.removeEventListener("contextmenu", onContextMenu);
-				break;
-			case "hover":
-				anchor.removeEventListener("mouseover", onMouseover);
-				anchor.removeEventListener("mouseout", onMouseout);
-				break;
-		}
+		if (container) removeListeners(container);
 		destroy?.();
 	});
 
 	/** Set up event listeners */
-	function setUpAnchor(anchor: Element | null, auto: boolean | "contextmenu" | "hover"): void {
-		if (typeof window !== "undefined" && [true, "contextmenu"].includes(auto)) {
-			window.removeEventListener("click", onWindowClick);
-			window.addEventListener("click", onWindowClick);
-		}
-		if (!anchor) return;
-		if (!(anchor instanceof HTMLButtonElement) && [true, "contextmenu"].includes(auto) && !anchor.hasAttribute("tabindex")) {
-			anchor.setAttribute("tabindex", "0");
-		}
+	function initialize(container: Element | null, auto: boolean | "contextmenu" | "hover"): void {
+		if (!container || typeof window === "undefined") return;
+
+		removeListeners(container);
 		switch (auto) {
 			case true:
-				if (!(anchor instanceof HTMLButtonElement)) {
-					anchor.removeEventListener("keydown", onClick);
-					anchor.addEventListener("keydown", onClick);
+				if (!(container instanceof HTMLButtonElement)) {
+					container.addEventListener("keydown", onClick);
 				}
-				anchor.removeEventListener("click", onClick);
-				anchor.addEventListener("click", onClick);
+				container.addEventListener("click", onClick);
 				break;
 			case "contextmenu":
-				anchor.removeEventListener("contextmenu", onContextMenu);
-				anchor.addEventListener("contextmenu", onContextMenu);
+				container.addEventListener("contextmenu", onContextMenu);
 				break;
 			case "hover":
-				anchor.removeEventListener("mouseover", onMouseover);
-				anchor.removeEventListener("mouseout", onMouseout);
-				anchor.addEventListener("mouseover", onMouseover);
-				anchor.addEventListener("mouseout", onMouseout);
+				container.addEventListener("mouseover", onMouseover);
+				container.addEventListener("mouseout", onMouseout);
 				break;
 		}
+	}
+
+	/** TODOC */
+	function removeListeners(anchor: Element): void {
+		anchor.removeEventListener("keydown", onClick);
+		anchor.removeEventListener("click", onClick);
+		anchor.removeEventListener("contextmenu", onContextMenu);
+		anchor.removeEventListener("mouseover", onMouseover);
+		anchor.removeEventListener("mouseout", onMouseout);
 	}
 
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
-		if (keepOpen || !open || !showing || !PopupHelper.isOutsideClick(e, child) || !PopupHelper.isOutsideClick(e, anchor)) return;
-		close(true);
+		if (!open || !PopupHelper.isOutsideClick(e, innerContainer) || !PopupHelper.isOutsideClick(e, effectiveAnchor)) return;
+		lastFocused = null;
+		close();
+	}
+
+	/** Handle window clicks */
+	function onWindowKeydown(e: KeyboardEvent): void {
+		if (e.key !== "Escape") return;
+		close();
 	}
 
 	/** Handle `anchor` clicks */
-	function onClick(): void {
+	function onClick(e: Event): void {
+		if (e instanceof KeyboardEvent && e.key !== "Enter") return;
 		showPopup();
 	}
 
@@ -229,43 +191,90 @@
 		}, 300);
 	}
 
-	/** TODOC */
-	function close(ignoreReFocus = false): void {
-		open = false;
-		position = null;
-		if (auto === "hover" && typeof window !== "undefined") {
-			hoverCooldown = true;
-			window.setTimeout(() => (hoverCooldown = false), 300);
-		}
-		showing = false;
-		dispatch("close");
-		destroy?.();
-		destroy = null;
-		if (ignoreReFocus) return;
-		if (reFocus) reFocus?.focus();
-		else if (typeof window !== "undefined" && focused instanceof HTMLElement) focused.focus();
+	/** Function to close popup after a custom event */
+	function closeClick(onClick?: () => void): () => void {
+		return () => {
+			onClick?.();
+			close();
+		};
 	}
 
 	/** Open the popup */
 	async function showPopup(arg?: HTMLElement | null | { x: number; y: number }): Promise<void> {
-		open = true;
-		if (typeof arg !== "undefined") {
-			if (arg === null || arg instanceof HTMLElement) anchor = arg;
-			else if ("x" in arg && "y" in arg) position = arg;
+		if (!container || !outerContainer) return;
+
+		effectiveAnchor = anchor ?? container;
+		if (arg) {
+			if (arg instanceof HTMLElement) {
+				effectiveAnchor = arg;
+				removeListeners(effectiveAnchor);
+				initialize(effectiveAnchor, auto);
+			} else if ("x" in arg && "y" in arg) {
+				position = arg;
+			}
 		}
 
-		if (typeof document !== "undefined" && document.activeElement !== document.body) focused = document.activeElement;
-		else focused = anchor;
+		const isFirstShow = !open;
+		if (isFirstShow) await firstShow(outerContainer); // Portals the container to body container;
+		if (!innerContainer) return;
 
-		await tick(); // Wait for child
-		if (!anchors.length || !anchor || !popupContainer || !child) return;
+		calculatePosition();
 
-		// Portal the container to body container
-		if (!destroy) destroy = portalIn(popupContainer, portalKey).destroy;
+		if (align !== null) {
+			const vertical = ["left", "right"].includes(justify);
+			switch (align) {
+				case "center":
+					if (vertical) {
+						innerContainer.style.marginTop = "auto";
+						innerContainer.style.marginBottom = "auto";
+					} else {
+						innerContainer.style.marginLeft = "auto";
+						innerContainer.style.marginRight = "auto";
+					}
+					break;
+				case "start":
+					if (vertical) innerContainer.style.marginBottom = "auto";
+					else innerContainer.style.marginRight = "auto";
+					break;
+				case "end":
+					if (vertical) innerContainer.style.marginTop = "auto";
+					else innerContainer.style.marginLeft = "auto";
+					break;
+				case "stretch":
+					if (vertical) innerContainer.style.height = "100%";
+					else innerContainer.style.width = "100%";
+					break;
+			}
+		}
+		outerContainer.style.opacity = "1";
+		dispatch("show");
 
-		const rect: DOMRect | null = await calculateBounds();
-		if (!rect) return;
+		if (isFirstShow) PopupHelper.firstFocusable(innerContainer)?.focus();
+	}
 
+	/** TODOC */
+	async function firstShow(outerContainer: HTMLDivElement): Promise<void> {
+		if (typeof document !== "undefined") lastFocused = document.activeElement;
+
+		open = true;
+		await tick(); // Wait for child to be rendered
+		destroy = portalIn(outerContainer, portalKey).destroy;
+
+		if (auto === "hover" && innerContainer) {
+			innerContainer.addEventListener("mouseover", onMouseover);
+			innerContainer.addEventListener("mouseout", onMouseout);
+		}
+		if (typeof window !== "undefined") window.addEventListener("resize", calculatePosition);
+
+		scrollBox = PopupHelper.firstScrollBox(container);
+		if (scrollBox) scrollBox.addEventListener("scroll", calculatePosition);
+	}
+
+	/** TODOC */
+	function calculatePosition(): void {
+		if (!effectiveAnchor || !outerContainer || !innerContainer) return;
+		const anchors = PopupHelper.getEffectiveElements(effectiveAnchor).filter((e) => e !== <Element>outerContainer);
+		const rect = innerContainer.getBoundingClientRect();
 		const anchorRect = PopupHelper.getMultipleElementBounds(anchors);
 
 		const targetTop: number = position ? position.y : anchorRect.top;
@@ -299,7 +308,14 @@
 						else minWidth = anchorRect.width;
 						bottom = viewHeight - targetTop + window.scrollY + maxMarginTop;
 
-						left = targetLeft + window.scrollX;
+						switch (float) {
+							case "start":
+								left = targetLeft + window.scrollX;
+								break;
+							case "end":
+								right = viewWidth - targetRight + window.scrollX;
+								break;
+						}
 						minWidth = anchorRect.width;
 					}
 					break;
@@ -309,7 +325,14 @@
 						else minWidth = anchorRect.width;
 						top = targetBottom + window.scrollY + maxMarginBottom;
 
-						left = targetLeft + window.scrollX;
+						switch (float) {
+							case "start":
+								left = targetLeft + window.scrollX;
+								break;
+							case "end":
+								right = viewWidth - targetRight + window.scrollX;
+								break;
+						}
 						minWidth = anchorRect.width;
 					}
 					break;
@@ -319,7 +342,14 @@
 						else minHeight = anchorRect.height;
 						right = viewWidth - targetLeft + window.scrollX + maxMarginLeft;
 
-						top = targetTop + window.scrollY;
+						switch (float) {
+							case "start":
+								top = targetTop + window.scrollY;
+								break;
+							case "end":
+								bottom = viewHeight - targetTop + window.scrollY;
+								break;
+						}
 						minHeight = anchorRect.height;
 					}
 					break;
@@ -329,7 +359,14 @@
 						else minHeight = anchorRect.height;
 						left = targetRight + window.scrollX + maxMarginRight;
 
-						top = targetTop + window.scrollY;
+						switch (float) {
+							case "start":
+								top = targetTop + window.scrollY;
+								break;
+							case "end":
+								bottom = viewHeight - targetTop + window.scrollY;
+								break;
+						}
 						minHeight = anchorRect.height;
 					}
 					break;
@@ -342,106 +379,92 @@
 				const overflow = top + rect.height - height;
 				top -= overflow;
 			}
-			popupContainer.style.top = top + "px";
-		} else popupContainer.style.top = "";
+			outerContainer.style.top = top + "px";
+		} else outerContainer.style.top = "";
 		if (bottom !== null) {
 			const height = viewHeight - window.scrollY;
 			if (bottom + rect.height > height) {
 				const overflow = bottom + rect.height - height;
 				bottom -= overflow;
 			}
-			popupContainer.style.bottom = bottom + "px";
-		} else popupContainer.style.bottom = "";
+			outerContainer.style.bottom = bottom + "px";
+		} else outerContainer.style.bottom = "";
 		if (left !== null) {
 			const width = viewWidth + window.scrollX;
 			if (left + rect.width > width) {
 				const overflow = left + rect.width - width;
 				left -= overflow;
 			}
-			popupContainer.style.left = left + "px";
-		} else popupContainer.style.left = "";
+			outerContainer.style.left = left + "px";
+		} else outerContainer.style.left = "";
 		if (right !== null) {
 			const width = viewWidth - window.scrollX;
 			if (right + rect.width > width) {
 				const overflow = right + rect.width - width;
 				right -= overflow;
 			}
-			popupContainer.style.right = right + "px";
-		} else popupContainer.style.right = "";
-		if (maxHeight !== null) popupContainer.style.maxHeight = maxHeight + "px";
-		else popupContainer.style.maxHeight = "";
-		if (maxWidth !== null) popupContainer.style.maxWidth = maxWidth + "px";
-		else popupContainer.style.maxWidth = "";
-		if (minHeight !== null) popupContainer.style.minHeight = minHeight + "px";
-		else popupContainer.style.minHeight = "";
-		if (minWidth !== null) popupContainer.style.minWidth = minWidth + "px";
-		else popupContainer.style.minWidth = "";
-
-		if (align !== null) {
-			const vertical = ["left", "right"].includes(justify);
-			switch (align) {
-				case "center":
-					if (vertical) {
-						child.style.marginTop = "auto";
-						child.style.marginBottom = "auto";
-					} else {
-						child.style.marginLeft = "auto";
-						child.style.marginRight = "auto";
-					}
-					break;
-				case "start":
-					if (vertical) child.style.marginBottom = "auto";
-					else child.style.marginRight = "auto";
-					break;
-				case "end":
-					if (vertical) child.style.marginTop = "auto";
-					else child.style.marginLeft = "auto";
-					break;
-				case "stretch":
-					if (vertical) child.style.height = "100%";
-					else child.style.width = "100%";
-					break;
-			}
-		}
-
-		if (auto === "hover") {
-			child.addEventListener("mouseover", onMouseover);
-			child.addEventListener("mouseout", onMouseout);
-		}
-
-		popupContainer.style.opacity = "1";
-		const firstShow = showing !== open;
-		showing = true;
-		dispatch("show");
-
-		if (!firstShow) return;
-		const first = child.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-		if (first instanceof HTMLElement && first.getAttribute("tabindex") !== "-1" && !first.hidden) {
-			first.focus();
-		}
+			outerContainer.style.right = right + "px";
+		} else outerContainer.style.right = "";
+		if (maxHeight !== null) outerContainer.style.maxHeight = maxHeight + "px";
+		else outerContainer.style.maxHeight = "";
+		if (maxWidth !== null) outerContainer.style.maxWidth = maxWidth + "px";
+		else outerContainer.style.maxWidth = "";
+		if (minHeight !== null) outerContainer.style.minHeight = minHeight + "px";
+		else outerContainer.style.minHeight = "";
+		if (minWidth !== null) outerContainer.style.minWidth = minWidth + "px";
+		else outerContainer.style.minWidth = "";
 	}
 
-	/** Get bounds of `child` after rendered */
-	async function calculateBounds(): Promise<DOMRect | null> {
-		await tick();
-		return child?.getBoundingClientRect() ?? null;
-	}
+	/** TODOC */
+	function close(): void {
+		if (!open) return; // No logic here that makes sense to run when already closed
 
-	/** Function to close popup after a custom event */
-	function closeClick(onClick?: () => void): () => void {
-		return () => {
-			onClick?.();
-			close();
-		};
+		switch (auto) {
+			case true:
+				break;
+			case "hover":
+				if (typeof window !== "undefined") {
+					hoverCooldown = true;
+					window.setTimeout(() => (hoverCooldown = false), 300);
+				}
+				break;
+			case "contextmenu":
+				position = null;
+				break;
+		}
+
+		if (typeof window !== "undefined") window.removeEventListener("resize", calculatePosition);
+		if (scrollBox) scrollBox.removeEventListener("scroll", calculatePosition);
+
+		if (destroy) {
+			destroy();
+			destroy = null;
+		}
+
+		if (open && lastFocused instanceof HTMLElement) {
+			lastFocused?.focus();
+		}
+
+		if (container && effectiveAnchor !== <Element>container) {
+			effectiveAnchor = container;
+			initialize(container, auto);
+		}
+
+		open = false;
+		dispatch("close");
 	}
 </script>
 
-<div bind:this={popupContainer} class:none={!open} style="left: 0; top: 0;" class="container">
-	{#if open}
-		<div bind:this={child} class={cssClass} {style} class:modal-small={modalSmall}>
-			<slot {showing} {closeClick} />
+<svelte:window on:click={(e) => onWindowClick(e)} on:keydown={onWindowKeydown} />
+
+<div class={cssClass} {style} bind:this={container}>
+	<slot name="summary" />
+	<!-- Below here will be teleported -->
+	<div bind:this={outerContainer} class:none={!open} style="left: 0; top: 0;" class="container">
+		<div bind:this={innerContainer} style:overflow="hidden" class:modal-small={modalSmall}>
+			<slot {closeClick} />
 		</div>
-	{/if}
+	</div>
 </div>
 
 <style lang="scss">
@@ -451,16 +474,6 @@
 		opacity: 0;
 		overflow: hidden;
 		display: flex;
-
-		@media only screen and (max-width: 600px) {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100vw;
-			height: 100vh;
-			background-color: rgba(0, 0, 0, 0.16);
-			backdrop-filter: blur(2px);
-		}
 	}
 
 	.none {
@@ -470,12 +483,12 @@
 	@media only screen and (max-width: 600px) {
 		.modal-small {
 			position: fixed;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 80%;
-			max-width: 400px;
-			height: auto;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background-color: rgba(0, 0, 0, 0.16);
+			backdrop-filter: blur(2px);
 		}
 	}
 </style>
