@@ -54,7 +54,7 @@
 	let focused: boolean = false;
 
 	/** The popup element if any is registered */
-	let popupElement: HTMLPopupElement | null = null;
+	let popupElement: HTMLPopupElement | undefined;
 
 	/** The current option index that will be selected when pressing enter */
 	let selectedIndex = 0;
@@ -143,7 +143,7 @@
 	});
 
 	/** Register popup and apply observer */
-	function registerPopup(selectPopup: HTMLPopupElement | null): void {
+	function registerPopup(selectPopup: HTMLPopupElement | undefined): void {
 		popupElement = selectPopup;
 
 		if (!popupElement?.innerContainer) return;
