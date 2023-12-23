@@ -53,7 +53,7 @@
 			"svelte": "./dist/popup/index.js"
 		},
 		"./popup/Popup.svelte": {
-			"types": "./dist/popup/Popup.svelte",
+			"types": "./dist/popup/Popup.svelte.d.ts",
 			"svelte": "./dist/popup/Popup.svelte"
 		},
 		"./select": {
