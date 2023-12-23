@@ -1,9 +1,13 @@
+<script lang="ts" context="module">
+	/** TODOC */
+	let popupsContainer: HTMLDivElement | undefined;
+</script>
+
 <script lang="ts">
 	import { onMount, onDestroy, tick, createEventDispatcher } from "svelte";
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
 	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
-	import { popupsContainer } from "$lib/popup/popupsContainer.js";
 
 	/** For portal */
 	const portalKey = "BODY";
@@ -98,11 +102,10 @@
 
 	// ctor
 	onMount(() => {
-		if (document.body && !portalDeclared(portalKey) && !$popupsContainer) {
-			const el = document.createElement("div");
-			popupsContainer.set(el);
-			document.body.appendChild(el);
-			portalOut(el, portalKey);
+		if (document.body && !portalDeclared(portalKey) && !popupsContainer) {
+			popupsContainer = document.createElement("div");
+			document.body.appendChild(popupsContainer);
+			portalOut(popupsContainer, portalKey);
 		}
 	});
 
