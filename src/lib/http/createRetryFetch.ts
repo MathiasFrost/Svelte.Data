@@ -8,17 +8,36 @@ export function createRetryFetch(maxRetries: number, fetch?: Fetch): Fetch {
 	return async (requestInfo, requestInit) => {
 		fetch ??= window.fetch;
 
+		async function tryFetch(): Promise<Response | Error> {
+			try {
+				return await fetch!(requestInfo, requestInit);
+			} catch (e) {
+				return e instanceof Error ? e : new Error(`${e}`);
+			}
+		}
+
+		function isTemporal(response: Response | Error): boolean {
+			if (response instanceof Error) {
+				// Avoid retrying for CORS errors
+				return !response.message.includes("CORS");
+			} else {
+				// Retry for specified HTTP status codes
+				return TEMPORAL_FAILURES.includes(response.status);
+			}
+		}
+
 		// Perform the first fetch without delay
-		let response = await fetch(requestInfo, requestInit);
+		let response = await tryFetch();
 
 		let retryCount = 0;
-		while (TEMPORAL_FAILURES.includes(response.status) && retryCount++ < maxRetries) {
+		while (isTemporal(response) && retryCount++ < maxRetries) {
 			// Calculate exponential backoff with jitter
 			const delay = (Math.pow(2, retryCount) + Math.random() * 0.5) * 1_000;
 
 			await new Promise((resolve) => setTimeout(resolve, delay));
-			response = await fetch(requestInfo, requestInit);
+			response = await tryFetch();
 		}
+		if (response instanceof Error) throw response;
 		return response;
 	};
 }
