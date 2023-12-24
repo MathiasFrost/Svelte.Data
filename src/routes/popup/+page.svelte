@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { outClick } from "$lib/popup/outClick.js";
-	import { autoDialog } from "$lib/popup/autoDialog.js";
 	import Popup from "$lib/popup/Popup.svelte";
+	import { fly } from "svelte/transition";
+	import EnhancedDetails from "$lib/popup/EnhancedDetails.svelte";
 
 	let open = false;
 	let openDd = false;
@@ -44,8 +45,17 @@
 		<button on:click={() => (open = false)}>test</button>
 	</dialog>
 
+	<EnhancedDetails let:open>
+		<summary>test</summary>
+		{#if open}
+			<div transition:fly>
+				<h1>haahha</h1>
+			</div>
+		{/if}
+	</EnhancedDetails>
+
 	<button>Auto</button>
-	<dialog use:autoDialog>
+	<dialog>
 		<p>Greetings, one and all!</p>
 		<input />
 		<form method="dialog">
