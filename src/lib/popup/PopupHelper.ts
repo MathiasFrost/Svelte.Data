@@ -3,7 +3,7 @@ export class PopupHelper {
 	/** TODOC */
 	public static isOutsideClick(e: MouseEvent, bounds: Node | null | undefined): boolean {
 		// If screen doesn't have any pixels there is no point
-		if (e.screenX <= 0 || e.screenY <= 0) return false;
+		if (e.screenX === 0 && e.screenY === 0) return false;
 
 		if (!(bounds instanceof HTMLElement)) return true;
 
