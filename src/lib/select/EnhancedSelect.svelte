@@ -6,6 +6,7 @@
 	import Popup from "$lib/popup/Popup.svelte";
 	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
 	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
+	import { outClick } from "$lib/popup/index.js";
 
 	/** Name for the default input element for `search` */
 	const DEFAULT_NAME = "[DEFAULT]";
@@ -717,7 +718,7 @@
 	$: checked = getChecked(pool, values);
 </script>
 
-<svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
+<svelte:window on:keydown={onKeydown} />
 
 {#if name}
 	{#if multiple}
@@ -731,7 +732,7 @@
 	{/if}
 {/if}
 
-<div class:contents={!cssClass} class={cssClass} bind:this={container}>
+<div class:contents={!cssClass} class={cssClass} bind:this={container} use:outClick={onWindowClick}>
 	<slot name="summary" {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
 	{#if !popup}
 		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />

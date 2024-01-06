@@ -8,6 +8,7 @@
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
+	import { multiOutClick } from "$lib/popup/outClick.js";
 
 	/** For portal */
 	const portalKey = "BODY";
@@ -45,6 +46,9 @@
 
 	/** Reference to definitive anchor element */
 	export let anchor: Element | null = null;
+
+	/** TODOC */
+	let outClicks: ReturnType<typeof multiOutClick> | null = null;
 
 	/** Container */
 	let container: HTMLDivElement | null = null;
@@ -105,11 +109,17 @@
 	onDestroy(() => {
 		if (container) removeListeners(container);
 		destroy?.();
+		outClicks?.destroy();
 	});
 
 	/** Set up event listeners */
 	function initialize(container: Element | null, auto: boolean | "contextmenu" | "hover"): void {
 		if (!container || typeof window === "undefined") return;
+
+		if (innerContainer) {
+			outClicks?.destroy();
+			outClicks = multiOutClick([container, innerContainer], onWindowClick);
+		}
 
 		removeListeners(container);
 		switch (auto) {
@@ -143,8 +153,8 @@
 	}
 
 	/** Handle window clicks */
-	function onWindowClick(e: MouseEvent): void {
-		if (!open || !PopupHelper.isOutsideClick(e, innerContainer) || !PopupHelper.isOutsideClick(e, effectiveAnchor)) return;
+	function onWindowClick(): void {
+		if (!open) return;
 		lastFocused = null;
 		close();
 	}
@@ -470,7 +480,7 @@
 	}
 </script>
 
-<svelte:window on:click={(e) => onWindowClick(e)} on:keydown={onWindowKeydown} />
+<svelte:window on:keydown={onWindowKeydown} />
 
 <div class={cssClass} {style} bind:this={container}>
 	<slot name="summary" />
