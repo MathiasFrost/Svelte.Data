@@ -88,7 +88,6 @@ export function multiOutClick(nodes: Node[], handler: (e: MouseEvent) => void): 
 			// Check if the mouse is outside the container
 			if (PopupHelper.isOutsideClick(e, node)) {
 				isOutsides[i] = true;
-				console.log(isOutsides);
 			}
 		};
 	}
