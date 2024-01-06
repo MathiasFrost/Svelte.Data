@@ -13,12 +13,16 @@
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	const dispatch = createEventDispatcher<{ change: SvelteEnhancedSelectElement<T> }>();
+	const dispatch = createEventDispatcher<{ change: SvelteEnhancedSelectElement<T, K> }>();
 
 	/** Current value */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let value: K | null = null;
 
 	/** Current value for multiple select */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let values: (K | null)[] = [];
 
 	/** Name of this select as a form input */
@@ -459,6 +463,8 @@
 	}
 
 	/** Update the `search` element's search value to match current value */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateDisplay(value: K | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
 
@@ -741,7 +747,7 @@
 	</Popup>
 {/if}
 
-<style>
+<style lang="scss">
 	.contents {
 		display: contents;
 	}
