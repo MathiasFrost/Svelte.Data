@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
+	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
 
 	/** Type of the array element */
 	type T = $$Generic;
@@ -8,17 +8,14 @@
 	// /** Type of the value */
 	// type K = $$Generic;
 
-	/** Unique value representing this option */
-	export let value: unknown | null = null;
-
 	/** The array element this option represents */
-	export let item: T | null = null;
+	export let value: T | null = null;
 
 	/** Set to true if this options should toggle all for multiple select */
 	export let togglesAll = false;
 
 	/** Pass down from `EnhancedSelect` */
-	export let registerOption: (option: HTMLEnhancedOptionElement<T>) => void;
+	export let registerOption: (option: SvelteEnhancedOptionElement<T>) => void;
 
 	/** CSS class for container */
 	let cssClass = "";
@@ -33,11 +30,10 @@
 	/** Passed down to slot as a convenient way to conditionally render something based on multiple `EnhancedSelect`'s values */
 	let checked = false;
 
-	/** @see HTMLEnhancedOptionElement */
-	export const self: HTMLEnhancedOptionElement<T> = {
+	/** @see SvelteEnhancedOptionElement */
+	export const self: SvelteEnhancedOptionElement<T> = {
 		value,
 		element: container,
-		item,
 		togglesAll,
 		checked,
 		setChecked(value) {
@@ -48,7 +44,6 @@
 	// Update self
 	$: self.value = value;
 	$: self.element = container;
-	$: self.item = item;
 	$: self.togglesAll = togglesAll;
 	$: self.checked = checked;
 

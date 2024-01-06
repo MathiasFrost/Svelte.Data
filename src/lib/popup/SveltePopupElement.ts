@@ -1,7 +1,10 @@
 /** TODOC */
-export interface HTMLPopupElement {
+export interface SveltePopupElement {
 	/** TODOC */
-	innerContainer: HTMLDivElement | null;
+	get innerContainer(): HTMLDivElement | null;
+
+	/** TODOC */
+	get lastFocused(): Element | null;
 
 	/** TODOC */
 	showPopup(arg?: HTMLElement | null | { x: number; y: number }): Promise<void>;

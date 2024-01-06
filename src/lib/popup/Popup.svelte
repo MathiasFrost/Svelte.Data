@@ -6,8 +6,8 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick, createEventDispatcher } from "svelte";
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
-	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
 
 	/** For portal */
 	const portalKey = "BODY";
@@ -77,8 +77,13 @@
 	let scrollBox: Element | null = null;
 
 	/** @see HTMLPopupElement */
-	export const self: HTMLPopupElement = {
-		innerContainer,
+	export const self: SveltePopupElement = {
+		get innerContainer() {
+			return innerContainer;
+		},
+		get lastFocused() {
+			return lastFocused;
+		},
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
@@ -86,19 +91,6 @@
 			close();
 		}
 	};
-
-	// Update props
-	$: self.innerContainer = innerContainer;
-
-	// Call functions when open changes
-	$: if (open) {
-		if (outerContainer && innerContainer) showPopup();
-	} else {
-		close();
-	}
-
-	// Set up event listeners
-	$: initialize(container, auto);
 
 	// ctor
 	onMount(() => {
@@ -453,6 +445,16 @@
 		open = false;
 		dispatch("close");
 	}
+
+	// Call functions when open changes
+	$: if (open) {
+		if (outerContainer && innerContainer) showPopup();
+	} else {
+		close();
+	}
+
+	// Set up event listeners
+	$: initialize(container, auto);
 </script>
 
 <svelte:window on:click={(e) => onWindowClick(e)} on:keydown={onWindowKeydown} />

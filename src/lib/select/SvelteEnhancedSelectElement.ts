@@ -1,27 +1,27 @@
-import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
+import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
 
 /** TODOC */
-export interface HTMLEnhancedSelectElement<T> {
+export interface SvelteEnhancedSelectElement<T, K = string> {
 	/** TODOC */
-	name: string;
+	get name(): string;
 
 	/** The value of a non-multiple enhanced select */
-	value: unknown | null;
+	get value(): K | null;
 
 	/** The values of a multiple enhanced select */
-	values: (unknown | null)[];
+	get values(): (K | null)[];
 
 	/** Reference to the options pool */
-	pool: T[];
+	get pool(): T[];
 
 	/** Reference to the elements in body with a `value` attribute */
-	options: HTMLEnhancedOptionElement<T>[];
+	get options(): SvelteEnhancedOptionElement<T>[];
 
 	/** The search string */
-	search: Record<string, HTMLInputElement>;
+	get search(): Record<string, HTMLInputElement>;
 
 	/** The currently selected option */
-	selectedIndex: number;
+	get selectedIndex(): number;
 
 	/** TODOC */
 	focus(): void;
