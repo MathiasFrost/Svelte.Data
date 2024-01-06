@@ -167,7 +167,7 @@
 
 	/** Handle `anchor` clicks */
 	function onClick(e: Event): void {
-		if (e instanceof KeyboardEvent && !["Enter", " "].includes(e.key)) return;
+		if (e instanceof KeyboardEvent && e.key !== "Enter") return;
 		showPopup();
 	}
 
