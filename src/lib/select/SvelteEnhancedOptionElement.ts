@@ -1,7 +1,7 @@
 /** TODOC */
 export interface SvelteEnhancedOptionElement<T> {
 	/** TODOC */
-	get value(): T | null;
+	get item(): T | null;
 
 	/** TODOC */
 	get element(): HTMLDivElement | null;

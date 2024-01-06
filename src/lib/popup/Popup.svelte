@@ -56,7 +56,7 @@
 	let innerContainer: HTMLDivElement | null = null;
 
 	/** Element focused before element was opened */
-	let lastFocused: Element | null = null;
+	let lastFocused: HTMLElement | null = null;
 
 	/** True if we are hovering over the `anchor` or popup */
 	let hovering = false;
@@ -125,6 +125,8 @@
 			case "hover":
 				container.addEventListener("mouseover", onMouseover);
 				container.addEventListener("mouseout", onMouseout);
+				container.addEventListener("focusin", onMouseover);
+				container.addEventListener("focusout", onMouseout);
 				break;
 		}
 	}
@@ -136,6 +138,8 @@
 		anchor.removeEventListener("contextmenu", onContextMenu);
 		anchor.removeEventListener("mouseover", onMouseover);
 		anchor.removeEventListener("mouseout", onMouseout);
+		anchor.removeEventListener("focusin", onMouseover);
+		anchor.removeEventListener("focusout", onMouseout);
 	}
 
 	/** Handle window clicks */
@@ -173,7 +177,8 @@
 	}
 
 	/** Handle `anchor` mouseout events */
-	function onMouseout(): void {
+	function onMouseout(e: FocusEvent | Event): void {
+		if (e instanceof FocusEvent && e.relatedTarget instanceof Node && innerContainer?.contains(e.relatedTarget)) return;
 		hovering = false;
 		if (typeof window === "undefined") return;
 		window.setTimeout(() => {
@@ -246,7 +251,7 @@
 
 	/** Stuff that should only happen on first show (reset after close) */
 	async function firstShow(outerContainer: HTMLDivElement): Promise<void> {
-		if (typeof document !== "undefined") lastFocused = document.activeElement;
+		if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) lastFocused = document.activeElement;
 
 		open = true;
 		await tick(); // Wait for child to be rendered
@@ -455,6 +460,14 @@
 
 	// Set up event listeners
 	$: initialize(container, auto);
+	$: if (outerContainer) {
+		outerContainer.addEventListener("keydown", (e) => {
+			if (e.key === "Tab" && !PopupHelper.hasMoreFocusable(outerContainer, e.shiftKey)) {
+				e.preventDefault();
+				close();
+			}
+		});
+	}
 </script>
 
 <svelte:window on:click={(e) => onWindowClick(e)} on:keydown={onWindowKeydown} />

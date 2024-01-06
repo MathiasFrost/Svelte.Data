@@ -4,7 +4,7 @@ export interface SveltePopupElement {
 	get innerContainer(): HTMLDivElement | null;
 
 	/** TODOC */
-	get lastFocused(): Element | null;
+	get lastFocused(): HTMLElement | null;
 
 	/** TODOC */
 	showPopup(arg?: HTMLElement | null | { x: number; y: number }): Promise<void>;

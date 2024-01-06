@@ -1,20 +1,18 @@
-<script lang="ts">
+<script lang="ts" generics="T">
 	import { onDestroy } from "svelte";
 	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
 
-	/** Type of the array element */
-	type T = $$Generic;
-
-	// /** Type of the value */
-	// type K = $$Generic;
-
 	/** The array element this option represents */
-	export let value: T | null = null;
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export let item: T | null = null;
 
 	/** Set to true if this options should toggle all for multiple select */
 	export let togglesAll = false;
 
 	/** Pass down from `EnhancedSelect` */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let registerOption: (option: SvelteEnhancedOptionElement<T>) => void;
 
 	/** CSS class for container */
@@ -31,29 +29,33 @@
 	let checked = false;
 
 	/** @see SvelteEnhancedOptionElement */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export const self: SvelteEnhancedOptionElement<T> = {
-		value,
-		element: container,
-		togglesAll,
-		checked,
+		get item() {
+			return item;
+		},
+		get element() {
+			return container;
+		},
+		get togglesAll() {
+			return togglesAll;
+		},
+		get checked() {
+			return checked;
+		},
 		setChecked(value) {
 			checked = value;
 		}
 	};
 
-	// Update self
-	$: self.value = value;
-	$: self.element = container;
-	$: self.togglesAll = togglesAll;
-	$: self.checked = checked;
-
-	// Call register option when available
-	$: registerOption(self);
-
 	// cleanup
 	onDestroy(() => {
-		self.element = null;
+		container = null;
 	});
+
+	// Call register option when available
+	$: if (container) registerOption(self);
 </script>
 
 <div bind:this={container} class={cssClass} {style}>

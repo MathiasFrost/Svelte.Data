@@ -36,7 +36,7 @@
 	/** Select ID */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	export let selectId: (item: T) => K = (item) => `${item}` as K;
+	export let selectValue: (item: T) => K = (item) => `${item}` as K;
 
 	/** TODOC */
 	export let delay: number = 0;
@@ -71,10 +71,10 @@
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	let selected: T | null = null;
 
-	/** TODOC */
+	/** References to checked elements */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	let checked: () => T[] = getChecked(pool, values);
+	let checked: T[];
 
 	/** The current option index that will be selected when pressing enter */
 	let selectedIndex = 0;
@@ -108,7 +108,7 @@
 	let popupObserver: MutationObserver | null = null;
 
 	/** Last focused `search` element that can be refocused after selecting a value */
-	let lastFocused: Element | null = null;
+	let lastFocused: HTMLElement | null = null;
 
 	/** First element found that scrolls. Assumed to be the main scroll box for options */
 	let scrollBox: HTMLElement | null = null;
@@ -292,19 +292,9 @@
 			return;
 		}
 
-		lastFocused ??= popupElement?.lastFocused ?? null;
-		if (lastFocused) {
-			const focusableElements = Array.from(document.querySelectorAll('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(
-				(item) => item instanceof HTMLElement && item.getAttribute("tabindex") !== "-1" && !item.hidden
-			);
-			const currentIndex = focusableElements.indexOf(lastFocused);
-			const next = e.shiftKey ? focusableElements[currentIndex - 1] : focusableElements[currentIndex + 1];
-			if (next instanceof HTMLElement) {
-				e.preventDefault();
-				close();
-				next.focus();
-				return;
-			}
+		if (!PopupHelper.hasMoreFocusable(popupElement?.innerContainer ?? container, e.shiftKey)) {
+			e.preventDefault();
+			close();
 		}
 	}
 
@@ -421,14 +411,14 @@
 				const visible = options.filter((o) => !!o.element);
 				const allChecked = visible.every((o) => o.checked);
 				if (allChecked) values = [];
-				else values = visible.map((o) => (o.value === null ? null : selectId(o.value)));
+				else values = visible.map((o) => (o.item === null ? null : selectValue(o.item)));
 			} else {
-				if (!values.includes(e.value === null ? null : selectId(e.value))) values = values.concat(e.value === null ? null : selectId(e.value));
-				else values = values.filter((v) => v !== (e.value === null ? null : selectId(e.value)));
+				if (!values.includes(e.item === null ? null : selectValue(e.item))) values = values.concat(e.item === null ? null : selectValue(e.item));
+				else values = values.filter((v) => v !== (e.item === null ? null : selectValue(e.item)));
 			}
 		} else {
 			const oldValue = value;
-			value = e.value === null ? null : selectId(e.value);
+			value = e.item === null ? null : selectValue(e.item);
 
 			// We have to manually update in this case
 			if (value === oldValue) {
@@ -451,7 +441,7 @@
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateValues(options: SvelteEnhancedOptionElement<T>[], values: (K | null)[]): void {
 		for (const option of options) {
-			if (values.includes(option.value === null ? null : selectId(option.value))) option.setChecked(true);
+			if (values.includes(option.item === null ? null : selectValue(option.item))) option.setChecked(true);
 			else option.setChecked(false);
 		}
 	}
@@ -475,7 +465,7 @@
 			item = null;
 			selected = null;
 		} else {
-			item = pool.find((o) => selectId(o) === value);
+			item = pool.find((o) => selectValue(o) === value);
 
 			if (item) selected = item;
 			else item = selected;
@@ -515,11 +505,11 @@
 		const option = getOptionMatchingSearch(searchValues);
 
 		// If not found, do not change value and explicitly revert display
-		if (!option?.value) {
+		if (!option?.item) {
 			updateDisplay(value);
 			filterOptions = getFilterOptions(searchValues);
 		} else {
-			const oldValue = selectId(option.value);
+			const oldValue = selectValue(option.item);
 			if (value === oldValue) updateDisplay(value);
 			else value = oldValue;
 		}
@@ -618,7 +608,6 @@
 	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
 		if (e.target instanceof HTMLElement && !popupElement?.innerContainer?.contains(document.activeElement)) lastFocused = e.target;
-		if (!focused) showOptions();
 		if (!lastFocused && e.relatedTarget instanceof HTMLElement) lastFocused = e.relatedTarget;
 		focused = true;
 	}
@@ -629,8 +618,8 @@
 	function getOptionMatchingSearch(search: Record<string, string>): SvelteEnhancedOptionElement<T> | null {
 		return (
 			options.find((o) => {
-				if (isObject(o.value)) return Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(o.value)[key]}`.toLowerCase());
-				return search[DEFAULT_NAME]?.toLowerCase() === `${o.value}`.toLowerCase();
+				if (isObject(o.item)) return Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(o.item)[key]}`.toLowerCase());
+				return search[DEFAULT_NAME]?.toLowerCase() === `${o.item}`.toLowerCase();
 			}) ?? null
 		);
 	}
@@ -662,11 +651,11 @@
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
 			const option = getOptionMatchingSearch(search);
 			if (
-				isObject(option?.value) &&
-				Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option?.value)[key]}`.toLowerCase())
+				isObject(option?.item) &&
+				Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option?.item)[key]}`.toLowerCase())
 			) {
 				filtered = Array.from(options);
-			} else if (`${option?.value}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
+			} else if (`${option?.item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
 				filtered = Array.from(options);
 			} else {
 				// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
@@ -692,14 +681,21 @@
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateAllChecked(options: SvelteEnhancedOptionElement<T>[], values: (K | null)[]): boolean {
-		return options.filter((o) => !!o.element).every((o) => values.includes(o.value === null ? null : selectId(o.value)));
+		return options.filter((o) => !!o.element).every((o) => values.includes(o.item === null ? null : selectValue(o.item)));
 	}
 
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	function getChecked(pool: T[], values: (K | null)[]): () => T[] {
-		return () => pool.filter((item) => values.includes(selectId(item)));
+	function getChecked(pool: T[], values: (K | null)[]): T[] {
+		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+		return values.reduce<T[]>((prev, curr) => {
+			let found = pool.find((item) => selectValue(item) === curr);
+			// Pool could have changed since last time, so source from checked as well if not found in pool
+			found ??= checked.find((item) => selectValue(item) === curr);
+			if (found) prev.push(found);
+			return prev;
+		}, []);
 	}
 
 	// Update `allChecked` when options and values changes
