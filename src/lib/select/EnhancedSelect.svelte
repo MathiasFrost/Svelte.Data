@@ -359,8 +359,9 @@
 	}
 
 	/** Handle window clicks */
-	function onWindowClick(e: MouseEvent): void {
-		if (!focused || !PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popupElement?.innerContainer)) return;
+	function onWindowClick(): void {
+		// If we are using popup, defer out click to it
+		if (!focused || popupElement?.innerContainer) return;
 		blur();
 	}
 
