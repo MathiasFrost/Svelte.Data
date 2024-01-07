@@ -29,7 +29,7 @@
 	/** Name of this select as a form input */
 	export let name = "";
 
-	/** Option pool */
+	/** Initial option pool */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let pool: T[] = [];
@@ -70,10 +70,15 @@
 	/** The popup element if any is registered */
 	let popupElement: SveltePopupElement | undefined;
 
+	/** Total pool */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let totalPool: T[] = pool;
+
 	/** Need to preserve the item corresponding to the value for `force` revert */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	let selected: T | null = null;
+	let selected: T | null = null as unknown as T; // svelte-check can't infer that this variable can be assigned later in the component's lifecycle
 
 	/** References to checked elements */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
@@ -137,7 +142,7 @@
 			return values;
 		},
 		get pool() {
-			return pool;
+			return totalPool;
 		},
 		get options() {
 			return options;
@@ -188,9 +193,6 @@
 		if (!observer) {
 			container.addEventListener("click", showOptions);
 			searchForElements(container, "added");
-
-			// Update after gathering search inputs
-			filterOptions = getFilterOptions(searchValues);
 		}
 
 		observer = new MutationObserver(mutationCallback);
@@ -207,9 +209,6 @@
 		}
 		options = options;
 		if (focused) scrollToOptionIfNeeded();
-
-		// Update after gathering search inputs
-		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** Search for relevant elements among the mutated elements (`search`, `scrollBox`) */
@@ -259,6 +258,8 @@
 						const name = node.name ? node.name : DEFAULT_NAME;
 						searchInputs[name] = node;
 						searchValues[name] = node.value;
+
+						filterOptions = getFilterOptions(searchValues);
 					}
 				} else {
 					delete searchInputs[name];
@@ -286,23 +287,8 @@
 
 	/** Make sure tabbing works */
 	function searchKeydown(e: KeyboardEvent): void {
-		if (e.key !== "Tab") return;
-		if (!(e.target instanceof HTMLElement)) return;
-
-		const name = e.target.getAttribute("name")?.toString() ?? DEFAULT_NAME;
-		const keys = Object.keys(searchInputs);
-		const index = keys.indexOf(name);
-		if (!e.shiftKey && index < keys.length - 1) {
-			e.preventDefault();
-			searchInputs[keys[index + 1]].focus();
-			return;
-		} else if (e.shiftKey && index > 0) {
-			e.preventDefault();
-			searchInputs[keys[index - 1]].focus();
-			return;
-		}
-
-		if (!PopupHelper.hasMoreFocusable(popupElement?.innerContainer ?? container, e.shiftKey)) {
+		// If popup, defer logic to it
+		if (open && e.key === "Tab" && !popupElement?.innerContainer && !PopupHelper.hasMoreFocusable(container, e.shiftKey)) {
 			e.preventDefault();
 			close();
 		}
@@ -483,7 +469,7 @@
 			item = null;
 			selected = null;
 		} else {
-			item = pool.find((o) => selectValue(o) === value);
+			item = totalPool.find((o) => selectValue(o) === value);
 
 			if (item) selected = item;
 			else item = selected;
@@ -659,9 +645,10 @@
 	/** Construct the function that should filter the pool of options based on `search` values */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	function getFilterOptions(search: Record<string, string>): (options: T[], allOnEmpty?: boolean) => T[] {
-		return (options, allOnEmpty) => {
-			pool = options;
+	function getFilterOptions(search: Record<string, string>): (pool: T[], allOnEmpty?: boolean) => T[] {
+		return (pool, allOnEmpty) => {
+			totalPool = pool;
+
 			// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 			let filtered: T[] = [];
@@ -672,9 +659,9 @@
 				isObject(option?.item) &&
 				Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option?.item)[key]}`.toLowerCase())
 			) {
-				filtered = Array.from(options);
+				filtered = Array.from(pool);
 			} else if (`${option?.item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
-				filtered = Array.from(options);
+				filtered = Array.from(pool);
 			} else {
 				// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 				// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
@@ -685,7 +672,7 @@
 							if (!val) return allOnEmpty !== false; // If no search, display all
 							return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
 						}),
-					Array.from(options)
+					Array.from(pool)
 				);
 			}
 
@@ -705,10 +692,10 @@
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	function getChecked(pool: T[], values: (K | null)[]): T[] {
+	function getChecked(values: (K | null)[]): T[] {
 		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 		return values.reduce<T[]>((prev, curr) => {
-			let found = pool.find((item) => selectValue(item) === curr);
+			let found = totalPool.find((item) => selectValue(item) === curr);
 			// Pool could have changed since last time, so source from checked as well if not found in pool
 			found ??= checked.find((item) => selectValue(item) === curr);
 			if (found) prev.push(found);
@@ -732,7 +719,7 @@
 	$: updateValues(options, values);
 
 	// TODOC
-	$: checked = getChecked(pool, values);
+	$: checked = getChecked(values);
 </script>
 
 <svelte:window on:keydown={onKeydown} />

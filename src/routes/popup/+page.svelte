@@ -5,9 +5,7 @@
 	import EnhancedDetails from "$lib/popup/EnhancedDetails.svelte";
 
 	let open = false;
-	let openDd = false;
 	let test: HTMLDialogElement;
-	let test2: HTMLElement;
 	$: if (open && test) test.showModal();
 	else if (!open && test) test.close();
 </script>
@@ -17,21 +15,25 @@
 <!--<button popovertarget="mypopover">Toggle the popover</button>-->
 <!--<div id="mypopover" popover>Popover content</div>-->
 
-<button class="dropbtn" style="padding: 2rem; margin-right: 1rem; width: 10rem; height: 20rem;">Dropdown</button>
-<Popup style="background-color: crimson" auto open justify="below" align="center" let:closeClick>
-	<button on:click={closeClick()}>Option 1</button>
-	<button on:click={closeClick()}>Option 2</button>
-	<button on:click={closeClick()}>Option 3</button>
-	<button on:click={closeClick()}>Option 4</button>
+<Popup auto open justify="below" align="center" let:closeClick>
+	<button slot="summary" class="dropbtn" style="padding: 2rem; margin-right: 1rem; width: 10rem; height: 20rem;">Dropdown</button>
+	<div style="background-color: crimson">
+		<button on:click={closeClick()}>Option 1</button>
+		<button on:click={closeClick()}>Option 2</button>
+		<button on:click={closeClick()}>Option 3</button>
+		<button on:click={closeClick()}>Option 4</button>
+	</div>
 </Popup>
 
 <div style="display: flex; justify-content: space-between; height: 100rem; width: 100rem;">
-	<button bind:this={test2} class="dropbtn" style="padding: 2rem; margin-right: 1rem;" on:click={() => (openDd = true)}>Dropdown</button>
-	<Popup class="" style="width: 3rem; background-color: crimson; height: 100%;" open={openDd} contain justify="left" align="center">
-		<button on:click={() => (openDd = false)}>Option 1</button>
-		<button on:click={() => (openDd = false)}>Option 2</button>
-		<button on:click={() => (openDd = false)}>Option 3</button>
-		<button on:click={() => (openDd = false)}>Option 4</button>
+	<Popup auto contain justify="left" align="center" let:closeClick>
+		<button slot="summary" class="dropbtn" style="padding: 2rem; margin-right: 1rem;">Dropdown</button>
+		<div style="width: 3rem; background-color: crimson; height: 100%;">
+			<button on:click={closeClick()}>Option 1</button>
+			<button on:click={closeClick()}>Option 2</button>
+			<button on:click={closeClick()}>Option 3</button>
+			<button on:click={closeClick()}>Option 4</button>
+		</div>
 	</Popup>
 
 	<button on:click={() => (open = true)}>Open</button>
@@ -45,10 +47,10 @@
 		<button on:click={() => (open = false)}>test</button>
 	</dialog>
 
-	<EnhancedDetails let:open>
-		<summary>test</summary>
+	<EnhancedDetails let:open let:scrollToEnd>
+		<div slot="summary">test</div>
 		{#if open}
-			<div transition:fly>
+			<div transition:fly on:introend={scrollToEnd}>
 				<h1>haahha</h1>
 			</div>
 		{/if}

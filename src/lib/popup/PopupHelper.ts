@@ -88,7 +88,7 @@ export class PopupHelper {
 			if (reverse) {
 				return index > 0;
 			} else {
-				return index + 1 < focusable.length;
+				return index < focusable.length - 1;
 			}
 		}
 		return false;

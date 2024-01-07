@@ -42,7 +42,7 @@
 	export { cssClass as class };
 
 	/** CSS style for container */
-	export let style = "";
+	export let style = "display: contents;";
 
 	/** Reference to definitive anchor element */
 	export let anchor: Element | null = null;
@@ -490,7 +490,7 @@
 	$: initialize(container, auto);
 	$: if (outerContainer) {
 		outerContainer.addEventListener("keydown", (e) => {
-			if (e.key === "Tab" && !PopupHelper.hasMoreFocusable(outerContainer, e.shiftKey)) {
+			if (open && e.key === "Tab" && !PopupHelper.hasMoreFocusable(outerContainer, e.shiftKey)) {
 				e.preventDefault();
 				close();
 			}

@@ -24,7 +24,7 @@
 				const range = selection.getRangeAt(0);
 				if (range.commonAncestorContainer !== e.target && !e.target.contains(range.commonAncestorContainer)) continue;
 
-				const [startAst, endAst] = getAST(range, e.target.childNodes);
+				const [startAst, endAst] = getAST(range, Array.from(e.target.childNodes));
 				if (!startAst || !endAst) return;
 
 				const end = range.startContainer === range.endContainer ? range.endOffset : startAst.value?.length ?? 0;
@@ -48,7 +48,7 @@
 		}
 	}
 
-	function getAST(range: Range, childNodes: NodeListOf<ChildNode>): [AST | null, AST | null] {
+	function getAST(range: Range, childNodes: Node[]): [AST | null, AST | null] {
 		let startAst: AST | null = null;
 		let endAst: AST | null = null;
 
@@ -83,11 +83,16 @@
 
 		ast.forEach((a) => build(a));
 
-		return builder;
+		return sanitizeString(builder);
+	}
+
+	function sanitizeString(str: string): string {
+		return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/\//g, "&#x2F;");
 	}
 </script>
 
-<div class="container" contenteditable on:input={handleInput} on:keydown={handleKeydown}>
+<div class="container" contenteditable role="textbox" tabindex="0" on:input={handleInput} on:keydown={handleKeydown}>
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html renderAST(ast)}
 </div>
 
