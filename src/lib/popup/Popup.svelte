@@ -14,7 +14,7 @@
 	const portalKey = "BODY";
 
 	/** TODOC */
-	const dispatch = createEventDispatcher<{ close: void; show: void }>();
+	const dispatch = createEventDispatcher<{ close: void; show: void; outClick: MouseEvent }>();
 
 	/** If popup should be open */
 	export let open = false;
@@ -91,6 +91,9 @@
 		get lastFocused() {
 			return lastFocused;
 		},
+		get open() {
+			return open;
+		},
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
@@ -156,10 +159,11 @@
 	}
 
 	/** Handle window clicks */
-	function onWindowClick(): void {
+	function onWindowClick(e: MouseEvent): void {
 		if (!open) return;
 		lastFocused = null;
 		close();
+		dispatch("outClick", e);
 	}
 
 	/** Handle window clicks */

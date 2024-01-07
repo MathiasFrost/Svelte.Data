@@ -478,8 +478,8 @@
 		Object.keys(searchInputs).forEach((key) => {
 			if (key in searchInputs) {
 				const ref = searchInputs[key];
-				if (key === DEFAULT_NAME) ref.value = `${item}`;
-				else if (isObject(item)) ref.value = `${item[key]}`;
+				if (key === DEFAULT_NAME) ref.value = `${item ?? ""}`;
+				else if (isObject(item)) ref.value = `${item[key] ?? ""}`;
 				else ref.value = "";
 				searchValues[key] = ref.value;
 			}

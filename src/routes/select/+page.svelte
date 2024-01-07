@@ -138,7 +138,7 @@
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
 	<EnhancedSelect name="user" pool={users} value={3} selectValue={(user) => user.id} let:registerOption popup>
 		<svelte:fragment slot="summary" let:selected>
-			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name} />
+			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name ?? ""} />
 		</svelte:fragment>
 		<div class="selector">
 			<EnhancedOption {registerOption} />
