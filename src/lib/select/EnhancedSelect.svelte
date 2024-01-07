@@ -1,11 +1,11 @@
 <script lang="ts" generics="T, K = string">
-	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
-	import { ensureObject, isObject } from "$lib/types/unknown.js";
-	import { PopupHelper } from "$lib/popup/PopupHelper.js";
-	import Popup from "$lib/popup/Popup.svelte";
 	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
 	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
+	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
+	import { PopupHelper } from "$lib/popup/index.js";
+	import { ensureObject, isObject } from "$lib/types/index.js";
+	import Popup from "$lib/popup/Popup.svelte";
 	import { outClick } from "$lib/popup/index.js";
 
 	/** Name for the default input element for `search` */
@@ -54,6 +54,9 @@
 	/** If popup should be a centered modal on small screens */
 	export let modalSmall = false;
 
+	/** If we should never prevent default on enter */
+	export let submit = false;
+
 	/** CSS class for the container */
 	let cssClass = "";
 	export { cssClass as class };
@@ -92,7 +95,7 @@
 	/** Filter options passed in and register them internally */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
+	let filterOptions: (options: T[], allOnEmpty?: boolean) => T[] = getFilterOptions(searchValues);
 
 	/** The found `EnhancedOption` elements inside the container */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
@@ -185,6 +188,9 @@
 		if (!observer) {
 			container.addEventListener("click", showOptions);
 			searchForElements(container, "added");
+
+			// Update after gathering search inputs
+			filterOptions = getFilterOptions(searchValues);
 		}
 
 		observer = new MutationObserver(mutationCallback);
@@ -201,6 +207,9 @@
 		}
 		options = options;
 		if (focused) scrollToOptionIfNeeded();
+
+		// Update after gathering search inputs
+		filterOptions = getFilterOptions(searchValues);
 	}
 
 	/** Search for relevant elements among the mutated elements (`search`, `scrollBox`) */
@@ -318,7 +327,7 @@
 				break;
 			case "Enter":
 				{
-					e.preventDefault();
+					if (!submit) e.preventDefault();
 					if (multiple) {
 						close();
 						return;
@@ -344,10 +353,8 @@
 				clearSearch();
 				break;
 			case "Escape":
-				if (!open) return;
-				e.preventDefault();
 				close();
-				break;
+				return;
 			default:
 				return;
 		}
@@ -361,7 +368,8 @@
 	/** Handle window clicks */
 	function onWindowClick(): void {
 		// If we are using popup, defer out click to it
-		if (!focused || popupElement?.innerContainer) return;
+		if (popupElement?.innerContainer) return;
+		close();
 		blur();
 	}
 
@@ -389,6 +397,14 @@
 
 	/** Handle `search` element inputs */
 	function onInput(this: HTMLInputElement): void {
+		// If not open, open when interacting
+		if (!open) {
+			showOptions().then(() => {
+				selectedIndex = hovered;
+				scrollToOptionIfNeeded();
+			});
+		}
+
 		const name = this.getAttribute("name")?.toString();
 
 		if (delay) {
@@ -643,8 +659,8 @@
 	/** Construct the function that should filter the pool of options based on `search` values */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
-		return (options) => {
+	function getFilterOptions(search: Record<string, string>): (options: T[], allOnEmpty?: boolean) => T[] {
+		return (options, allOnEmpty) => {
 			pool = options;
 			// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
@@ -666,7 +682,7 @@
 					(prev, curr) =>
 						prev.filter((item) => {
 							const val = search[curr].toLowerCase();
-							if (!val) return true; // If no search, display all
+							if (!val) return allOnEmpty !== false; // If no search, display all
 							return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
 						}),
 					Array.from(options)

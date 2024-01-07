@@ -48,6 +48,9 @@
 	export let anchor: Element | null = null;
 
 	/** TODOC */
+	export let delay = 600;
+
+	/** TODOC */
 	let outClicks: ReturnType<typeof multiOutClick> | null = null;
 
 	/** Container */
@@ -183,7 +186,10 @@
 	function onMouseover(): void {
 		if (hoverCooldown) return;
 		hovering = true;
-		showPopup();
+		window.setTimeout(() => {
+			if (!hovering) return;
+			showPopup();
+		}, delay);
 	}
 
 	/** Handle `anchor` mouseout events */
@@ -265,7 +271,9 @@
 
 		open = true;
 		await tick(); // Wait for child to be rendered
-		destroy = portalIn(outerContainer, portalKey).destroy;
+
+		// Don't portal if inside <dialog>
+		if (!container?.closest("dialog")) destroy = portalIn(outerContainer, portalKey).destroy;
 
 		if (auto === "hover" && innerContainer) {
 			innerContainer.addEventListener("mouseover", onMouseover);
@@ -378,6 +386,16 @@
 					}
 					break;
 			}
+		}
+
+		const dialog = container?.closest("dialog");
+		if (dialog) {
+			const dialogStyle = window.getComputedStyle(dialog);
+			if (top !== null) top -= parseInt(dialogStyle.marginTop);
+			if (bottom !== null) bottom -= parseInt(dialogStyle.marginBottom);
+			if (left !== null) left -= parseInt(dialogStyle.marginLeft);
+			if (right !== null) right -= parseInt(dialogStyle.marginRight);
+			dialog.style.overflow = "visible"; // Has to be set when inside <dialog>
 		}
 
 		if (top !== null) {

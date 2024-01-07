@@ -3,6 +3,7 @@
 	import { setUserStore } from "$sandbox/user/user.js";
 	import { writable } from "svelte/store";
 	import { browser } from "$app/environment";
+	import "../../app.scss";
 
 	// Create a store and update it when necessary...
 	const user = writable<Record<string, unknown>>();
