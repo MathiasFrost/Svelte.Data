@@ -6,14 +6,15 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick, createEventDispatcher } from "svelte";
 	import { portalDeclared, portalIn, portalOut } from "$lib/popup/portal.js";
-	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
+	import { multiOutClick } from "$lib/popup/outClick.js";
 
 	/** For portal */
 	const portalKey = "BODY";
 
 	/** TODOC */
-	const dispatch = createEventDispatcher<{ close: void; show: void }>();
+	const dispatch = createEventDispatcher<{ close: void; show: void; outClick: MouseEvent }>();
 
 	/** If popup should be open */
 	export let open = false;
@@ -41,10 +42,16 @@
 	export { cssClass as class };
 
 	/** CSS style for container */
-	export let style = "";
+	export let style = "display: contents;";
 
 	/** Reference to definitive anchor element */
 	export let anchor: Element | null = null;
+
+	/** TODOC */
+	export let delay = 600;
+
+	/** TODOC */
+	let outClicks: ReturnType<typeof multiOutClick> | null = null;
 
 	/** Container */
 	let container: HTMLDivElement | null = null;
@@ -56,7 +63,7 @@
 	let innerContainer: HTMLDivElement | null = null;
 
 	/** Element focused before element was opened */
-	let lastFocused: Element | null = null;
+	let lastFocused: HTMLElement | null = null;
 
 	/** True if we are hovering over the `anchor` or popup */
 	let hovering = false;
@@ -77,8 +84,16 @@
 	let scrollBox: Element | null = null;
 
 	/** @see HTMLPopupElement */
-	export const self: HTMLPopupElement = {
-		innerContainer,
+	export const self: SveltePopupElement = {
+		get innerContainer() {
+			return innerContainer;
+		},
+		get lastFocused() {
+			return lastFocused;
+		},
+		get open() {
+			return open;
+		},
 		async showPopup(arg: HTMLElement | null | { x: number; y: number }) {
 			await showPopup(arg);
 		},
@@ -86,19 +101,6 @@
 			close();
 		}
 	};
-
-	// Update props
-	$: self.innerContainer = innerContainer;
-
-	// Call functions when open changes
-	$: if (open) {
-		if (outerContainer && innerContainer) showPopup();
-	} else {
-		close();
-	}
-
-	// Set up event listeners
-	$: initialize(container, auto);
 
 	// ctor
 	onMount(() => {
@@ -113,11 +115,17 @@
 	onDestroy(() => {
 		if (container) removeListeners(container);
 		destroy?.();
+		outClicks?.destroy();
 	});
 
 	/** Set up event listeners */
 	function initialize(container: Element | null, auto: boolean | "contextmenu" | "hover"): void {
 		if (!container || typeof window === "undefined") return;
+
+		if (innerContainer) {
+			outClicks?.destroy();
+			outClicks = multiOutClick([container, innerContainer], onWindowClick);
+		}
 
 		removeListeners(container);
 		switch (auto) {
@@ -133,6 +141,8 @@
 			case "hover":
 				container.addEventListener("mouseover", onMouseover);
 				container.addEventListener("mouseout", onMouseout);
+				container.addEventListener("focusin", onMouseover);
+				container.addEventListener("focusout", onMouseout);
 				break;
 		}
 	}
@@ -144,13 +154,16 @@
 		anchor.removeEventListener("contextmenu", onContextMenu);
 		anchor.removeEventListener("mouseover", onMouseover);
 		anchor.removeEventListener("mouseout", onMouseout);
+		anchor.removeEventListener("focusin", onMouseover);
+		anchor.removeEventListener("focusout", onMouseout);
 	}
 
 	/** Handle window clicks */
 	function onWindowClick(e: MouseEvent): void {
-		if (!open || !PopupHelper.isOutsideClick(e, innerContainer) || !PopupHelper.isOutsideClick(e, effectiveAnchor)) return;
+		if (!open) return;
 		lastFocused = null;
 		close();
+		dispatch("outClick", e);
 	}
 
 	/** Handle window clicks */
@@ -177,11 +190,15 @@
 	function onMouseover(): void {
 		if (hoverCooldown) return;
 		hovering = true;
-		showPopup();
+		window.setTimeout(() => {
+			if (!hovering) return;
+			showPopup();
+		}, delay);
 	}
 
 	/** Handle `anchor` mouseout events */
-	function onMouseout(): void {
+	function onMouseout(e: FocusEvent | Event): void {
+		if (e instanceof FocusEvent && e.relatedTarget instanceof Node && innerContainer?.contains(e.relatedTarget)) return;
 		hovering = false;
 		if (typeof window === "undefined") return;
 		window.setTimeout(() => {
@@ -254,11 +271,13 @@
 
 	/** Stuff that should only happen on first show (reset after close) */
 	async function firstShow(outerContainer: HTMLDivElement): Promise<void> {
-		if (typeof document !== "undefined") lastFocused = document.activeElement;
+		if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) lastFocused = document.activeElement;
 
 		open = true;
 		await tick(); // Wait for child to be rendered
-		destroy = portalIn(outerContainer, portalKey).destroy;
+
+		// Don't portal if inside <dialog>
+		if (!container?.closest("dialog")) destroy = portalIn(outerContainer, portalKey).destroy;
 
 		if (auto === "hover" && innerContainer) {
 			innerContainer.addEventListener("mouseover", onMouseover);
@@ -373,6 +392,16 @@
 			}
 		}
 
+		const dialog = container?.closest("dialog");
+		if (dialog) {
+			const dialogStyle = window.getComputedStyle(dialog);
+			if (top !== null) top -= parseInt(dialogStyle.marginTop);
+			if (bottom !== null) bottom -= parseInt(dialogStyle.marginBottom);
+			if (left !== null) left -= parseInt(dialogStyle.marginLeft);
+			if (right !== null) right -= parseInt(dialogStyle.marginRight);
+			dialog.style.overflow = "visible"; // Has to be set when inside <dialog>
+		}
+
 		if (top !== null) {
 			const height = viewHeight + window.scrollY;
 			if (top + rect.height > height) {
@@ -453,9 +482,27 @@
 		open = false;
 		dispatch("close");
 	}
+
+	// Call functions when open changes
+	$: if (open) {
+		if (outerContainer && innerContainer) showPopup();
+	} else {
+		close();
+	}
+
+	// Set up event listeners
+	$: initialize(container, auto);
+	$: if (outerContainer) {
+		outerContainer.addEventListener("keydown", (e) => {
+			if (open && e.key === "Tab" && !PopupHelper.hasMoreFocusable(outerContainer, e.shiftKey)) {
+				e.preventDefault();
+				close();
+			}
+		});
+	}
 </script>
 
-<svelte:window on:click={(e) => onWindowClick(e)} on:keydown={onWindowKeydown} />
+<svelte:window on:keydown={onWindowKeydown} />
 
 <div class={cssClass} {style} bind:this={container}>
 	<slot name="summary" />

@@ -1,2 +1,2 @@
-export type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";
-export type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
+export type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
+export type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";

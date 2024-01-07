@@ -1,24 +1,19 @@
-<script lang="ts">
+<script lang="ts" generics="T">
 	import { onDestroy } from "svelte";
-	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
-
-	/** Type of the array element */
-	type T = $$Generic;
-
-	// /** Type of the value */
-	// type K = $$Generic;
-
-	/** Unique value representing this option */
-	export let value: unknown | null = null;
+	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
 
 	/** The array element this option represents */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let item: T | null = null;
 
 	/** Set to true if this options should toggle all for multiple select */
 	export let togglesAll = false;
 
 	/** Pass down from `EnhancedSelect` */
-	export let registerOption: (option: HTMLEnhancedOptionElement<T>) => void;
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export let registerOption: (option: SvelteEnhancedOptionElement<T>) => void;
 
 	/** CSS class for container */
 	let cssClass = "";
@@ -33,32 +28,34 @@
 	/** Passed down to slot as a convenient way to conditionally render something based on multiple `EnhancedSelect`'s values */
 	let checked = false;
 
-	/** @see HTMLEnhancedOptionElement */
-	export const self: HTMLEnhancedOptionElement<T> = {
-		value,
-		element: container,
-		item,
-		togglesAll,
-		checked,
+	/** @see SvelteEnhancedOptionElement */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export const self: SvelteEnhancedOptionElement<T> = {
+		get item() {
+			return item;
+		},
+		get element() {
+			return container;
+		},
+		get togglesAll() {
+			return togglesAll;
+		},
+		get checked() {
+			return checked;
+		},
 		setChecked(value) {
 			checked = value;
 		}
 	};
 
-	// Update self
-	$: self.value = value;
-	$: self.element = container;
-	$: self.item = item;
-	$: self.togglesAll = togglesAll;
-	$: self.checked = checked;
-
-	// Call register option when available
-	$: registerOption(self);
-
 	// cleanup
 	onDestroy(() => {
-		self.element = null;
+		container = null;
 	});
+
+	// Call register option when available
+	$: if (container) registerOption(self);
 </script>
 
 <div bind:this={container} class={cssClass} {style}>

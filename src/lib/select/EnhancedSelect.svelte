@@ -1,35 +1,46 @@
-<script lang="ts">
-	import type { HTMLEnhancedSelectElement } from "$lib/select/HTMLEnhancedSelectElement.js";
+<script lang="ts" generics="T, K = string">
 	import { createEventDispatcher, onDestroy, tick } from "svelte";
-	import { ensureObject, isObject } from "$lib/types/unknown.js";
-	import type { HTMLEnhancedOptionElement } from "$lib/select/HTMLEnhancedOptionElement.js";
-	import type { HTMLPopupElement } from "$lib/popup/HTMLPopupElement.js";
-	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
+	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
+	import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
+	import { PopupHelper } from "$lib/popup/index.js";
+	import { ensureObject, isObject } from "$lib/types/index.js";
 	import Popup from "$lib/popup/Popup.svelte";
-
-	/** Type of the array element */
-	type T = $$Generic;
-
-	// /** Type of the value */
-	// type K = $$Generic;
+	import { outClick } from "$lib/popup/index.js";
 
 	/** Name for the default input element for `search` */
 	const DEFAULT_NAME = "[DEFAULT]";
 
 	/** TODOC */
-	const dispatch = createEventDispatcher<{ change: HTMLEnhancedSelectElement<T> }>();
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	const dispatch = createEventDispatcher<{ change: SvelteEnhancedSelectElement<T, K> }>();
 
 	/** Current value */
-	export let value: unknown | null = null;
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export let value: K | null = null;
 
 	/** Current value for multiple select */
-	export let values: (unknown | null)[] = [];
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export let values: (K | null)[] = [];
 
 	/** Name of this select as a form input */
 	export let name = "";
 
-	/** Option pool */
+	/** Initial option pool */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let pool: T[] = [];
+
+	/** Select ID */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export let selectValue: (item: T) => K = (item) => `${item}` as K;
+
+	/** TODOC */
+	export let delay: number = 0;
 
 	/** Force display text to be valid when blurred */
 	export let force = false;
@@ -43,6 +54,9 @@
 	/** If popup should be a centered modal on small screens */
 	export let modalSmall = false;
 
+	/** If we should never prevent default on enter */
+	export let submit = false;
+
 	/** CSS class for the container */
 	let cssClass = "";
 	export { cssClass as class };
@@ -54,7 +68,22 @@
 	let focused: boolean = false;
 
 	/** The popup element if any is registered */
-	let popupElement: HTMLPopupElement | undefined;
+	let popupElement: SveltePopupElement | undefined;
+
+	/** Total pool */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let totalPool: T[] = pool;
+
+	/** Need to preserve the item corresponding to the value for `force` revert */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let selected: T | null = null as unknown as T; // svelte-check can't infer that this variable can be assigned later in the component's lifecycle
+
+	/** References to checked elements */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let checked: T[];
 
 	/** The current option index that will be selected when pressing enter */
 	let selectedIndex = 0;
@@ -69,10 +98,14 @@
 	let searchValues: Record<string, string> = {};
 
 	/** Filter options passed in and register them internally */
-	let filterOptions: (options: T[]) => T[] = getFilterOptions(searchValues);
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let filterOptions: (options: T[], allOnEmpty?: boolean) => T[] = getFilterOptions(searchValues);
 
 	/** The found `EnhancedOption` elements inside the container */
-	let options: HTMLEnhancedOptionElement<T>[] = [];
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	let options: SvelteEnhancedOptionElement<T>[] = [];
 
 	/** Container of all content */
 	let container: HTMLDivElement | null = null;
@@ -92,15 +125,34 @@
 	/** If all options are checked when `multiple` */
 	let allChecked = false;
 
-	/** @see HTMLEnhancedSelectElement */
-	export const self: HTMLEnhancedSelectElement<T> = {
-		name,
-		value,
-		values,
-		pool,
-		options,
-		selectedIndex,
-		search: searchInputs,
+	/** TODOC */
+	let timeout = 0;
+
+	/** @see SvelteEnhancedSelectElement */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	export const self: SvelteEnhancedSelectElement<T, K> = {
+		get name() {
+			return name;
+		},
+		get value() {
+			return value;
+		},
+		get values() {
+			return values;
+		},
+		get pool() {
+			return totalPool;
+		},
+		get options() {
+			return options;
+		},
+		get selectedIndex() {
+			return selectedIndex;
+		},
+		get search() {
+			return searchInputs;
+		},
 		focus() {
 			focus();
 		},
@@ -112,30 +164,6 @@
 		}
 	};
 
-	// Update `allChecked` when options and values changes
-	$: allChecked = updateAllChecked(options, values);
-
-	// Set up observer for container when bound
-	$: setUpObserver(container);
-
-	// Update highlighted option when options and hovered changes
-	$: updateHighlighted(hovered, options);
-
-	// Update display when value changes
-	$: updateDisplay(value);
-
-	// Update the checked value for `EnhancedOption` elements to match values
-	$: updateValues(options, values);
-
-	// Update all references
-	$: self.value = value;
-	$: self.values = values;
-	$: self.search = searchInputs;
-	$: self.options = options;
-	$: self.pool = pool;
-	$: self.selectedIndex = selectedIndex;
-	$: self.name = name;
-
 	// cleanup
 	onDestroy(() => {
 		observer?.disconnect();
@@ -143,7 +171,7 @@
 	});
 
 	/** Register popup and apply observer */
-	function registerPopup(selectPopup: HTMLPopupElement | undefined): void {
+	function registerPopup(selectPopup: SveltePopupElement | undefined): void {
 		popupElement = selectPopup;
 
 		if (!popupElement?.innerContainer) return;
@@ -200,27 +228,53 @@
 			}
 
 			// Find search inputs
-			if (node instanceof HTMLInputElement && !node.hasAttribute("disabled") && ["text", "search"].includes(`${node.getAttribute("type")}`)) {
+			if (
+				node instanceof HTMLInputElement ||
+				node instanceof HTMLButtonElement ||
+				node instanceof HTMLTextAreaElement ||
+				(node instanceof HTMLElement && node.hasAttribute("tabindex") && node.getAttribute("tabindex") !== "-1")
+			) {
 				if (action === "added") {
-					node.setAttribute("autocomplete", "off");
-					const name = node.name ? node.name : DEFAULT_NAME;
-					searchInputs[name] = node;
-					if (!node.hasAttribute("readonly")) {
-						searchValues[name] = node.value;
-						node.addEventListener("input", onInput);
-					}
 					node.addEventListener("blur", onBlur);
 					node.addEventListener("focus", onFocus);
-					node.addEventListener("keydown", searchKeydown);
 					if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement) {
-						if (popupElement?.innerContainer?.contains(node)) {
+						if (!popupElement?.innerContainer?.contains(node)) {
 							lastFocused = node;
 						}
 						focused = true;
 					}
+
+					if (
+						node.getAttribute("tabindex") !== "-1" &&
+						node instanceof HTMLInputElement &&
+						!node.hasAttribute("disabled") &&
+						!node.hasAttribute("readonly") &&
+						["text", "search"].includes(`${node.getAttribute("type")}`)
+					) {
+						node.addEventListener("input", onInput);
+						node.addEventListener("keydown", searchKeydown);
+
+						node.setAttribute("autocomplete", "off");
+						const name = node.name ? node.name : DEFAULT_NAME;
+						searchInputs[name] = node;
+						searchValues[name] = node.value;
+
+						filterOptions = getFilterOptions(searchValues);
+					}
 				} else {
 					delete searchInputs[name];
 					delete searchValues[name];
+				}
+			}
+
+			if (node instanceof HTMLElement && node.hasAttribute("tabindex") && node.getAttribute("tabindex") !== "-1") {
+				node.addEventListener("blur", onBlur);
+				node.addEventListener("focus", onFocus);
+				if (typeof document !== "undefined" && document.activeElement === node && document.activeElement instanceof HTMLElement) {
+					if (!popupElement?.innerContainer?.contains(node)) {
+						lastFocused = node;
+					}
+					focused = true;
 				}
 			}
 		}
@@ -233,34 +287,10 @@
 
 	/** Make sure tabbing works */
 	function searchKeydown(e: KeyboardEvent): void {
-		if (e.key !== "Tab") return;
-		if (!(e.target instanceof HTMLElement)) return;
-
-		const name = e.target.getAttribute("name")?.toString() ?? DEFAULT_NAME;
-		const keys = Object.keys(searchInputs);
-		const index = keys.indexOf(name);
-		if (!e.shiftKey && index < keys.length - 1) {
+		// If popup, defer logic to it
+		if (open && e.key === "Tab" && !popupElement?.innerContainer && !PopupHelper.hasMoreFocusable(container, e.shiftKey)) {
 			e.preventDefault();
-			searchInputs[keys[index + 1]].focus();
-			return;
-		} else if (e.shiftKey && index > 0) {
-			e.preventDefault();
-			searchInputs[keys[index - 1]].focus();
-			return;
-		}
-
-		if (lastFocused) {
-			const focusableElements = Array.from(document.querySelectorAll('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(
-				(item) => item instanceof HTMLElement && item.getAttribute("tabindex") !== "-1" && !item.hidden
-			);
-			const currentIndex = focusableElements.indexOf(lastFocused);
-			const next = e.shiftKey ? focusableElements[currentIndex - 1] : focusableElements[currentIndex + 1];
-			if (next instanceof HTMLElement) {
-				e.preventDefault();
-				close();
-				next.focus();
-				return;
-			}
+			close();
 		}
 	}
 
@@ -283,7 +313,7 @@
 				break;
 			case "Enter":
 				{
-					e.preventDefault();
+					if (!submit) e.preventDefault();
 					if (multiple) {
 						close();
 						return;
@@ -309,10 +339,8 @@
 				clearSearch();
 				break;
 			case "Escape":
-				if (!open) return;
-				e.preventDefault();
 				close();
-				break;
+				return;
 			default:
 				return;
 		}
@@ -324,8 +352,10 @@
 	}
 
 	/** Handle window clicks */
-	function onWindowClick(e: MouseEvent): void {
-		if (!focused || !PopupHelper.isOutsideClick(e, container) || !PopupHelper.isOutsideClick(e, popupElement?.innerContainer)) return;
+	function onWindowClick(): void {
+		// If we are using popup, defer out click to it
+		if (popupElement?.innerContainer) return;
+		close();
 		blur();
 	}
 
@@ -353,27 +383,46 @@
 
 	/** Handle `search` element inputs */
 	function onInput(this: HTMLInputElement): void {
+		// If not open, open when interacting
+		if (!open) {
+			showOptions().then(() => {
+				selectedIndex = hovered;
+				scrollToOptionIfNeeded();
+			});
+		}
+
 		const name = this.getAttribute("name")?.toString();
-		if (name) searchValues[name] = this.value;
-		else searchValues[DEFAULT_NAME] = this.value;
-		filterOptions = getFilterOptions(searchValues);
+
+		if (delay) {
+			window.clearTimeout(timeout);
+			timeout = window.setTimeout(() => {
+				if (name) searchValues[name] = this.value;
+				else searchValues[DEFAULT_NAME] = this.value;
+			}, delay);
+		} else {
+			if (name) searchValues[name] = this.value;
+			else searchValues[DEFAULT_NAME] = this.value;
+			filterOptions = getFilterOptions(searchValues);
+		}
 	}
 
 	/** Called when the decision has been made to select an option */
-	function selectElement(e: HTMLEnhancedOptionElement<T>): void {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function selectElement(e: SvelteEnhancedOptionElement<T>): void {
 		if (multiple) {
 			if (e.togglesAll) {
 				const visible = options.filter((o) => !!o.element);
 				const allChecked = visible.every((o) => o.checked);
 				if (allChecked) values = [];
-				else values = visible.map((o) => o.value);
+				else values = visible.map((o) => (o.item === null ? null : selectValue(o.item)));
 			} else {
-				if (!values.includes(e.value)) values = values.concat(e.value);
-				else values = values.filter((v) => v !== e.value);
+				if (!values.includes(e.item === null ? null : selectValue(e.item))) values = values.concat(e.item === null ? null : selectValue(e.item));
+				else values = values.filter((v) => v !== (e.item === null ? null : selectValue(e.item)));
 			}
 		} else {
 			const oldValue = value;
-			value = e.value;
+			value = e.item === null ? null : selectValue(e.item);
 
 			// We have to manually update in this case
 			if (value === oldValue) {
@@ -381,7 +430,7 @@
 			}
 
 			filterOptions = getFilterOptions(searchValues);
-			close();
+			tick().then(close);
 		}
 
 		hovered = options.findIndex((o) => o.element === e.element);
@@ -392,9 +441,11 @@
 	}
 
 	/** Update the `checked` value of `EnhancedOption`s */
-	function updateValues(options: HTMLEnhancedOptionElement<T>[], values: (unknown | null)[]): void {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function updateValues(options: SvelteEnhancedOptionElement<T>[], values: (K | null)[]): void {
 		for (const option of options) {
-			if (values.includes(option.value)) option.setChecked(true);
+			if (values.includes(option.item === null ? null : selectValue(option.item))) option.setChecked(true);
 			else option.setChecked(false);
 		}
 	}
@@ -406,14 +457,29 @@
 	}
 
 	/** Update the `search` element's search value to match current value */
-	function updateDisplay(value: unknown | null): void {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function updateDisplay(value: K | null): void {
 		if (multiple) return; // There is no obvious way to update display when multiple
-		const option = options.find((o) => o.value === value);
+
+		// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+		let item: T | null | undefined;
+		if (value === null) {
+			item = null;
+			selected = null;
+		} else {
+			item = totalPool.find((o) => selectValue(o) === value);
+
+			if (item) selected = item;
+			else item = selected;
+		}
+
 		Object.keys(searchInputs).forEach((key) => {
 			if (key in searchInputs) {
 				const ref = searchInputs[key];
-				if (key === DEFAULT_NAME) ref.value = `${option?.item}`;
-				else if (isObject(option?.item)) ref.value = `${option.item[key]}`;
+				if (key === DEFAULT_NAME) ref.value = `${item ?? ""}`;
+				else if (isObject(item)) ref.value = `${item[key] ?? ""}`;
 				else ref.value = "";
 				searchValues[key] = ref.value;
 			}
@@ -421,7 +487,9 @@
 	}
 
 	/** Add `highlighted` class to `hover`d element */
-	function updateHighlighted(hovered: number, options: HTMLEnhancedOptionElement<T>[]): void {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function updateHighlighted(hovered: number, options: SvelteEnhancedOptionElement<T>[]): void {
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i].element;
 			if (!el) continue;
@@ -441,11 +509,13 @@
 		const option = getOptionMatchingSearch(searchValues);
 
 		// If not found, do not change value and explicitly revert display
-		if (!option) {
+		if (!option?.item) {
 			updateDisplay(value);
 			filterOptions = getFilterOptions(searchValues);
 		} else {
-			value = option.value;
+			const oldValue = selectValue(option.item);
+			if (value === oldValue) updateDisplay(value);
+			else value = oldValue;
 		}
 	}
 
@@ -470,7 +540,7 @@
 	/** Handle opening and focusing of this component */
 	function close(): void {
 		if (!open) return;
-		if (!Object.keys(searchInputs).length) focused = false;
+		if (!Object.keys(searchInputs).length && !popupElement?.lastFocused) focused = false;
 		if (popup) {
 			Object.keys(searchInputs).forEach((key) => {
 				if (popupElement?.innerContainer?.contains(searchInputs[key])) delete searchInputs[key];
@@ -483,7 +553,9 @@
 	}
 
 	/** Register an `EnhancedOption` element */
-	function registerOption(option: HTMLEnhancedOptionElement<T>): void {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function registerOption(option: SvelteEnhancedOptionElement<T>): void {
 		if (!option.element || options.includes(option)) return;
 
 		option.element.setAttribute("tabindex", "-1");
@@ -514,7 +586,7 @@
 	/** Handle `search` element mouseover */
 	function onMouseover(e: Event): void {
 		if (!(e.target instanceof HTMLElement)) return;
-		hovered = options.findIndex((o) => o.element === <HTMLDivElement>e.target);
+		hovered = options.findIndex((o) => o.element === <HTMLDivElement>e.currentTarget);
 	}
 
 	/** Handle `search` element mouseout */
@@ -540,17 +612,18 @@
 	/** Handle `search` element focus */
 	function onFocus(e: FocusEvent): void {
 		if (e.target instanceof HTMLElement && !popupElement?.innerContainer?.contains(document.activeElement)) lastFocused = e.target;
-		if (!focused) showOptions();
+		if (!lastFocused && e.relatedTarget instanceof HTMLElement) lastFocused = e.relatedTarget;
 		focused = true;
 	}
 
 	/** Get the option fully matching search strings */
-	function getOptionMatchingSearch(search: Record<string, string>): HTMLEnhancedOptionElement<T> | null {
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function getOptionMatchingSearch(search: Record<string, string>): SvelteEnhancedOptionElement<T> | null {
 		return (
 			options.find((o) => {
-				if (o.item === null) return Object.keys(search).every((key) => !search[key]);
 				if (isObject(o.item)) return Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(o.item)[key]}`.toLowerCase());
-				return search[DEFAULT_NAME]?.toLowerCase() === `${o}`.toLowerCase();
+				return search[DEFAULT_NAME]?.toLowerCase() === `${o.item}`.toLowerCase();
 			}) ?? null
 		);
 	}
@@ -570,26 +643,36 @@
 	}
 
 	/** Construct the function that should filter the pool of options based on `search` values */
-	function getFilterOptions(search: Record<string, string>): (options: T[]) => T[] {
-		return (options) => {
-			pool = options;
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function getFilterOptions(search: Record<string, string>): (pool: T[], allOnEmpty?: boolean) => T[] {
+		return (pool, allOnEmpty) => {
+			totalPool = pool;
+
+			// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 			let filtered: T[] = [];
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
 			const option = getOptionMatchingSearch(search);
-			if (isObject(option?.item) && Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option.item)[key]}`.toLowerCase())) {
-				filtered = Array.from(options);
+			if (
+				isObject(option?.item) &&
+				Object.keys(search).every((key) => search[key].toLowerCase() === `${ensureObject(option?.item)[key]}`.toLowerCase())
+			) {
+				filtered = Array.from(pool);
 			} else if (`${option?.item}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
-				filtered = Array.from(options);
+				filtered = Array.from(pool);
 			} else {
+				// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+				// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 				filtered = Object.keys(search).reduce<T[]>(
 					(prev, curr) =>
 						prev.filter((item) => {
 							const val = search[curr].toLowerCase();
-							if (!val) return true; // If no search, display all
+							if (!val) return allOnEmpty !== false; // If no search, display all
 							return isObject(item) ? `${item[curr]}`.toLowerCase().includes(val) : `${item}`.toLowerCase().includes(val);
 						}),
-					Array.from(options)
+					Array.from(pool)
 				);
 			}
 
@@ -600,12 +683,46 @@
 	}
 
 	/** Check if all pool options are contained in `values` */
-	function updateAllChecked(options: HTMLEnhancedOptionElement<T>[], values: unknown[]): boolean {
-		return options.filter((o) => !!o.element).every((o) => values.includes(o.value));
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function updateAllChecked(options: SvelteEnhancedOptionElement<T>[], values: (K | null)[]): boolean {
+		return options.filter((o) => !!o.element).every((o) => values.includes(o.item === null ? null : selectValue(o.item)));
 	}
+
+	/** TODOC */
+	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function getChecked(values: (K | null)[]): T[] {
+		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+		return values.reduce<T[]>((prev, curr) => {
+			let found = totalPool.find((item) => selectValue(item) === curr);
+			// Pool could have changed since last time, so source from checked as well if not found in pool
+			found ??= checked.find((item) => selectValue(item) === curr);
+			if (found) prev.push(found);
+			return prev;
+		}, []);
+	}
+
+	// Update `allChecked` when options and values changes
+	$: allChecked = updateAllChecked(options, values);
+
+	// Set up observer for container when bound
+	$: setUpObserver(container);
+
+	// Update highlighted option when options and hovered changes
+	$: updateHighlighted(hovered, options);
+
+	// Update display when value changes
+	$: updateDisplay(value);
+
+	// Update the checked value for `EnhancedOption` elements to match values
+	$: updateValues(options, values);
+
+	// TODOC
+	$: checked = getChecked(values);
 </script>
 
-<svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
+<svelte:window on:keydown={onKeydown} />
 
 {#if name}
 	{#if multiple}
@@ -619,19 +736,19 @@
 	{/if}
 {/if}
 
-<div class:contents={!cssClass} class={cssClass} bind:this={container}>
-	<slot name="summary" {clearSearch} {allChecked} {pool} {value} {values} {open} />
+<div class:contents={!cssClass} class={cssClass} bind:this={container} use:outClick={onWindowClick}>
+	<slot name="summary" {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
 	{#if !popup}
-		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
 	{/if}
 </div>
 {#if popup}
 	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
-		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} />
+		<slot {registerOption} {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
 	</Popup>
 {/if}
 
-<style>
+<style lang="scss">
 	.contents {
 		display: contents;
 	}

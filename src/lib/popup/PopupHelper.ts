@@ -2,8 +2,10 @@
 export class PopupHelper {
 	/** TODOC */
 	public static isOutsideClick(e: MouseEvent, bounds: Node | null | undefined): boolean {
-		// If screen doesn't have any pixels there is no point
-		if (e.screenX === 0 && e.screenY === 0) return false;
+		// If screen doesn't have any pixels, fallback to contains
+		if (e.screenX === 0 && e.screenY === 0) {
+			return e.target instanceof Node && !bounds?.contains(e.target);
+		}
 
 		if (!(bounds instanceof HTMLElement)) return true;
 
@@ -57,11 +59,39 @@ export class PopupHelper {
 
 	/** TODOC */
 	public static firstFocusable(startingPoints: Element | null | undefined): HTMLElement | null {
-		const first = startingPoints?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-		if (first instanceof HTMLElement && first.getAttribute("tabindex") !== "-1" && !first.hidden) {
-			return first;
+		const first = startingPoints?.querySelector(this.focusableElementQuery);
+		return first instanceof HTMLElement ? first : null;
+	}
+
+	/** TODOC */
+	public static focusableElementQuery = `
+  button:not(:disabled):not([aria-hidden="true"]):not([tabindex="-1"]),
+  [href]:not([aria-hidden="true"]):not([tabindex="-1"]),
+  input:not(:disabled):not([type="hidden"]):not([aria-hidden="true"]):not([tabindex="-1"]),
+  select:not(:disabled):not([aria-hidden="true"]):not([tabindex="-1"]),
+  textarea:not(:disabled):not([aria-hidden="true"]):not([tabindex="-1"]),
+  [tabindex]:not([tabindex="-1"]):not([aria-hidden="true"]),
+  [contenteditable]:not([contenteditable="false"]):not([aria-hidden="true"]):not([tabindex="-1"])
+`;
+
+	/** TODOC */
+	public static allFocusable(container: Element | null | undefined | Document): HTMLElement[] {
+		return Array.from(container?.querySelectorAll<HTMLElement>(this.focusableElementQuery) ?? []);
+	}
+
+	/** TODOC */
+	public static hasMoreFocusable(container: Element | null | undefined, reverse: boolean): boolean {
+		const focusable = this.allFocusable(container);
+		const current = document.activeElement;
+		if (current instanceof HTMLElement) {
+			const index = focusable.indexOf(current);
+			if (reverse) {
+				return index > 0;
+			} else {
+				return index < focusable.length - 1;
+			}
 		}
-		return null;
+		return false;
 	}
 
 	/** TODOC */

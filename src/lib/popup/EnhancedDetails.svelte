@@ -1,51 +1,48 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	/** TODOC */
+	export let open: boolean = false;
 
 	/** TODOC */
-	export let open = false;
+	let cssClass = "";
+	export { cssClass as class };
+
+	/** CSS style for container */
+	export let style = "";
+
+	/** If we should scroll to end after animation */
+	export let autoscroll = false;
+
+	/** */
+	let div: HTMLDivElement | undefined;
 
 	/** TODOC */
-	export let duration = 300;
+	function scrollToEnd(): void {
+		if (autoscroll && div) {
+			const rect = div.getBoundingClientRect();
 
-	/** TODOC */
-	let details: HTMLDetailsElement | undefined;
+			if (
+				rect.top >= 0 &&
+				rect.left >= 0 &&
+				rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) /* or $(window).height() */ &&
+				rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
+			)
+				return;
 
-	/** TODOC */
-	let timeout = 0;
-
-	// ctor
-	onMount(() => {
-		details?.addEventListener("click", onClick);
-	});
-
-	/** TODOC */
-	function onClick(e: Event): void {
-		window.clearTimeout(timeout);
-		if (open) {
-			e.preventDefault();
-			close();
-		} else {
-			open = true;
+			window.scrollTo({ top: div.offsetTop, behavior: "smooth" });
 		}
 	}
 
-	async function close(): Promise<void> {
-		timeout = window.setTimeout(() => {
-			if (!details) return;
-			details.open = false;
-			open = false;
-		}, duration);
-	}
-
-	/** Function to close details after a custom event */
-	function closeClick(onClick?: () => void): () => void {
-		return () => {
-			onClick?.();
-			close();
-		};
+	/** TODOC */
+	function handleClick(): void {
+		open = !open;
 	}
 </script>
 
-<details bind:this={details}>
-	<slot {open} {closeClick} />
-</details>
+<div class={cssClass} {style}>
+	<div style="display: contents;" on:click={handleClick} role="button" tabindex="0" on:keyup={handleClick}>
+		<slot name="summary">Details</slot>
+	</div>
+	<div style:display={open ? "contents" : "none"}>
+		<slot {open} {scrollToEnd} />
+	</div>
+</div>
