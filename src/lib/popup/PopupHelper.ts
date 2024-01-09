@@ -58,6 +58,19 @@ export class PopupHelper {
 	}
 
 	/** TODOC */
+	public static findParentWithDisplay(element: HTMLElement | null): HTMLElement | null {
+		if (typeof document === "undefined") return null;
+		while (element && element !== document.body) {
+			const display = window.getComputedStyle(element).display;
+			if (display !== "none" && display !== "inline" && display !== "inline-block") {
+				return element;
+			}
+			element = element.parentElement;
+		}
+		return null; // No parent with distinct display found
+	}
+
+	/** TODOC */
 	public static firstFocusable(startingPoints: Element | null | undefined): HTMLElement | null {
 		const first = startingPoints?.querySelector(this.focusableElementQuery);
 		return first instanceof HTMLElement ? first : null;
