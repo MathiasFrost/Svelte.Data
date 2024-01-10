@@ -37,7 +37,7 @@
 	/** Delay filter by this. Useful for async data to avoid fetching on every keystroke. */
 	export let delay: number = 0;
 
-	/** Force display text to be valid when blurred. TODO: Infer this by type="text" vs type="search" */
+	/** Force display text to be valid when blurred */
 	export let force = false;
 
 	/** Multiple or single select */
@@ -81,7 +81,7 @@
 	let checked: T[];
 
 	/** The current option index that will be selected when pressing enter */
-	let selectedIndex = 0;
+	let selectedIndex = -1;
 
 	/** The current option index that is either selected with keyboard or hovered with mouse */
 	let hovered = selectedIndex;
@@ -151,8 +151,8 @@
 		},
 		close() {
 			// If popup, defer closing to it
-			if (popupElement) popupElement.close();
-			close();
+			if (popupElement?.open) return;
+			else close();
 		}
 	};
 
@@ -273,27 +273,28 @@
 		switch (e.key) {
 			case "ArrowUp":
 				e.preventDefault();
-				if (hovered > 0) hovered--;
+				if (hovered >= 0) hovered--;
 				break;
 			case "ArrowDown":
 				e.preventDefault();
 				if (hovered < options.length - 1) hovered++;
 				break;
-			case "Enter":
-				{
-					// This will make selecting and submitting happen in one keystroke
-					if (!submit) e.preventDefault();
-					if (multiple) {
-						close();
-						return;
-					}
-					const item = options[hovered];
-					if (item) {
-						selectOption(item);
-						return;
-					}
+			case "Enter": {
+				// This will make selecting and submitting happen in one keystroke
+				if (!submit) e.preventDefault();
+				if (multiple) {
+					close();
+					return;
 				}
-				break;
+				const item = options[hovered];
+				if (item) {
+					selectOption(item);
+					return;
+				} else {
+					close();
+					return;
+				}
+			}
 			case " ":
 				if (multiple && e.ctrlKey) {
 					e.preventDefault();
@@ -321,8 +322,8 @@
 
 	/** Handle window clicks */
 	function onWindowClick(): void {
-		if (popupElement?.open) popupElement.close();
-		close();
+		if (popupElement?.open) return;
+		else close();
 	}
 
 	/** Scroll to option if it is out of view */
@@ -446,7 +447,6 @@
 	/** Add `highlighted` class to `hover`d element */
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateHighlighted(hovered: number, options: Option[]): void {
-		console.log(hovered, options);
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i];
 			if (!el.parent) continue;
@@ -481,11 +481,20 @@
 			selectedIndex = hovered;
 
 			await tick();
+
+			// Clear search inputs inside the popup
+			Object.keys(searchInputs)
+				.filter((key) => popupElement?.innerContainer?.contains(searchInputs[key]))
+				.forEach((key) => {
+					searchValues[key] = "";
+					searchInputs[key].value = "";
+				});
 		} else {
 			selectedIndex = hovered;
 		}
 
-		updateFilter(); // Not 100% sure this is needed, but makes sense to ensure filters are correct on show
+		updateFilter();
+		searchForOptions();
 		scrollToOptionIfNeeded();
 	}
 
@@ -557,10 +566,12 @@
 	/** Handle component blur */
 	function onFocusOut(e: FocusEvent): void {
 		if (
-			!e.relatedTarget ||
-			(e.relatedTarget instanceof HTMLElement && (container?.contains(e.relatedTarget) || popupElement?.innerContainer?.contains(e.relatedTarget)))
-		)
+			e.relatedTarget &&
+			e.relatedTarget instanceof HTMLElement &&
+			(container?.contains(e.relatedTarget) || popupElement?.innerContainer?.contains(e.relatedTarget))
+		) {
 			return;
+		}
 
 		focused = false;
 		close();
