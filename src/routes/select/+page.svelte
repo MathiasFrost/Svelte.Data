@@ -1,8 +1,7 @@
 <script lang="ts">
-	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
-	import EnhancedOption from "$lib/select/EnhancedOption.svelte";
-	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
 	import "../../app.scss";
+	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
+	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
 
 	/** TODOC */
 	interface User {
@@ -83,10 +82,8 @@
 <h2>Simple</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
 	<EnhancedSelect name="user" pool={users} value={3} key="id" force popup let:filterOptions>
-		<svelte:fragment slot="summary" let:selected>
-			<input type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name} />
-		</svelte:fragment>
-		<ul class="selector">
+		<input slot="summary" let:selected type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name} />
+		<ul style="list-style: none; padding: 0;" class="selector">
 			<li><data value="" /></li>
 			{#each filterOptions(users) as user}
 				<li><data value={user.id} />{user.name}</li>
