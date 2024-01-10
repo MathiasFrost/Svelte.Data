@@ -10,6 +10,9 @@
 	/** Name for the default input element for `search` */
 	const DEFAULT_NAME = "[DEFAULT]";
 
+	/** String to identify check all options */
+	const CHECK_ALL = "[CHECK_ALL]";
+
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
@@ -384,9 +387,18 @@
 	/** Called when the decision has been made to select an option */
 	function selectOption(e: Option): void {
 		if (multiple) {
-			const found = getKey(findItem(e.element.value));
-			if (!values.includes(found)) values = values.concat(found);
-			else values = values.filter((v) => v !== found);
+			if (e.element.value === CHECK_ALL) {
+				const allChecked = options
+					.filter((option) => option.element.value !== CHECK_ALL)
+					.every((option) => values.includes(getKey(findItem(option.element.value))));
+
+				if (allChecked) values = [];
+				else values = options.filter((option) => option.element.value !== CHECK_ALL).map((option) => getKey(findItem(option.element.value)));
+			} else {
+				const found = getKey(findItem(e.element.value));
+				if (!values.includes(found)) values = values.concat(found);
+				else values = values.filter((v) => v !== found);
+			}
 		} else {
 			const found = getKey(findItem(e.element.value));
 			const oldValue = value;
@@ -702,14 +714,14 @@
 {/if}
 
 <div class:contents={!cssClass} class={cssClass} bind:this={container} use:outClick={onWindowClick}>
-	<slot name="summary" {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
+	<slot name="summary" {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
 	{#if !popup}
-		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
+		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
 	{/if}
 </div>
 {#if popup}
 	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
-		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} />
+		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
 	</Popup>
 {/if}
 

@@ -99,11 +99,11 @@
 			<p>Selected: {checked.map((user) => user.username).join(", ")}{checked.length}</p>
 			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
 		</div>
-		<svelte:fragment let:filterOptions let:allChecked let:checked>
+		<svelte:fragment let:filterOptions let:allChecked let:checked let:checkAll>
 			{@const filtered = filterOptions(users)}
 			<ul style="list-style: none; padding: 0;" class="selector">
 				<li>
-					<data value="" />
+					<data value={checkAll} />
 					<input tabindex="-1" type="checkbox" checked={allChecked} />
 					{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
 				</li>
