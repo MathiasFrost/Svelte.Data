@@ -472,7 +472,6 @@
 
 		if (open && lastFocused instanceof HTMLElement) {
 			lastFocused?.focus();
-			console.log(lastFocused);
 		}
 
 		if (container && effectiveAnchor !== <Element>container) {
