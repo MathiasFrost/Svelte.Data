@@ -547,7 +547,7 @@
 			// TOTHINK: We could maybe to slices, but then it won't work with #key blocks
 			if (options.some((option) => option.element === dataEl)) continue;
 
-			const parent = PopupHelper.findParentWithDisplay(dataEl);
+			const parent = PopupHelper.findParentWithDisplay(dataEl.parentElement);
 			if (!parent || parent === dataEl) continue;
 
 			parent.addEventListener("click", onClick);
