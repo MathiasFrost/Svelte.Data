@@ -13,6 +13,9 @@
 	/** String to identify check all options */
 	const CHECK_ALL = "[CHECK_ALL]";
 
+	/** String to identify uncheck all options */
+	const UNCHECK_ALL = "[UNCHECK_ALL]";
+
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
@@ -389,11 +392,18 @@
 		if (multiple) {
 			if (e.element.value === CHECK_ALL) {
 				const allChecked = options
-					.filter((option) => option.element.value !== CHECK_ALL)
+					.filter((option) => ![CHECK_ALL, UNCHECK_ALL].includes(option.element.value))
 					.every((option) => values.includes(getKey(findItem(option.element.value))));
 
 				if (allChecked) values = [];
-				else values = options.filter((option) => option.element.value !== CHECK_ALL).map((option) => getKey(findItem(option.element.value)));
+				else
+					values = options
+						.filter((option) => ![CHECK_ALL, UNCHECK_ALL].includes(option.element.value))
+						.map((option) => getKey(findItem(option.element.value)));
+			} else if (e.element.value === UNCHECK_ALL) {
+				values = options
+					.filter((option) => ![CHECK_ALL, UNCHECK_ALL].includes(option.element.value))
+					.map((option) => getKey(findItem(option.element.value)));
 			} else {
 				const found = getKey(findItem(e.element.value));
 				if (!values.includes(found)) values = values.concat(found);
@@ -686,6 +696,12 @@
 		}, []);
 	}
 
+	/** TODOC */
+	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
+	function uncheck(item: T): void {
+		values = values.filter((value) => getKey(item) !== value);
+	}
+
 	// Update highlighted option when options and hovered changes
 	$: updateHighlighted(hovered, options);
 
@@ -714,14 +730,53 @@
 {/if}
 
 <div class:contents={!cssClass} class={cssClass} bind:this={container} use:outClick={onWindowClick}>
-	<slot name="summary" {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
+	<slot
+		name="summary"
+		{clearSearch}
+		{container}
+		{allChecked}
+		{open}
+		{value}
+		{values}
+		{searchValues}
+		{selected}
+		{checked}
+		checkAll={CHECK_ALL}
+		uncheckAll={UNCHECK_ALL}
+		{uncheck} />
 	{#if !popup}
-		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
+		<slot
+			{filterOptions}
+			{clearSearch}
+			{container}
+			{allChecked}
+			{open}
+			{value}
+			{values}
+			{searchValues}
+			{selected}
+			{checked}
+			checkAll={CHECK_ALL}
+			uncheckAll={UNCHECK_ALL}
+			{uncheck} />
 	{/if}
 </div>
 {#if popup}
 	<Popup bind:self={popupElement} anchor={container} {modalSmall} align="stretch" contain on:close={close}>
-		<slot {filterOptions} {clearSearch} {container} {allChecked} {open} {value} {values} {searchValues} {selected} {checked} checkAll={CHECK_ALL} />
+		<slot
+			{filterOptions}
+			{clearSearch}
+			{container}
+			{allChecked}
+			{open}
+			{value}
+			{values}
+			{searchValues}
+			{selected}
+			{checked}
+			checkAll={CHECK_ALL}
+			uncheckAll={UNCHECK_ALL}
+			{uncheck} />
 	</Popup>
 {/if}
 

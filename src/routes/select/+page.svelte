@@ -119,8 +119,12 @@
 <h2>Multiple with simple display</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
 	<EnhancedSelect name="users" bind:self={select2} pool={users} key={(user) => user.id} values={[1, 3]} multiple popup>
-		<svelte:fragment slot="summary" let:checked>
-			<input type="text" readonly style="width: 100%" value={checked.map((user) => user.username).join(", ")} />
+		<svelte:fragment slot="summary" let:checked let:uncheck>
+			<div role="listbox" class="input" tabindex="0">
+				{#each checked as user}
+					<button on:click={() => uncheck(user)}>{user.username}</button>
+				{/each}
+			</div>
 		</svelte:fragment>
 		<svelte:fragment let:filterOptions let:allChecked let:checked>
 			{@const filtered = filterOptions(users)}
