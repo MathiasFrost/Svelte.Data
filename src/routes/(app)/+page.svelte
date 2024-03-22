@@ -2,12 +2,18 @@
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
+	import { User } from "$lib/http/BaseModel.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
 
 	onMount(async () => {
 		forecasts = testHttp.getForecasts();
+		const res = await fetch("/api/test");
+		const o = await res.json();
+		const usr = User.deserialize(o);
+		console.log(usr);
+		usr.name = "asd";
 	});
 
 	let url: string | null = null;

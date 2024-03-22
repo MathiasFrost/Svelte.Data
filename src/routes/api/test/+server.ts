@@ -1,4 +1,4 @@
-import { error } from "@sveltejs/kit";
+import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
 
 const promise = () =>
@@ -13,5 +13,5 @@ export const GET: RequestHandler = async () => {
 	// 	unauthorized.set(true);
 	// 	return text("Hello there");
 	// }
-	throw error(400, { message: "test", errorId: "123" });
+	return json({ name: 2, age: 2 });
 };
