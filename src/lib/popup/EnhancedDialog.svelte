@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { portalIn } from "$lib/popup/portal.js";
+	import type { SvelteEnhancedDialogElement } from "$lib/popup/SvelteEnhancedDialogElement.js";
 
 	/** TODOC */
 	export let open = false;
@@ -7,12 +8,22 @@
 	/** TODOC */
 	export let dismissible = true;
 
-	/** Set to true to automatically set up click events on the slot elements */
-	export let auto = false;
-
 	/** TODOC */
 	let cssClass = "";
 	export { cssClass as class };
+
+	/** @see SvelteEnhancedDialogElement */
+	export const self: SvelteEnhancedDialogElement = {
+		get open(): boolean {
+			return open;
+		},
+		close() {
+			open = false;
+		},
+		showModal() {
+			open = true;
+		}
+	};
 
 	/** TODOC */
 	function keypress(e: KeyboardEvent): void {
@@ -20,28 +31,14 @@
 			open = false;
 		}
 	}
-
-	/** TODOC */
-	function handleClick(): void {
-		if (auto) open = !open;
-	}
 </script>
 
-{#if auto && $$slots["default"]}
-	<div class="passthrough" on:click={handleClick} role="button" tabindex="-1" on:keyup={handleClick}>
-		<slot />
-	</div>
-{/if}
 {#if open}
 	<div use:portalIn={"modal"}>
 		<div class="modal-backdrop" on:click={() => (open = dismissible ? false : open)} role="button" tabindex="-1" on:keypress={keypress} />
 		<div class="modal-container">
 			<div class="modal {cssClass}">
-				{#if $$slots["body"]}
-					<slot name="body" />
-				{:else}
-					<slot />
-				{/if}
+				<slot />
 			</div>
 		</div>
 	</div>
