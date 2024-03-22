@@ -30,9 +30,9 @@ export class HTTPResponseError extends Error {
 		this.response = response;
 		this.requestInit = requestInit;
 		this.requestUri = requestUri;
-		this.message = `${this.requestInit.method}: ${this.requestUri} was unsuccessful (${this.response.status} ${this.response.statusText})`;
+		this.message = `${this.requestInit.method}: ${this.requestUri} was unsuccessful (${this.response.status} ${this.response.statusText}): ${e.message}`;
 		this.stack = e.stack;
-		this.cause = e.cause;
+		this.cause = e.cause || e.message;
 		this.error = e;
 	}
 

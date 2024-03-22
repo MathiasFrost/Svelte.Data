@@ -1,6 +1,9 @@
-import { types } from "sass";
-import Number = types.Number;
-import type { Readable } from "svelte/store";
+import type { Fetch } from "$lib/http/Fetch.js";
+import { type Readable, readonly, type Writable, writable } from "svelte/store";
+import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
+import type { Postprocess } from "$lib/http/Postprocess.js";
+import type { Preprocess } from "$lib/http/Preprocess.js";
+import { indefinitePromise } from "$lib/async/index.js";
 
 enum TypeCode {
 	string,
@@ -72,34 +75,45 @@ export class User {
 	@Type(Number)
 	public readonly age: number = 0;
 }
-interface IHTTPReqeustOptions extends RequestInit {
+interface SvelteHTTPOptions extends RequestInit {
 	readonly milliseconds: number;
 	readonly refreshOnFocus: boolean;
 	readonly pauseOnBlur: boolean;
+	postprocess: Postprocess;
+	preprocess: Preprocess;
+	readonly startImmediately: boolean;
+	fetch: Fetch;
 }
 
-interface IHTTPRequest<T> {
+interface SvelteHTTPRequest<T> {
 	readonly promise: Promise<T>;
-	readonly value: T;
-	readonly pending: boolean;
+	get value(): T;
+	readonly pending: boolean | null;
+	readonly error: HTTPResponseError | null;
+	readonly hasValue: boolean;
+}
+
+interface SvelteHTTPRequestStore<T> extends Readable<SvelteHTTPRequest<T>> {
 	refresh(silent?: boolean): Promise<T>;
+	start(): void;
 }
 
 // noinspection JSUnusedGlobalSymbols
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
 export class SvelteHTTP {
 	/** Base address for requests made with this client */
-	public readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | string | null = null;
 
-	/** @see HTTPClientOptions */
-	private readonly options: HTTPClientOptions;
+	/** @see SvelteHTTPOptions */
+	private readonly options: Partial<SvelteHTTPOptions>;
 
 	/** ctor */
-	public constructor(baseAddress = "", options: Partial<HTTPClientOptions> = {}) {
+	public constructor(baseAddress = "", options: Partial<SvelteHTTPOptions> = {}) {
 		try {
 			this.baseAddress = new URL(baseAddress);
 		} catch (e) {
 			console.warn("Base address could not be constructed from constructor");
+			this.baseAddress = baseAddress;
 		}
 		this.options = options;
 	}
@@ -137,16 +151,13 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** TODOC */
 export class HTTPRequestBuilder {
 	/** TODOC */
-	public readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | string | null = null;
 
 	/** TODOC */
 	public readonly _requestUri: string;
 
-	/** TODOC */
-	public readonly requestInit: RequestInit;
-
 	/** @see HTTPClientOptions */
-	public readonly options: HTTPClientOptions;
+	public readonly options: Partial<SvelteHTTPOptions>;
 
 	/** @see XMLHttpRequest */
 	public xmlHttpRequest?: XMLHttpRequest;
@@ -170,13 +181,12 @@ export class HTTPRequestBuilder {
 	public ensureSuccess = true;
 
 	/** TODOC */
-	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
+	constructor(baseAddress: URL | string | null, httpMethod: HTTPMethod, requestUri: string, options: Partial<SvelteHTTPOptions>) {
 		this.baseAddress = baseAddress;
-		this.requestInit = { ...(options.defaultRequestInit ?? {}) }; // TODO: deep copy this object
-		this.requestInit.method = httpMethod;
-		this.requestInit.headers = new Headers();
-		this._requestUri = requestUri;
 		this.options = { ...options };
+		this.options.method = httpMethod;
+		this.options.headers ??= new Headers();
+		this._requestUri = requestUri;
 	}
 
 	/** Get the server-side `load` `fetch` or client-side `window.fetch` */
@@ -196,12 +206,22 @@ export class HTTPRequestBuilder {
 				// noinspection HttpUrlsUsage
 				if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
 				else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
-			} else if (this.baseAddress.href.endsWith("/")) {
-				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
-				else requestUri = this.baseAddress.href + this._requestUri;
-			} else {
-				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
-				else requestUri = this.baseAddress.host + "/" + this._requestUri;
+			} else if (typeof this.baseAddress === "string") {
+				if (this.baseAddress.endsWith("/")) {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress + this._requestUri;
+					else requestUri = this.baseAddress + this._requestUri;
+				} else {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress + this._requestUri;
+					else requestUri = this.baseAddress + "/" + this._requestUri;
+				}
+			} else if (this.baseAddress instanceof URL) {
+				if (this.baseAddress.href.endsWith("/")) {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
+					else requestUri = this.baseAddress.href + this._requestUri;
+				} else {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
+					else requestUri = this.baseAddress.host + "/" + this._requestUri;
+				}
 			}
 		}
 
@@ -282,18 +302,18 @@ export class HTTPRequestBuilder {
 
 	/** Add headers to content */
 	public withHeaders(headers: Record<string, string>): HTTPRequestBuilder {
-		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
+		if (!(this.options.headers instanceof Headers)) throw new Error("Not happening");
 		for (const key of Object.keys(headers)) {
-			this.requestInit.headers.append(key, headers[key]);
+			this.options.headers.append(key, headers[key]);
 		}
 		return this;
 	}
 
 	/** HTTP request with application/json content */
 	public asJSON(content: object | string): HTTPRequestBuilder {
-		if (!(this.requestInit.headers instanceof Headers)) throw new Error("Not happening");
-		this.requestInit.headers.append("Content-Type", "application/json");
-		this.requestInit.body = typeof content === "string" ? content : JSON.stringify(content);
+		if (!(this.options.headers instanceof Headers)) throw new Error("Not happening");
+		this.options.headers.append("Content-Type", "application/json");
+		this.options.body = typeof content === "string" ? content : JSON.stringify(content);
 		return this;
 	}
 
@@ -301,19 +321,19 @@ export class HTTPRequestBuilder {
 	public asForm(content: Record<string, string>): HTTPRequestBuilder {
 		const formData = new FormData();
 		Object.keys(content).forEach((k) => formData.append(k, content[k]));
-		this.requestInit.body = formData;
+		this.options.body = formData;
 		return this;
 	}
 
 	/** HTTP request with application/x-www-form-urlencoded content */
 	public asQuery(content: string | URLSearchParams | Record<string, string> | string[][] | undefined): HTTPRequestBuilder {
-		this.requestInit.body = new URLSearchParams(content);
+		this.options.body = new URLSearchParams(content);
 		return this;
 	}
 
 	/** HTTP request with any `BodyInit` */
 	public withBody(body: BodyInit | null | undefined): HTTPRequestBuilder {
-		this.requestInit.body = body;
+		this.options.body = body;
 		return this;
 	}
 
@@ -330,159 +350,131 @@ export class HTTPRequestBuilder {
 	}
 
 	/** TODOC */
-	private async internalFetch<TResult>(handler: (response: Response) => Promise<TResult>, signal?: AbortSignal): Promise<TResult> {
-		this.requestInit.signal = signal;
-		if (typeof this.options.preprocess === "function") await this.options.preprocess(this.requestInit, this);
-		let response = await this._fetch(this.requestUri, this.requestInit);
-		if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, this);
+	private internalFetch<TResult>(handler: (response: Response) => Promise<TResult>, signal?: AbortSignal): SvelteHTTPRequestStore<TResult> {
+		const promiseFactory: () => Promise<TResult> = async () => {
+			this.options.signal = signal;
+			if (typeof this.options.preprocess === "function") await this.options.preprocess(this.options, this);
+			let response = await this._fetch(this.requestUri, this.options);
+			if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, this);
 
-		try {
-			// Early return null if status code is among null status codes
-			if (this.nullStatusCodes.includes(response.status)) return null as TResult;
+			try {
+				// Early return null if status code is among null status codes
+				if (this.nullStatusCodes.includes(response.status)) return null as TResult;
 
-			// Check if status code is within acceptable values
-			if (this.statusCodes.length) this.ensureWithinStatusCode(response);
-			else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
+				// Check if status code is within acceptable values
+				if (this.statusCodes.length) this.ensureWithinStatusCode(response);
+				else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
 
-			return await handler(response);
-		} catch (e) {
-			if (e instanceof Error) {
-				throw new HTTPResponseError(this.requestInit, response, this.requestUri, e);
+				return await handler(response);
+			} catch (e) {
+				if (e instanceof Error) {
+					throw new HTTPResponseError(this.options, response, this.requestUri, e);
+				}
+				throw e;
 			}
-			throw e;
+		};
+
+		const store = writable<SvelteHTTPRequest<TResult>>({
+			pending: this.options.startImmediately ? true : null,
+			promise: this.options.startImmediately ? setupPromise() : indefinitePromise(),
+			get value(): TResult {
+				throw new Error("Value is not ready. Check hasValue before accessing");
+			},
+			error: null,
+			hasValue: false
+		});
+
+		function setupPromise(): Promise<TResult> {
+			const promise = promiseFactory();
+			promise
+				.then((value) =>
+					store.update((prev) => ({
+						pending: false,
+						error: null,
+						hasValue: true,
+						promise: prev.promise,
+						get value(): TResult {
+							return value;
+						}
+					}))
+				)
+				.catch((e) => {
+					if (e instanceof HTTPResponseError) {
+						store.update((prev) => ({
+							pending: false,
+							error: e,
+							hasValue: false,
+							promise: prev.promise,
+							get value(): TResult {
+								throw new Error("Value is not ready. Check hasValue before accessing");
+							}
+						}));
+					} else {
+						throw e;
+					}
+				});
+
+			return promise;
 		}
+
+		return {
+			...readonly(store),
+			async refresh(silent?: boolean): Promise<TResult> {
+				const promise = setupPromise();
+				if (!silent) {
+					store.set({
+						pending: true,
+						hasValue: false,
+						error: null,
+						promise,
+						get value(): TResult {
+							throw new Error("Value is not ready. Check hasValue before accessing");
+						}
+					});
+				}
+				return await promise;
+			},
+			start() {
+				store.update((prev) => {
+					if (prev.pending !== null) return prev;
+					return {
+						pending: true,
+						promise: setupPromise(),
+						hasValue: false,
+						error: null,
+						get value(): TResult {
+							throw new Error("Value is not ready. Check hasValue before accessing");
+						}
+					};
+				});
+			}
+		};
 	}
 
-	/** @returns The raw request result */
-	public async fetch(signal?: AbortSignal): Promise<Response> {
-		return await this.internalFetch((response) => Promise.resolve(response), signal);
-	}
-
-	/** @returns The XMLHttpRequest */
-	public send(signal?: AbortSignal): XMLHttpRequest {
-		const request = this.xmlHttpRequest ?? new XMLHttpRequest();
-
-		if (!this.requestInit.method) throw new Error("Request method must be set");
-		this.requestInit.signal = signal;
-		request.open(this.requestInit.method, this.requestUri, true);
-
-		if (this.requestInit.credentials === "include") request.withCredentials = true;
-		if (this.requestInit.body instanceof ReadableStream) throw new Error("Request body cannot be ReadableStream when using XHR");
-
-		request.send(this.requestInit.body);
-		return request;
+	public static deserialize<TResult>(ctor: new (...args: never[]) => TResult, o: unknown): TResult {
+		if (o === null || typeof o !== "object") throw new Error("Could not deserialize JSON");
+		if (!Reflect.has(ctor, "deserialize")) throw new Error("Class does not have @Deserializable decorator");
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-expect-error
+		return ctor.deserialize(o);
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObject<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult> {
-		return await this.internalFetch(async (response) => {
+	public fromJSONObject<TResult = Record<string, unknown>>(ctor: new (...args: never[]) => TResult, signal?: AbortSignal): SvelteHTTPRequestStore<TResult> {
+		return this.internalFetch(async (response) => {
 			const json = await response.json();
-			return ensureObject(json, ensure);
+			return HTTPRequestBuilder.deserialize(ctor, json);
 		}, signal);
 	}
+}
 
-	/** The request body deserialized as a JSON object */
-	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromJSONObject(ensure, signal);
-	}
+const testHttp = new SvelteHTTP("/api/");
 
-	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[]> {
-		return await this.internalFetch(async (response) => {
-			const json = await response.json();
-			return ensureArray(json, ensure);
-		}, signal);
-	}
+export const testHttpUser = testHttp.get("test").fromJSONObject(User);
 
-	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromJSONArray(ensure, signal);
-	}
-
-	/** The request body deserialized as string */
-	public async fromString(signal?: AbortSignal): Promise<string> {
-		return await this.internalFetch((response) => response.text(), signal);
-	}
-
-	/** The request body deserialized as string */
-	public async fromStringNullable(signal?: AbortSignal): Promise<string | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromString(signal);
-	}
-
-	/** The request body deserialized as number */
-	public async fromNumber(signal?: AbortSignal): Promise<number> {
-		const content = await this.fromString(signal);
-		return ensureNumberString(content);
-	}
-
-	/** The request body deserialized as number or null if 204 */
-	public async fromNumberNullable(signal?: AbortSignal): Promise<number | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromNumber(signal);
-	}
-
-	/** The request body deserialized as bigint */
-	public async fromBigint(signal?: AbortSignal): Promise<bigint> {
-		const content = await this.fromString(signal);
-		return ensureBigIntString(content);
-	}
-
-	/** The request body deserialized as number or null if 204 */
-	public async fromBigintNullable(signal?: AbortSignal): Promise<bigint | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromBigint(signal);
-	}
-
-	/** The request body deserialized as boolean */
-	public async fromBoolean(signal?: AbortSignal): Promise<boolean> {
-		const content = await this.fromString(signal);
-		return ensureBooleanString(content);
-	}
-
-	/** The request body deserialized as boolean or null if 204 */
-	public async fromBooleanNullable(signal?: AbortSignal): Promise<boolean | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromBoolean(signal);
-	}
-
-	/** The request body deserialized as Date */
-	public async fromDateString(signal?: AbortSignal): Promise<Date> {
-		const content = await this.fromString(signal);
-		return ensureDateString(content);
-	}
-
-	/** The request body deserialized as Date or null if 204 */
-	public async fromDateStringNullable(signal?: AbortSignal): Promise<Date | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromDateString(signal);
-	}
-
-	/** The request body deserialized as DateOnly */
-	public async fromDateOnlyString(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly> {
-		const content = await this.fromString(signal);
-		return ensureDateOnlyString(content, wrap, true);
-	}
-
-	/** The request body deserialized as DateOnly or null if 204 */
-	public async fromDateOnlyStringNullable(wrap: DateWrap, signal?: AbortSignal): Promise<DateOnly | null> {
-		this.nullStatusCodes.push(204);
-		return await this.fromDateOnlyString(wrap, signal);
-	}
-
-	/** The location header from a 201 response */
-	public async create(signal?: AbortSignal): Promise<string> {
-		this.statusCodes.push(201);
-		return await this.internalFetch((response) => Promise.resolve(ensureString(response.headers.get("Location"))), signal);
-	}
-
-	/** The `object URL` from a stream response */
-	public async createObjectURL(signal?: AbortSignal): Promise<string> {
-		return await this.internalFetch(async (response) => {
-			const blob = await response.blob();
-			return URL.createObjectURL(blob);
-		}, signal);
-	}
+interface HTTPObject<T> {
+	getObject(): Promise<T>;
+	mutateAndRefresh(): Promise<T>;
+	mutateAndUpdate(): Promise<T>;
+	mutateAndReplace(): Promise<T>;
 }

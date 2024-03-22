@@ -13,5 +13,5 @@ export const GET: RequestHandler = async () => {
 	// 	unauthorized.set(true);
 	// 	return text("Hello there");
 	// }
-	return json({ name: 2, age: 2 });
+	return json({ name: "asd", age: 2 });
 };
