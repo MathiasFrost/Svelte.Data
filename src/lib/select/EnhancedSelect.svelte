@@ -1,4 +1,4 @@
-<script lang="ts" generics="T, K extends string | number | boolean | bigint = string">
+<script lang="ts" generics="T, K extends string | number | boolean | bigint | Date = string">
 	import { createEventDispatcher, onDestroy, onMount, tick } from "svelte";
 	import type { SvelteEnhancedSelectElement, Option } from "$lib/select/SvelteEnhancedSelectElement.js";
 	import type { SveltePopupElement } from "$lib/popup/SveltePopupElement.js";
@@ -410,9 +410,8 @@
 				else values = values.filter((v) => v !== found);
 			}
 		} else {
-			const found = getKey(findItem(e.element.value));
 			const oldValue = value;
-			value = found;
+			value = Number(e.element.value) || e.element.value;
 
 			// We have to manually update in this case
 			if (value === oldValue) {

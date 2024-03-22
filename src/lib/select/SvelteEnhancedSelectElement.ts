@@ -1,5 +1,5 @@
 /** TODOC */
-export interface SvelteEnhancedSelectElement<T, K extends string | number | boolean | bigint = string> {
+export interface SvelteEnhancedSelectElement<T, K extends string | number | boolean | bigint | Date = string> {
 	/** TODOC */
 	get name(): string;
 
