@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
-	import { setUserStore } from "$sandbox/user/user.js";
+	import { setUserStore } from "$sandbox/user/userStore.js";
 	import { writable } from "svelte/store";
 	import { browser } from "$app/environment";
 	import "../../app.scss";

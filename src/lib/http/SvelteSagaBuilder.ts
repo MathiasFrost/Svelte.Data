@@ -8,7 +8,7 @@ import type { Deserializer } from "$lib/types/unknown.js";
 /** TODOC */
 interface SvelteHTTPRequest<T> {
 	/** TODOC */
-	readonly promise: Promise<T>;
+	readonly promise: Promise<T> | T;
 
 	/** TODOC */
 	value?: T;
@@ -29,10 +29,10 @@ interface SvelteSaga<T, TMutations extends Mutations> extends Readable<SvelteHTT
 	refresh(silent?: boolean): Promise<T>;
 
 	/** TODOC */
-	start(): void;
+	start(): Promise<T>;
 
 	/** TODOC */
-	startWithGetter(getter: (signal: AbortSignal) => Promise<T>): void;
+	startWithGetter(getter: (signal: AbortSignal) => Promise<T> | T): Promise<T>;
 
 	/** TODOC */
 	stop(): void;
@@ -44,16 +44,16 @@ interface SvelteSaga<T, TMutations extends Mutations> extends Readable<SvelteHTT
 	update(ctor: Deserializer<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void;
 
 	/** TODOC */
-	updateGetter(getter: (signal: AbortSignal) => Promise<T>): void;
+	updateGetter(getter: (signal: AbortSignal) => Promise<T> | T): void;
 
 	/** TODOC */
-	updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T>, silent?: boolean): Promise<T>;
+	updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T> | T, silent?: boolean): Promise<T>;
 }
 
 /** TODOC */
 export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	/** TODOC */
-	public getter: () => Promise<T> = () => indefinitePromise();
+	public getter: () => Promise<T> | T = () => indefinitePromise();
 
 	/** TODOC */
 	public milliseconds: number = 0;
@@ -83,7 +83,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	}
 
 	/** TODOC */
-	public withGetter(getter: () => Promise<T>): this {
+	public withGetter(getter: () => Promise<T> | T): this {
 		this.getter = getter;
 		return this;
 	}
@@ -108,8 +108,8 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			hasValue: false
 		});
 
-		function setupPromise(getter: (signal: AbortSignal) => Promise<T>): Promise<T> {
-			const promise = getter(abort.signal);
+		function setupPromise(getter: (signal: AbortSignal) => Promise<T> | T): Promise<T> {
+			const promise = Promise.resolve(getter(abort.signal));
 			promise
 				.then((value) =>
 					store.update((prev) => ({
@@ -142,7 +142,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 				keyof TMutations,
 				(signal: AbortSignal, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
 			>;
-			getter: (signal: AbortSignal) => Promise<T>;
+			getter: (signal: AbortSignal) => Promise<T> | T;
 		} = {
 			mutators: this.mutators,
 			getter: () => indefinitePromise<T>()
@@ -150,17 +150,19 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 
 		return {
 			...readonly(store),
-			start() {
+			async start() {
+				const promise = config.getter(abort.signal);
 				store.set({
 					pending: true,
-					promise: config.getter(abort.signal),
+					promise,
 					hasValue: false,
 					error: null
 				});
+				return await promise;
 			},
-			startWithGetter(getter: (signal: AbortSignal) => Promise<T>) {
-				config.getter = getter;
-				this.start();
+			async startWithGetter(getter: (signal: AbortSignal) => Promise<T> | T) {
+				config.getter = () => setupPromise(getter);
+				return await this.start();
 			},
 			update(ctor: Deserializer<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void {
 				let rollback: () => void = () => {};
@@ -178,7 +180,14 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 						}
 					}
 					rollback = () => {
-						store.set({ pending: prev.pending, hasValue: prev.hasValue, error: prev.error, promise: prev.promise });
+						console.log(prev);
+						store.set({
+							pending: prev.pending,
+							hasValue: prev.hasValue,
+							error: prev.error,
+							promise: typeof prev.value === "undefined" ? indefinitePromise() : Promise.resolve(prev.value),
+							value: prev.value
+						});
 					};
 					const value = deserialize<T>(ctor, newValue);
 					return {
@@ -195,12 +204,13 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			async refresh(silent?: boolean): Promise<T> {
 				const promise = config.getter(abort.signal);
 				if (!silent) {
-					store.set({
+					store.update((prev) => ({
 						pending: true,
 						hasValue: false,
 						error: null,
-						promise
-					});
+						promise,
+						value: prev.value
+					}));
 				}
 				return await promise;
 			},
@@ -209,15 +219,21 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 					return await config.mutators[key](abort.signal, ...args);
 				} catch (e) {
 					if (e instanceof HTTPResponseError) {
-						store.update((prev) => ({ pending: false, promise: prev.promise, hasValue: prev.hasValue, error: e as HTTPResponseError }));
+						store.update((prev) => ({
+							pending: false,
+							promise: prev.promise,
+							hasValue: prev.hasValue,
+							error: e as HTTPResponseError,
+							value: prev.value
+						}));
 					}
 					throw e;
 				}
 			},
-			updateGetter(getter: (signal: AbortSignal) => Promise<T>) {
+			updateGetter(getter: (signal: AbortSignal) => Promise<T> | T) {
 				config.getter = () => setupPromise(getter);
 			},
-			async updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T>, silent?: boolean) {
+			async updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T> | T, silent?: boolean) {
 				config.getter = () => setupPromise(getter);
 				return await this.refresh(silent);
 			},

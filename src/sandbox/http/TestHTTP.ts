@@ -3,6 +3,7 @@ import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import { RESTHttp } from "$lib/http/RESTHttp.js";
 import { User } from "$sandbox/models/User.js";
+import { goto } from "$app/navigation";
 
 /** @static */
 export class TestHTTP extends RESTHttp {
@@ -37,7 +38,7 @@ export class TestHTTP extends RESTHttp {
 	}
 
 	/** TODOC */
-	private optimistic = false;
+	private optimistic = true;
 
 	/** TODOC */
 	public async getUser(id: number, signal: AbortSignal): Promise<User> {
@@ -52,16 +53,17 @@ export class TestHTTP extends RESTHttp {
 				if (this.optimistic) {
 					const rollback = store.update(User, form);
 					try {
-						newId = await this.post("update").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
+						newId = await this.post("test").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
 					} catch (e) {
 						rollback();
 						throw e;
 					}
-					store.updateGetter((signal) => this.getUser(newId, signal));
+					await store.updateAndInvokeGetter((signal) => this.getUser(newId, signal));
 				} else {
-					newId = await this.post("update").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
+					newId = await this.post("test").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
 					await store.updateAndInvokeGetter((signal) => this.getUser(newId, signal));
 				}
+				await goto(`/http/${newId}`, { replaceState: true });
 				return newId;
 			})
 			.toSvelteStore();

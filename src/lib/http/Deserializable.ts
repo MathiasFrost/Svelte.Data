@@ -38,14 +38,21 @@ export function Deserializable(target: new (...args: never[]) => object): void {
 		const typeCodes = res["__typeCodes"] as Record<string, TypeCode>;
 		Object.keys(input).forEach((key) => {
 			let expected = "";
+			let value: unknown;
 			switch (typeCodes[key]) {
 				case TypeCode.string:
-					if (typeof input[key] !== "string") {
+					if (typeof input[key] === "string") {
+						value = input[key];
+					} else {
 						expected = "string";
 					}
 					break;
 				case TypeCode.number:
-					if (typeof input[key] !== "number") {
+					if (typeof input[key] === "number") {
+						value = input[key];
+					} else if (typeof input[key] === "string") {
+						value = Number(input[key]);
+					} else {
 						expected = "number";
 					}
 					break;
@@ -58,7 +65,7 @@ export function Deserializable(target: new (...args: never[]) => object): void {
 				throw new Error(`Expected type '${expected}' for field '${key}', got type '${typeof input[key]}'`);
 			}
 
-			Reflect.set(res, key, input[key]);
+			Reflect.set(res, key, value);
 		});
 		return res;
 	};

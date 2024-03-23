@@ -2,15 +2,12 @@
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
-	import { userSaga } from "$lib/http/BaseModel.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
 
 	onMount(async () => {
 		forecasts = testHttp.getForecasts();
-		testHttpUser.start();
-		console.log(await $testHttpUser.promise);
 	});
 
 	let url: string | null = null;
@@ -31,21 +28,6 @@
 
 {#if url}
 	<img src={url} alt="xd" />
-{/if}
-
-<button on:click={() => testHttpUser.refresh()}> Refresh </button>
-
-{#await $testHttpUser.promise}
-	<p>Loading...</p>
-{:then user}
-	<p>{user.name}</p>
-{:catch e}
-	<p>{e.message}</p>
-{/await}
-
-<p>Normal:</p>
-{#if $testHttpUser.hasValue}
-	<p>{$testHttpUser.value.name}</p>
 {/if}
 
 <table>

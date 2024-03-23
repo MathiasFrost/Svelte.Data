@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getUserStore } from "$sandbox/user/user.js";
+	import { getUserStore } from "$sandbox/user/userStore.js";
 
 	const user = getUserStore();
 </script>

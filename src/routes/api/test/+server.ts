@@ -1,4 +1,4 @@
-import { json, text } from "@sveltejs/kit";
+import { error, json, text } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
 
 const promise = () =>
@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	await promise();
 	const id = Number(url.searchParams.get("id")) || 0;
 	if (id === 6) return json(user);
-	return text("");
+	throw error(404);
 };
 
 export const POST: RequestHandler = async ({ request }) => {
