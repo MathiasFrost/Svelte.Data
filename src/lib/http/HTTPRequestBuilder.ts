@@ -1,6 +1,6 @@
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import {
-	type Ensure,
+	type Ctor,
 	ensureArray,
 	ensureBigIntString,
 	ensureBooleanString,
@@ -260,21 +260,21 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObject<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult> {
+	public async fromJSONObject<TResult = Record<string, unknown>>(ctor?: Ctor<TResult>, signal?: AbortSignal): Promise<TResult> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
-			return ensureObject(json, ensure);
+			return ensureObject(json, ctor);
 		}, signal);
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult | null> {
+	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ensure?: Ctor<TResult>, signal?: AbortSignal): Promise<TResult | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromJSONObject(ensure, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[]> {
+	public async fromJSONArray<TResult = unknown>(ensure?: Ctor<TResult>, signal?: AbortSignal): Promise<TResult[]> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
 			return ensureArray(json, ensure);
@@ -282,7 +282,7 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
+	public async fromJSONArrayNullable<TResult = unknown>(ensure?: Ctor<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
 		this.nullStatusCodes.push(204);
 		return await this.fromJSONArray(ensure, signal);
 	}

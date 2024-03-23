@@ -1,39 +1,40 @@
 import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
+import { deserialize } from "$lib/http/Deserializable.js";
 
 /** Either a constructor or a function that takes in an unknown and outputs T definitively */
-export type Ensure<T> = (something?: unknown) => T;
+export type Ctor<T> = new (...args: never[]) => T;
 
 /** Make sure that something is an array (not null) */
-export function ensureArray<T = unknown>(something: unknown, ensure?: Ensure<T>): T[] {
+export function ensureArray<T = unknown>(something: unknown, ctor?: Ctor<T>): T[] {
 	if (Array.isArray(something)) {
-		if (typeof ensure !== "undefined") return something.map(ensure);
+		if (typeof ctor !== "undefined") return something.map((value) => deserialize(ctor, value));
 		return something;
 	}
 	throw new Error(`Expected Array, found ${typeof something}`);
 }
 
 /** Make sure that something is an array (may be null) */
-export function ensureArrayNullable<T = unknown>(something: unknown, ensure?: Ensure<T>): T[] | null {
+export function ensureArrayNullable<T = unknown>(something: unknown, ctor?: Ctor<T>): T[] | null {
 	if (something === null || Array.isArray(something)) {
-		if (typeof ensure !== "undefined" && something !== null) return something.map(ensure);
+		if (typeof ctor !== "undefined" && something !== null) return something.map((value) => deserialize(ctor, value));
 		return something;
 	}
 	throw new Error(`Expected Array | null, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (not null) */
-export function ensureObject<T = Record<string, unknown>>(something: unknown, ensure?: Ensure<T>): T {
+export function ensureObject<T = Record<string, unknown>>(something: unknown, ctor?: Ctor<T>): T {
 	if (typeof something === "object" && something !== null) {
-		if (typeof ensure !== "undefined") return ensure(something);
+		if (typeof ctor !== "undefined") return deserialize(ctor, something);
 		return something as T;
 	}
 	throw new Error(`Expected object, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (may be null) */
-export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ensure?: Ensure<T>): T | null {
+export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ctor?: Ctor<T>): T | null {
 	if (typeof something === "object") {
-		if (typeof ensure !== "undefined" && something !== null) return ensure(something);
+		if (typeof ctor !== "undefined" && something !== null) return deserialize(ctor, something);
 		return something as T | null;
 	}
 	throw new Error(`Expected object | null, found ${typeof something}`);

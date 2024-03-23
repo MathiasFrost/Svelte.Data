@@ -2,7 +2,7 @@ import type { Fetch } from "$lib/http/Fetch.js";
 import { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import { RESTHttp } from "$lib/http/RESTHttp.js";
-import type { User } from "$sandbox/models/User.js";
+import { User } from "$sandbox/models/User.js";
 
 /** @static */
 export class TestHTTP extends RESTHttp {
@@ -36,23 +36,26 @@ export class TestHTTP extends RESTHttp {
 		return await this.get("http://localhost:5043/WeatherForecast/DateOnly").withQuery({ dateOnly: dateOnly.toJSON() }).fromDateOnlyString(wrap);
 	}
 
+	/** TODOC */
+	private optimistic = false;
+
 	public createUserStore() {
 		return this.saga<User, { update: (id: number, form: FormData) => Promise<number>; delete: (id: number) => Promise<void> }>()
-			.withGetter((factory) => factory.get("test").fromJSONObject(User))
-			.withMutator("update", async (factory, store, id, form) => {
+			.withGetter((http) => http.get("test").fromJSONObject(User))
+			.withMutator("update", async (http, store, id, form) => {
 				let newId: number;
-				if (optimistic) {
+				if (this.optimistic) {
 					const rollback = store.update(form);
 					try {
-						newId = await factory.post("update").withParams(id).withBody(form).fromNumber();
+						newId = await http.post("update").withParams(id).withBody(form).fromNumber();
 					} catch (e) {
 						rollback();
 						throw e;
 					}
-					store.updateGetter((factory) => factory.get("test").withParams(newId).fromJSONObject(User));
+					store.updateGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
 				} else {
-					newId = await factory.post("update").withParams(id).withBody(form).fromNumber();
-					store.updateAndInvokeGetter((factory) => factory.get("test").withParams(newId).fromJSONObject(User));
+					newId = await http.post("update").withParams(id).withBody(form).fromNumber();
+					store.updateAndInvokeGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
 				}
 				return newId;
 			})

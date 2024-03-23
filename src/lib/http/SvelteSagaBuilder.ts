@@ -1,15 +1,63 @@
 import { type Mutations, RESTHttp } from "$lib/http/RESTHttp.js";
-import { readonly, writable } from "svelte/store";
+import { type Readable, readonly, writable } from "svelte/store";
 import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 import { indefinitePromise } from "$lib/async/index.js";
+import { deserialize } from "$lib/http/Deserializable.js";
+import type { Ctor } from "$lib/types/unknown.js";
+import type { Key } from "node:readline";
+
+/** TODOC */
+interface SvelteHTTPRequest<T> {
+	/** TODOC */
+	readonly promise: Promise<T>;
+
+	/** TODOC */
+	value?: T;
+
+	/** TODOC */
+	readonly pending: boolean | null;
+
+	/** TODOC */
+	readonly error: HTTPResponseError | null;
+
+	/** TODOC */
+	readonly hasValue: boolean;
+}
+
+/** TODOC */
+interface SvelteSaga<T, TMutations extends Mutations> extends Readable<SvelteHTTPRequest<T>> {
+	/** TODOC */
+	refresh(silent?: boolean): Promise<T>;
+
+	/** TODOC */
+	start(): void;
+
+	/** TODOC */
+	stop(): void;
+
+	/** TODOC */
+	mutate<Key extends keyof TMutations>(key: Key): ReturnType<TMutations[Key]>;
+
+	/** TODOC */
+	update(mutation: Record<string, unknown> | [string, unknown] | FormData, ctor: Ctor<T>): () => void;
+
+	/** TODOC */
+	updateGetter(getter: (http: RESTHttp) => Promise<T>): void;
+
+	/** TODOC */
+	updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>): void;
+}
 
 /** TODOC */
 export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	/** TODOC */
-	public customGetter: (() => Promise<T>) | undefined;
+	public getter: () => Promise<T> = () => indefinitePromise();
 
 	/** TODOC */
-	public httpStore: SvelteHTTPRequestStore<T, TMutations> | undefined;
+	public mutators: Record<
+		keyof TMutations,
+		(store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
+	> = {};
 
 	/** TODOC */
 	public initialValue: T | undefined;
@@ -29,67 +77,33 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	}
 
 	/** TODOC */
-	public withCustomGetter(getter: () => Promise<T>): this {
-		this.customGetter = getter;
-		return this;
-	}
-
-	/** TODOC */
-	public withGetter(builder: (factory: RESTHttp) => SvelteHTTPRequestStore<T, TMutations>): this {
-		this.httpStore = builder(this.http);
+	public withGetter(getter: (http: RESTHttp) => Promise<T>): this {
+		this.getter = () => getter(this.http);
 		return this;
 	}
 
 	/** TODOC */
 	public withMutator<Key extends keyof TMutations>(
 		key: Key,
-		builder: (factory: RESTHttp, store: SvelteHTTPRequestStore<T, TMutations>, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
+		mutator: (factory: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
 	): this {
-		this.httpStore = builder(this.http);
+		this.mutators[key] = (store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => mutator(this.http, store, ...args);
 		return this;
 	}
 
-	public toSvelteStore(): SvelteHTTPRequestStore<T, TMutations> {
-		return readonly(writable());
-	}
-
 	/** TODOC */
-	private internalFetch<TResult>(handler: (response: Response) => Promise<TResult>, signal?: AbortSignal): SvelteHTTPRequestStore<TResult> {
-		const promiseFactory: () => Promise<TResult> = async () => {
-			this.options.signal = signal;
-			if (typeof this.options.preprocess === "function") await this.options.preprocess(this.options, this);
-			let response = await this._fetch(this.requestUri, this.options);
-			if (typeof this.options.postprocess === "function") response = await this.options.postprocess(response, this);
+	public toSvelteStore(): SvelteSaga<T, TMutations> {
+		const abort = new AbortController();
 
-			try {
-				// Early return null if status code is among null status codes
-				if (this.nullStatusCodes.includes(response.status)) return null as TResult;
-
-				// Check if status code is within acceptable values
-				if (this.statusCodes.length) this.ensureWithinStatusCode(response);
-				else if (this.ensureSuccess) this.ensureSuccessStatusCode(response);
-
-				return await handler(response);
-			} catch (e) {
-				if (e instanceof Error) {
-					throw new HTTPResponseError(this.options, response, this.requestUri, e);
-				}
-				throw e;
-			}
-		};
-
-		const store = writable<SvelteHTTPRequest<TResult>>({
+		const store = writable<SvelteHTTPRequest<T>>({
 			pending: this.options.startImmediately ? true : null,
-			promise: this.options.startImmediately ? setupPromise() : indefinitePromise(),
-			get value(): TResult {
-				throw new Error("Value is not ready. Check hasValue before accessing");
-			},
+			promise: this.options.startImmediately ? setupPromise(this.getter) : indefinitePromise(),
 			error: null,
 			hasValue: false
 		});
 
-		function setupPromise(): Promise<TResult> {
-			const promise = promiseFactory();
+		function setupPromise(getter: () => Promise<T>): Promise<T> {
+			const promise = getter();
 			promise
 				.then((value) =>
 					store.update((prev) => ({
@@ -97,9 +111,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 						error: null,
 						hasValue: true,
 						promise: prev.promise,
-						get value(): TResult {
-							return value;
-						}
+						value
 					}))
 				)
 				.catch((e) => {
@@ -109,9 +121,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 							error: e,
 							hasValue: false,
 							promise: prev.promise,
-							get value(): TResult {
-								throw new Error("Value is not ready. Check hasValue before accessing");
-							}
+							value: prev.value
 						}));
 					} else {
 						throw e;
@@ -123,7 +133,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 
 		return {
 			...readonly(store),
-			update(mutation: Record<string, unknown> | [string, unknown] | FormData, ctor: new (...args: never[]) => TResult): () => void {
+			update(mutation: Record<string, unknown> | [string, unknown] | FormData, ctor: Ctor<T>): () => void {
 				let rollback: () => void = () => {};
 				store.update((prev) => {
 					const newValue = { ...prev.value } as Record<string, unknown>;
@@ -141,49 +151,45 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 					rollback = () => {
 						store.set({ pending: prev.pending, hasValue: prev.hasValue, error: prev.error, promise: prev.promise });
 					};
-					const value = HTTPRequestBuilder.deserialize<TResult>(ctor, newValue);
+					const value = deserialize<T>(ctor, newValue);
 					return {
 						pending: true,
 						hasValue: false,
 						error: null,
 						promise: prev.promise,
-						get value(): TResult {
-							return value;
-						}
+						value
 					};
 				});
 
 				return rollback;
 			},
-			async refresh(silent?: boolean): Promise<TResult> {
-				const promise = setupPromise();
+			refresh: async (silent) => {
+				const promise = setupPromise(this.getter);
 				if (!silent) {
 					store.set({
 						pending: true,
 						hasValue: false,
 						error: null,
-						promise,
-						get value(): TResult {
-							throw new Error("Value is not ready. Check hasValue before accessing");
-						}
+						promise
 					});
 				}
 				return await promise;
 			},
-			start() {
+			start: () => {
 				store.update((prev) => {
 					if (prev.pending !== null) return prev;
 					return {
 						pending: true,
-						promise: setupPromise(),
+						promise: setupPromise(this.getter),
 						hasValue: false,
-						error: null,
-						get value(): TResult {
-							throw new Error("Value is not ready. Check hasValue before accessing");
-						}
+						error: null
 					};
 				});
-			}
+			},
+			stop() {
+				abort.abort();
+			},
+			mutate<Key extends keyof TMutations>(key: Key): ReturnType<TMutations[Key]> {}
 		};
 	}
 }
