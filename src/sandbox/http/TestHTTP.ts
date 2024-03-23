@@ -39,29 +39,39 @@ export class TestHTTP extends RESTHttp {
 	/** TODOC */
 	private optimistic = false;
 
+	/** TODOC */
+	public async getUser(id: number, signal: AbortSignal): Promise<User> {
+		return await this.get("test").withQuery({ id: id.toString() }).fromJSONObject(User, signal);
+	}
+
+	/** TODOC */
 	public createUserStore() {
-		return this.saga<User, { update: (id: number, form: FormData) => Promise<number>; delete: (id: number) => Promise<void> }>()
-			.withGetter((http) => http.get("test").fromJSONObject(User))
-			.withMutator("update", async (http, store, id, form) => {
+		const store = this.saga<User, { update: (id: number, form: FormData) => Promise<number>; delete: (id: number) => Promise<void> }>()
+			.withMutator("update", async (signal, id, form) => {
 				let newId: number;
 				if (this.optimistic) {
 					const rollback = store.update(User, form);
 					try {
-						newId = await http.post("update").withParams(id).withBody(form).fromNumber();
+						newId = await this.post("update").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
 					} catch (e) {
 						rollback();
 						throw e;
 					}
-					store.updateGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
+					store.updateGetter((signal) => this.getUser(newId, signal));
 				} else {
-					newId = await http.post("update").withParams(id).withBody(form).fromNumber();
-					await store.updateAndInvokeGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
+					newId = await this.post("update").withQuery({ id: id.toString() }).withBody(form).fromNumber(signal);
+					await store.updateAndInvokeGetter((signal) => this.getUser(newId, signal));
 				}
 				return newId;
 			})
 			.toSvelteStore();
+
+		return store;
 	}
 }
 
 /** @see TestHTTP */
 export const testHttp = new TestHTTP();
+
+/** TODOC */
+export const testUserStore = testHttp.createUserStore();

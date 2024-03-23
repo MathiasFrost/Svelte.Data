@@ -1,3 +1,5 @@
+import type { Deserializer } from "$lib/types/unknown.js";
+
 export enum TypeCode {
 	string,
 	number,
@@ -62,11 +64,29 @@ export function Deserializable(target: new (...args: never[]) => object): void {
 	};
 }
 
-export function deserialize<TResult>(ctor: new (...args: never[]) => TResult, o: unknown): TResult {
-	if (o === null || typeof o !== "object") throw new Error("Could not deserialize JSON");
-	if (!Reflect.has(ctor, "deserialize")) return { ...o } as TResult;
+/** TODOC */
+function hasDeserializableDecorator<T>(deserializer: Deserializer<T>): deserializer is { deserialize: (something: unknown) => T } {
+	return "deserialize" in deserializer && typeof deserializer.deserialize === "function";
+}
 
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-expect-error
-	return ctor.deserialize(o);
+/** TODOC */
+export function deserialize<TResult>(deserializer: Deserializer<TResult> | null, something: unknown): TResult {
+	if (something === null || typeof something !== "object") throw new Error("Could not deserialize JSON");
+
+	if (!deserializer) return { ...something } as TResult;
+	if (hasDeserializableDecorator(deserializer)) {
+		return deserializer.deserialize(something);
+	} else {
+		try {
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-expect-error
+			return new deserializer(something);
+		} catch (e) {
+			if (e instanceof TypeError && e.message.includes("is not a constructor")) {
+				console.warn("Deserializer has neither @Deserializable, callable nor a constructor. Returning plain object.");
+				return { ...something } as TResult;
+			}
+			throw e;
+		}
+	}
 }

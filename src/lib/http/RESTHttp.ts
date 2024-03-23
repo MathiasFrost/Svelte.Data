@@ -26,7 +26,7 @@ export type Mutations = Record<string, (...args: never[]) => Promise<unknown>>;
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
 export class RESTHttp {
 	/** Base address for requests made with this client */
-	public readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | string | null = null;
 
 	/** @see HTTPClientOptions */
 	private readonly options: HTTPClientOptions;
@@ -37,13 +37,14 @@ export class RESTHttp {
 			this.baseAddress = new URL(baseAddress);
 		} catch (e) {
 			console.warn("Base address could not be constructed from constructor");
+			this.baseAddress = baseAddress;
 		}
 		this.options = options;
 	}
 
 	/** TODOC */
 	public saga<T, TMutations extends Mutations>(): SvelteSagaBuilder<T, TMutations> {
-		return new SvelteSagaBuilder<T, TMutations>(this);
+		return new SvelteSagaBuilder<T, TMutations>();
 	}
 
 	/** TODOC */

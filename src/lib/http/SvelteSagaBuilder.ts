@@ -1,9 +1,9 @@
-import { type Mutations, RESTHttp } from "$lib/http/RESTHttp.js";
+import { type Mutations } from "$lib/http/RESTHttp.js";
 import { type Readable, readonly, writable } from "svelte/store";
 import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 import { indefinitePromise } from "$lib/async/index.js";
 import { deserialize } from "$lib/http/Deserializable.js";
-import type { Ctor } from "$lib/types/unknown.js";
+import type { Deserializer } from "$lib/types/unknown.js";
 
 /** TODOC */
 interface SvelteHTTPRequest<T> {
@@ -32,19 +32,22 @@ interface SvelteSaga<T, TMutations extends Mutations> extends Readable<SvelteHTT
 	start(): void;
 
 	/** TODOC */
+	startWithGetter(getter: (signal: AbortSignal) => Promise<T>): void;
+
+	/** TODOC */
 	stop(): void;
 
 	/** TODOC */
 	mutate<Key extends keyof TMutations>(key: Key, ...args: Parameters<TMutations[Key]>): Promise<ReturnType<TMutations[Key]>>;
 
 	/** TODOC */
-	update(ctor: Ctor<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void;
+	update(ctor: Deserializer<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void;
 
 	/** TODOC */
-	updateGetter(getter: (http: RESTHttp) => Promise<T>): void;
+	updateGetter(getter: (signal: AbortSignal) => Promise<T>): void;
 
 	/** TODOC */
-	updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>, silent?: boolean): Promise<T>;
+	updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T>, silent?: boolean): Promise<T>;
 }
 
 /** TODOC */
@@ -53,21 +56,25 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	public getter: () => Promise<T> = () => indefinitePromise();
 
 	/** TODOC */
+	public milliseconds: number = 0;
+
+	/** TODOC */
+	public refreshOnFocus: boolean = false;
+
+	/** TODOC */
+	public pauseOnBlur: boolean = false;
+
+	/** TODOC */
 	public mutators = {} as Record<
 		keyof TMutations,
-		(http: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
+		(signal: AbortSignal, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
 	>;
 
 	/** TODOC */
 	public initialValue: T | undefined;
 
-	/** TODOC */
-	private readonly http: RESTHttp;
-
 	/** ctor */
-	public constructor(http: RESTHttp) {
-		this.http = http;
-	}
+	public constructor() {}
 
 	/** TODOC */
 	public withInitialValue(initialValue: T): this {
@@ -76,17 +83,17 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	}
 
 	/** TODOC */
-	public withGetter(getter: (http: RESTHttp) => Promise<T>): this {
-		this.getter = () => getter(this.http);
+	public withGetter(getter: () => Promise<T>): this {
+		this.getter = getter;
 		return this;
 	}
 
 	/** TODOC */
 	public withMutator<Key extends keyof TMutations>(
 		key: Key,
-		mutator: (factory: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
+		mutator: (signal: AbortSignal, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
 	): this {
-		this.mutators[key] = (http: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => mutator(http, store, ...args);
+		this.mutators[key] = mutator;
 		return this;
 	}
 
@@ -95,14 +102,14 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 		const abort = new AbortController();
 
 		const store = writable<SvelteHTTPRequest<T>>({
-			pending: this.options.startImmediately ? true : null,
-			promise: this.options.startImmediately ? setupPromise(this.getter) : indefinitePromise(),
+			pending: null,
+			promise: indefinitePromise(),
 			error: null,
 			hasValue: false
 		});
 
-		function setupPromise(getter: () => Promise<T>): Promise<T> {
-			const promise = getter();
+		function setupPromise(getter: (signal: AbortSignal) => Promise<T>): Promise<T> {
+			const promise = getter(abort.signal);
 			promise
 				.then((value) =>
 					store.update((prev) => ({
@@ -130,19 +137,32 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			return promise;
 		}
 
-		const config = {
+		const config: {
+			mutators: Record<
+				keyof TMutations,
+				(signal: AbortSignal, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
+			>;
+			getter: (signal: AbortSignal) => Promise<T>;
+		} = {
 			mutators: this.mutators,
-			getter: () => setupPromise(this.getter),
-			http: this.http
+			getter: () => indefinitePromise<T>()
 		};
-
-		function updateGetter(getter: (http: RESTHttp) => Promise<T>): void {
-			config.getter = () => setupPromise(() => getter(config.http));
-		}
 
 		return {
 			...readonly(store),
-			update(ctor: Ctor<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void {
+			start() {
+				store.set({
+					pending: true,
+					promise: config.getter(abort.signal),
+					hasValue: false,
+					error: null
+				});
+			},
+			startWithGetter(getter: (signal: AbortSignal) => Promise<T>) {
+				config.getter = getter;
+				this.start();
+			},
+			update(ctor: Deserializer<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void {
 				let rollback: () => void = () => {};
 				store.update((prev) => {
 					const newValue = { ...prev.value } as Record<string, unknown>;
@@ -173,7 +193,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 				return rollback;
 			},
 			async refresh(silent?: boolean): Promise<T> {
-				const promise = config.getter();
+				const promise = config.getter(abort.signal);
 				if (!silent) {
 					store.set({
 						pending: true,
@@ -184,23 +204,9 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 				}
 				return await promise;
 			},
-			start() {
-				store.update((prev) => {
-					if (prev.pending !== null) return prev;
-					return {
-						pending: true,
-						promise: config.getter(),
-						hasValue: false,
-						error: null
-					};
-				});
-			},
-			stop() {
-				abort.abort();
-			},
 			async mutate<Key extends keyof TMutations>(key: Key, ...args: Parameters<TMutations[Key]>): Promise<ReturnType<TMutations[Key]>> {
 				try {
-					return await config.mutators[key](config.http, this, ...args);
+					return await config.mutators[key](abort.signal, ...args);
 				} catch (e) {
 					if (e instanceof HTTPResponseError) {
 						store.update((prev) => ({ pending: false, promise: prev.promise, hasValue: prev.hasValue, error: e as HTTPResponseError }));
@@ -208,12 +214,15 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 					throw e;
 				}
 			},
-			updateGetter(getter: (http: RESTHttp) => Promise<T>) {
-				updateGetter(getter);
+			updateGetter(getter: (signal: AbortSignal) => Promise<T>) {
+				config.getter = () => setupPromise(getter);
 			},
-			async updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>, silent?: boolean) {
-				updateGetter(getter);
+			async updateAndInvokeGetter(getter: (signal: AbortSignal) => Promise<T>, silent?: boolean) {
+				config.getter = () => setupPromise(getter);
 				return await this.refresh(silent);
+			},
+			stop() {
+				abort.abort();
 			}
 		};
 	}
