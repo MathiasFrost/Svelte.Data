@@ -108,9 +108,9 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			hasValue: false
 		});
 
-		function setupPromise(getter: (signal: AbortSignal) => Promise<T> | T): Promise<T> {
-			const promise = Promise.resolve(getter(abort.signal));
-			promise
+		function setupPromise(getter: (signal: AbortSignal) => Promise<T> | T): Promise<T> | T {
+			const promise = getter(abort.signal);
+			Promise.resolve(promise)
 				.then((value) =>
 					store.update((prev) => ({
 						pending: false,
