@@ -1,6 +1,7 @@
 import { HTTPRequestBuilder } from "$lib/http/HTTPRequestBuilder.js";
 import { ValidationError } from "$lib/http/ValidationError.js";
 import type { HTTPClientOptions } from "$lib/http/HTTPClientOptions.js";
+import { SvelteSagaBuilder } from "$lib/http/SvelteSagaBuilder.js";
 
 declare global {
 	interface Response {
@@ -18,9 +19,12 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 	return this;
 };
 
+/** TODOC */
+export type Mutations = Record<string, (...args: never[]) => Promise<unknown>>;
+
 // noinspection JSUnusedGlobalSymbols
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
-export class HTTPClient {
+export class RESTHttp {
 	/** Base address for requests made with this client */
 	public readonly baseAddress: URL | null = null;
 
@@ -35,6 +39,11 @@ export class HTTPClient {
 			console.warn("Base address could not be constructed from constructor");
 		}
 		this.options = options;
+	}
+
+	/** TODOC */
+	public saga<T, TMutations extends Mutations>(): SvelteSagaBuilder<T, TMutations> {
+		return new SvelteSagaBuilder<T, TMutations>(this);
 	}
 
 	/** TODOC */

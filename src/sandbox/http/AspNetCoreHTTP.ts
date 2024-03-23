@@ -1,7 +1,7 @@
-import { HTTPClient } from "$lib/http/HTTPClient.js";
+import { RESTHttp } from "$lib/http/RESTHttp.js";
 
 export class AspNetCoreHTTP {
-	private static httpClient = new HTTPClient("http://localhost:5000/OAuth2/", {
+	private static httpClient = new RESTHttp("http://localhost:5000/OAuth2/", {
 		defaultRequestInit: { redirect: "manual", credentials: "include" }
 	});
 

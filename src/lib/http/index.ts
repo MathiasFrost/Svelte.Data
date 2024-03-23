@@ -1,4 +1,4 @@
-export { HTTPClient } from "$lib/http/HTTPClient.js";
+export { RESTHttp } from "$lib/http/RESTHttp.js";
 export { HTTPRequestBuilder, type HTTPMethod } from "$lib/http/HTTPRequestBuilder.js";
 export { type Postprocess } from "$lib/http/Postprocess.js";
 export { type Preprocess } from "$lib/http/Preprocess.js";
