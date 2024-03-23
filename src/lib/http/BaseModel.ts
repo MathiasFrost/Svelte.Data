@@ -4,6 +4,7 @@ import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 import type { Postprocess } from "$lib/http/Postprocess.js";
 import type { Preprocess } from "$lib/http/Preprocess.js";
 import { indefinitePromise } from "$lib/async/index.js";
+import { createEventDispatcher } from "svelte";
 
 enum TypeCode {
 	string,
@@ -93,14 +94,17 @@ interface SvelteHTTPRequest<T> {
 	readonly hasValue: boolean;
 }
 
-interface SvelteHTTPRequestStore<T> extends Readable<SvelteHTTPRequest<T>> {
+type Mutations = Record<string, (...args: never[]) => Promise<unknown>>;
+
+interface SvelteHTTPRequestStore<T, TMutations extends Mutations> extends Readable<SvelteHTTPRequest<T>> {
 	refresh(silent?: boolean): Promise<T>;
 	start(): void;
+	mutate<Key extends keyof TMutations>(key: Key): ReturnType<TMutations[Key]>;
 }
 
 // noinspection JSUnusedGlobalSymbols
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
-export class SvelteHTTP {
+export class SvelteHTTPFactory {
 	/** Base address for requests made with this client */
 	public readonly baseAddress: URL | string | null = null;
 
@@ -116,6 +120,11 @@ export class SvelteHTTP {
 			this.baseAddress = baseAddress;
 		}
 		this.options = options;
+	}
+
+	/** TODOC */
+	public saga<T, TMutations extends Mutations>(): SvelteHTTPBuilder<T, TMutations> {
+		return new SvelteHTTPBuilder<T, TMutations>(this);
 	}
 
 	/** TODOC */
@@ -468,13 +477,82 @@ export class HTTPRequestBuilder {
 	}
 }
 
-const testHttp = new SvelteHTTP("/api/");
+/** TODOC */
+class SvelteHTTPBuilder<T, TMutations extends Mutations> {
+	/** TODOC */
+	public customGetter: (() => Promise<T>) | undefined;
 
-export const testHttpUser = testHttp.get("test").fromJSONObject(User);
+	/** TODOC */
+	public httpStore: SvelteHTTPRequestStore<T, TMutations> | undefined;
 
-interface HTTPObject<T> {
-	getObject(): Promise<T>;
-	mutateAndRefresh(): Promise<T>;
-	mutateAndUpdate(): Promise<T>;
-	mutateAndReplace(): Promise<T>;
+	/** TODOC */
+	public initialValue: T | undefined;
+
+	/** TODOC */
+	private readonly http: SvelteHTTPFactory;
+
+	/** ctor */
+	public constructor(http: SvelteHTTPFactory) {
+		this.http = http;
+	}
+	/** TODOC */
+	public withInitialValue(initialValue: T): this {
+		this.initialValue = initialValue;
+		return this;
+	}
+
+	/** TODOC */
+	public withCustomGetter(getter: () => Promise<T>): this {
+		this.customGetter = getter;
+		return this;
+	}
+
+	/** TODOC */
+	public withGetter(builder: (factory: SvelteHTTPFactory) => SvelteHTTPRequestStore<T, TMutations>): this {
+		this.httpStore = builder(this.http);
+		return this;
+	}
+
+	/** TODOC */
+	public withMutator<Key extends keyof TMutations>(
+		key: Key,
+		builder: (factory: SvelteHTTPFactory, store: SvelteHTTPRequestStore<T, TMutations>, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
+	): this {
+		this.httpStore = builder(this.http);
+		return this;
+	}
+
+	public toSvelteStore(): SvelteHTTPRequestStore<T, TMutations> {
+		return readonly(writable());
+	}
 }
+
+const testHttp = new SvelteHTTPFactory("/api/");
+
+export const justHttpUser: User = await testHttp.get("test").fromJSONObject(User);
+
+export const userSaga = testHttp
+	.saga<User, { update: (id: number, form: FormData) => Promise<number>; delete: (id: number) => Promise<void> }>()
+	.withGetter((factory) => factory.get("test").fromJSONObject(User))
+	.withMutator("update", async (factory, store, id, form) => {
+		let newId: number;
+		if (optimistic) {
+			const rollback = store.mutate(form);
+			try {
+				newId = await factory.post("update").withParams(id).withBody(form).fromNumber();
+			} catch (e) {
+				rollback();
+				throw e;
+			}
+			store.updateGetter((factory) => factory.get("test").withParams(newId).fromJSONObject(User));
+		} else {
+			newId = await factory.post("update").withParams(id).withBody(form).fromNumber();
+			store.updateAndInvokeGetter((factory) => factory.get("test").withParams(newId).fromJSONObject(User));
+		}
+		return newId;
+	})
+	.toSvelteStore();
+
+const storeHttpUser: User = await $userSaga.promise;
+const id = await userSaga.mutate("update");
+const ida = await userSaga.mutate("delete");

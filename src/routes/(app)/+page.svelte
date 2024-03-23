@@ -2,7 +2,7 @@
 	import { testHttp } from "$sandbox/http/TestHTTP.js";
 	import type { WeatherForecast } from "$sandbox/models/WeatherForecast.js";
 	import { onMount } from "svelte";
-	import { testHttpUser } from "$lib/http/BaseModel.js";
+	import { userSaga } from "$lib/http/BaseModel.js";
 
 	/** TODOC */
 	let forecasts: Promise<WeatherForecast[]> = Promise.resolve([]);
