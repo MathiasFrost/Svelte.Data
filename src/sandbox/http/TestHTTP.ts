@@ -45,7 +45,7 @@ export class TestHTTP extends RESTHttp {
 			.withMutator("update", async (http, store, id, form) => {
 				let newId: number;
 				if (this.optimistic) {
-					const rollback = store.update(form);
+					const rollback = store.update(User, form);
 					try {
 						newId = await http.post("update").withParams(id).withBody(form).fromNumber();
 					} catch (e) {
@@ -55,7 +55,7 @@ export class TestHTTP extends RESTHttp {
 					store.updateGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
 				} else {
 					newId = await http.post("update").withParams(id).withBody(form).fromNumber();
-					store.updateAndInvokeGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
+					await store.updateAndInvokeGetter((http) => http.get("test").withParams(newId).fromJSONObject(User));
 				}
 				return newId;
 			})

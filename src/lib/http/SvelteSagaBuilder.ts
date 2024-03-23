@@ -4,7 +4,6 @@ import { HTTPResponseError } from "$lib/http/HTTPResponseError.js";
 import { indefinitePromise } from "$lib/async/index.js";
 import { deserialize } from "$lib/http/Deserializable.js";
 import type { Ctor } from "$lib/types/unknown.js";
-import type { Key } from "node:readline";
 
 /** TODOC */
 interface SvelteHTTPRequest<T> {
@@ -36,16 +35,16 @@ interface SvelteSaga<T, TMutations extends Mutations> extends Readable<SvelteHTT
 	stop(): void;
 
 	/** TODOC */
-	mutate<Key extends keyof TMutations>(key: Key): ReturnType<TMutations[Key]>;
+	mutate<Key extends keyof TMutations>(key: Key, ...args: Parameters<TMutations[Key]>): Promise<ReturnType<TMutations[Key]>>;
 
 	/** TODOC */
-	update(mutation: Record<string, unknown> | [string, unknown] | FormData, ctor: Ctor<T>): () => void;
+	update(ctor: Ctor<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void;
 
 	/** TODOC */
 	updateGetter(getter: (http: RESTHttp) => Promise<T>): void;
 
 	/** TODOC */
-	updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>): void;
+	updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>, silent?: boolean): Promise<T>;
 }
 
 /** TODOC */
@@ -54,10 +53,10 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 	public getter: () => Promise<T> = () => indefinitePromise();
 
 	/** TODOC */
-	public mutators: Record<
+	public mutators = {} as Record<
 		keyof TMutations,
-		(store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
-	> = {};
+		(http: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[keyof TMutations]>) => ReturnType<TMutations[keyof TMutations]>
+	>;
 
 	/** TODOC */
 	public initialValue: T | undefined;
@@ -87,7 +86,7 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 		key: Key,
 		mutator: (factory: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => ReturnType<TMutations[Key]>
 	): this {
-		this.mutators[key] = (store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => mutator(this.http, store, ...args);
+		this.mutators[key] = (http: RESTHttp, store: SvelteSaga<T, TMutations>, ...args: Parameters<TMutations[Key]>) => mutator(http, store, ...args);
 		return this;
 	}
 
@@ -131,9 +130,19 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			return promise;
 		}
 
+		const config = {
+			mutators: this.mutators,
+			getter: () => setupPromise(this.getter),
+			http: this.http
+		};
+
+		function updateGetter(getter: (http: RESTHttp) => Promise<T>): void {
+			config.getter = () => setupPromise(() => getter(config.http));
+		}
+
 		return {
 			...readonly(store),
-			update(mutation: Record<string, unknown> | [string, unknown] | FormData, ctor: Ctor<T>): () => void {
+			update(ctor: Ctor<T>, mutation: Record<string, unknown> | [string, unknown] | FormData): () => void {
 				let rollback: () => void = () => {};
 				store.update((prev) => {
 					const newValue = { ...prev.value } as Record<string, unknown>;
@@ -163,8 +172,8 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 
 				return rollback;
 			},
-			refresh: async (silent) => {
-				const promise = setupPromise(this.getter);
+			async refresh(silent?: boolean): Promise<T> {
+				const promise = config.getter();
 				if (!silent) {
 					store.set({
 						pending: true,
@@ -175,12 +184,12 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 				}
 				return await promise;
 			},
-			start: () => {
+			start() {
 				store.update((prev) => {
 					if (prev.pending !== null) return prev;
 					return {
 						pending: true,
-						promise: setupPromise(this.getter),
+						promise: config.getter(),
 						hasValue: false,
 						error: null
 					};
@@ -189,7 +198,23 @@ export class SvelteSagaBuilder<T, TMutations extends Mutations> {
 			stop() {
 				abort.abort();
 			},
-			mutate<Key extends keyof TMutations>(key: Key): ReturnType<TMutations[Key]> {}
+			async mutate<Key extends keyof TMutations>(key: Key, ...args: Parameters<TMutations[Key]>): Promise<ReturnType<TMutations[Key]>> {
+				try {
+					return await config.mutators[key](config.http, this, ...args);
+				} catch (e) {
+					if (e instanceof HTTPResponseError) {
+						store.update((prev) => ({ pending: false, promise: prev.promise, hasValue: prev.hasValue, error: e as HTTPResponseError }));
+					}
+					throw e;
+				}
+			},
+			updateGetter(getter: (http: RESTHttp) => Promise<T>) {
+				updateGetter(getter);
+			},
+			async updateAndInvokeGetter(getter: (http: RESTHttp) => Promise<T>, silent?: boolean) {
+				updateGetter(getter);
+				return await this.refresh(silent);
+			}
 		};
 	}
 }
