@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { AspNetCoreHTTP } from "$sandbox/http/AspNetCoreHTTP.js";
-	import { setUserStore } from "$sandbox/user/user.js";
+	import { AspNetCoreRestAPI } from "$sandbox/http/AspNetCoreRestAPI.js";
+	import { setUserStore } from "$sandbox/user/userStore.js";
 	import { writable } from "svelte/store";
 	import { browser } from "$app/environment";
 	import "../../app.scss";
@@ -22,7 +22,7 @@
 
 <nav>
 	{#if browser}
-		{#await AspNetCoreHTTP.getClaims()}
+		{#await AspNetCoreRestAPI.getClaims()}
 			<div>Loading...</div>
 		{:then res}
 			<pre>{JSON.stringify(res, null, 2)}</pre>

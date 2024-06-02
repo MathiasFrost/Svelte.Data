@@ -18,11 +18,14 @@ Response.prototype.validationErrors = async function (): Promise<Response> {
 	return this;
 };
 
+/** TODOC */
+export type Mutations = Record<string, (...args: never[]) => Promise<unknown>>;
+
 // noinspection JSUnusedGlobalSymbols
 /** Class to handle HTTP requests (`fetch`/`XHR`) */
-export class HTTPClient {
+export class RestAPI {
 	/** Base address for requests made with this client */
-	public readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | string | null = null;
 
 	/** @see HTTPClientOptions */
 	private readonly options: HTTPClientOptions;
@@ -33,6 +36,7 @@ export class HTTPClient {
 			this.baseAddress = new URL(baseAddress);
 		} catch (e) {
 			console.warn("Base address could not be constructed from constructor");
+			this.baseAddress = baseAddress;
 		}
 		this.options = options;
 	}

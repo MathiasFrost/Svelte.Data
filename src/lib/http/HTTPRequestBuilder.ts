@@ -1,6 +1,6 @@
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 import {
-	type Ensure,
+	type Deserializer,
 	ensureArray,
 	ensureBigIntString,
 	ensureBooleanString,
@@ -23,7 +23,7 @@ export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** TODOC */
 export class HTTPRequestBuilder {
 	/** TODOC */
-	public readonly baseAddress: URL | null = null;
+	public readonly baseAddress: URL | string | null = null;
 
 	/** TODOC */
 	public readonly _requestUri: string;
@@ -56,7 +56,7 @@ export class HTTPRequestBuilder {
 	public ensureSuccess = true;
 
 	/** TODOC */
-	constructor(baseAddress: URL | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
+	constructor(baseAddress: URL | string | null, httpMethod: HTTPMethod, requestUri: string, options: HTTPClientOptions) {
 		this.baseAddress = baseAddress;
 		this.requestInit = { ...(options.defaultRequestInit ?? {}) }; // TODO: deep copy this object
 		this.requestInit.method = httpMethod;
@@ -82,12 +82,22 @@ export class HTTPRequestBuilder {
 				// noinspection HttpUrlsUsage
 				if (this._requestUri.startsWith("https://") || this._requestUri.startsWith("http://")) requestUri = this._requestUri;
 				else throw new Error("When baseAddress is not set, requestUris must be a fully qualified URI");
-			} else if (this.baseAddress.href.endsWith("/")) {
-				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
-				else requestUri = this.baseAddress.href + this._requestUri;
-			} else {
-				if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
-				else requestUri = this.baseAddress.host + "/" + this._requestUri;
+			} else if (typeof this.baseAddress === "string") {
+				if (this.baseAddress.endsWith("/")) {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress + this._requestUri;
+					else requestUri = this.baseAddress + this._requestUri;
+				} else {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress + this._requestUri;
+					else requestUri = this.baseAddress + "/" + this._requestUri;
+				}
+			} else if (this.baseAddress instanceof URL) {
+				if (this.baseAddress.href.endsWith("/")) {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.host + this._requestUri;
+					else requestUri = this.baseAddress.href + this._requestUri;
+				} else {
+					if (this._requestUri.startsWith("/")) requestUri = this.baseAddress.href + this._requestUri;
+					else requestUri = this.baseAddress.host + "/" + this._requestUri;
+				}
 			}
 		}
 
@@ -260,31 +270,31 @@ export class HTTPRequestBuilder {
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObject<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult> {
+	public async fromJSONObject<TResult = Record<string, unknown>>(ctor?: Deserializer<TResult>, signal?: AbortSignal): Promise<TResult> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
-			return ensureObject(json, ensure);
+			return ensureObject(json, ctor);
 		}, signal);
 	}
 
 	/** The request body deserialized as a JSON object */
-	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult | null> {
+	public async fromJSONObjectNullable<TResult = Record<string, unknown>>(ctor?: Deserializer<TResult>, signal?: AbortSignal): Promise<TResult | null> {
 		this.nullStatusCodes.push(204);
-		return await this.fromJSONObject(ensure, signal);
+		return await this.fromJSONObject(ctor, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArray<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[]> {
+	public async fromJSONArray<TResult = unknown>(ctor?: Deserializer<TResult>, signal?: AbortSignal): Promise<TResult[]> {
 		return await this.internalFetch(async (response) => {
 			const json = await response.json();
-			return ensureArray(json, ensure);
+			return ensureArray(json, ctor);
 		}, signal);
 	}
 
 	/** The request body deserialized as a JSON array */
-	public async fromJSONArrayNullable<TResult = unknown>(ensure?: Ensure<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
+	public async fromJSONArrayNullable<TResult = unknown>(ctor?: Deserializer<TResult>, signal?: AbortSignal): Promise<TResult[] | null> {
 		this.nullStatusCodes.push(204);
-		return await this.fromJSONArray(ensure, signal);
+		return await this.fromJSONArray(ctor, signal);
 	}
 
 	/** The request body deserialized as string */

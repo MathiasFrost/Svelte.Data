@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { testHttp } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestRestAPI.js";
 
 	let promise = testHttp.getTest();
 </script>
