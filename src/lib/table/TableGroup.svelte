@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
 	// eslint-disable-next-line no-undef
-	export let groups: Record<string, (el: T) => unknown>;
+	export let groups: Record<string, keyof T>;
 	// eslint-disable-next-line no-undef
 	export let data: T[];
 
@@ -14,7 +14,7 @@
 	}
 
 	// eslint-disable-next-line no-undef
-	function groupData<T>(data: T[], groups: Record<string, (el: T) => unknown>): IGrouping<T>[] {
+	function groupData<T>(data: T[], groups: Record<string, keyof T>): IGrouping<T>[] {
 		// eslint-disable-next-line no-undef
 		const result: IGrouping<T>[] = [];
 		const groupKeys = Object.keys(groups);
@@ -29,7 +29,7 @@
 			const grouped = new Map<unknown, T[]>();
 
 			for (const item of currentData) {
-				const key = selector(item);
+				const key = item[selector];
 				if (!grouped.has(key)) {
 					grouped.set(key, []);
 				}

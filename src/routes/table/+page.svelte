@@ -41,7 +41,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		<TableGroup groups={{ City: (el) => el.city, Name: (el) => el.name }} {data} let:grouped>
+		<TableGroup groups={{ City: "city", Name: "name" }} {data} let:grouped>
 			{#each grouped as group}
 				<tr>
 					<th colspan="4"><Indent i={group.level} />{group.key}: {group.value} <em>({group.count})</em></th>

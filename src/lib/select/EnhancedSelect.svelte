@@ -38,7 +38,7 @@
 
 	/** Select primary key. Can be a property name or a function */
 	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-	export let key: string | ((item: T) => K) | undefined = void 0;
+	export let key: keyof T | undefined = void 0;
 
 	/** Delay filter by this. Useful for async data to avoid fetching on every keystroke. */
 	export let delay: number = 0;
@@ -191,8 +191,7 @@
 		if (item === null) return null;
 
 		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
-		if (typeof key === "string" && isObject(item)) return item[key] as unknown as K;
-		if (typeof key === "function") return key(item);
+		if (typeof key !== "undefined" && isObject(item)) return item[key] as unknown as K;
 
 		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 		return item as unknown as K;
@@ -411,7 +410,8 @@
 			}
 		} else {
 			const oldValue = value;
-			value = Number(e.element.value) || e.element.value;
+			// eslint-disable-next-line no-undef
+			value = (Number(e.element.value) || e.element.value || null) as K | null;
 
 			// We have to manually update in this case
 			if (value === oldValue) {

@@ -64,7 +64,7 @@
 <h2>Multiple search props</h2>
 <p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}</p>
 <form on:submit|preventDefault={onSubmit}>
-	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} key={(user) => user.id} let:filterOptions>
+	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} key="id" let:filterOptions>
 		<svelte:fragment slot="summary" let:selected>
 			<input type="search" placeholder="Name" name="name" bind:this={input} value={selected?.name ?? ""} />
 			<input type="search" placeholder="Username" name="username" value={selected?.username ?? ""} />
@@ -94,7 +94,7 @@
 
 <h2>Multiple</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[3, 1]} key={(user) => user.id} multiple popup>
+	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[3, 1]} key="id" multiple popup>
 		<div style="width: 100%;" slot="summary" let:checked>
 			<p>Selected: {checked.map((user) => user.username).join(", ")}{checked.length}</p>
 			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
@@ -118,7 +118,7 @@
 
 <h2>Multiple with simple display</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} key={(user) => user.id} values={[1, 3]} multiple popup>
+	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" values={[1, 3]} multiple popup>
 		<svelte:fragment slot="summary" let:checked let:uncheck>
 			<div role="listbox" class="input" tabindex="0">
 				{#each checked as user}
@@ -149,7 +149,7 @@
 
 <h2>Stylized select</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} key={(user) => user.id} popup>
+	<EnhancedSelect name="user" pool={users} value={3} key="id" popup>
 		<svelte:fragment slot="summary" let:selected>
 			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name ?? ""} />
 		</svelte:fragment>
