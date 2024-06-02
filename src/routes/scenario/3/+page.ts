@@ -1,5 +1,5 @@
 import type { PageLoad } from "./$types.js";
-import { testHttp } from "$sandbox/http/TestHTTP";
+import { testHttp } from "$sandbox/http/TestRestAPI.js";
 
 /** @inheritdoc */
 export const load = (async ({ fetch }) => {

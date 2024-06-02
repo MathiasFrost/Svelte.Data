@@ -1,7 +1,7 @@
-import { HTTPClient } from "$lib/http/HTTPClient.js";
+import { RestAPI } from "$lib/http/RestAPI.js";
 
-export class AspNetCoreHTTP {
-	private static httpClient = new HTTPClient("http://localhost:5000/OAuth2/", {
+export class AspNetCoreRestAPI {
+	private static httpClient = new RestAPI("http://localhost:5000/OAuth2/", {
 		defaultRequestInit: { redirect: "manual", credentials: "include" }
 	});
 

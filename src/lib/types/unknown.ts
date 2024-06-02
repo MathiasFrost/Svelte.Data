@@ -1,39 +1,40 @@
 import { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
+import { deserialize } from "$lib/http/Deserializable.js";
 
 /** Either a constructor or a function that takes in an unknown and outputs T definitively */
-export type Ensure<T> = (something?: unknown) => T;
+export type Deserializer<T> = (new (...args: never[]) => T) | ((something: unknown) => T) | { deserialize: (something: unknown) => T };
 
 /** Make sure that something is an array (not null) */
-export function ensureArray<T = unknown>(something: unknown, ensure?: Ensure<T>): T[] {
+export function ensureArray<T = unknown>(something: unknown, deserializer?: Deserializer<T>): T[] {
 	if (Array.isArray(something)) {
-		if (typeof ensure !== "undefined") return something.map(ensure);
+		if (typeof deserializer !== "undefined") return something.map((value) => deserialize(deserializer, value));
 		return something;
 	}
 	throw new Error(`Expected Array, found ${typeof something}`);
 }
 
 /** Make sure that something is an array (may be null) */
-export function ensureArrayNullable<T = unknown>(something: unknown, ensure?: Ensure<T>): T[] | null {
+export function ensureArrayNullable<T = unknown>(something: unknown, ctor?: Deserializer<T>): T[] | null {
 	if (something === null || Array.isArray(something)) {
-		if (typeof ensure !== "undefined" && something !== null) return something.map(ensure);
+		if (typeof ctor !== "undefined" && something !== null) return something.map((value) => deserialize(ctor, value));
 		return something;
 	}
 	throw new Error(`Expected Array | null, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (not null) */
-export function ensureObject<T = Record<string, unknown>>(something: unknown, ensure?: Ensure<T>): T {
+export function ensureObject<T = Record<string, unknown>>(something: unknown, ctor?: Deserializer<T>): T {
 	if (typeof something === "object" && something !== null) {
-		if (typeof ensure !== "undefined") return ensure(something);
+		if (typeof ctor !== "undefined") return deserialize(ctor, something);
 		return something as T;
 	}
 	throw new Error(`Expected object, found ${typeof something}`);
 }
 
 /** Make sure that something is an object (may be null) */
-export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ensure?: Ensure<T>): T | null {
+export function ensureObjectNullable<T = Record<string, unknown>>(something: unknown, ctor?: Deserializer<T>): T | null {
 	if (typeof something === "object") {
-		if (typeof ensure !== "undefined" && something !== null) return ensure(something);
+		if (typeof ctor !== "undefined" && something !== null) return deserialize(ctor, something);
 		return something as T | null;
 	}
 	throw new Error(`Expected object | null, found ${typeof something}`);
@@ -177,19 +178,19 @@ export function ensureInstanceOfNullable<T>(something: unknown, t: new (...args:
 }
 
 /** Make sure that each key of a dictionary is of type */
-export function ensureDictionary<T>(something: unknown, ensure: (something: unknown) => T): Record<string, T> {
+export function ensureDictionary<T>(something: unknown, deserializer: Deserializer<T>): Record<string, T> {
 	const res: Record<string, T> = {};
 	const o = ensureObject(something);
 	for (const key of Object.keys(o)) {
-		res[key] = ensure(o[key]);
+		res[key] = deserialize(deserializer, o[key]);
 	}
 	return res;
 }
 
 /** Make sure that each key of a dictionary is of type */
-export function ensureDictionaryNullable<T>(something: unknown, ensure: (something: unknown) => T): Record<string, T> | null {
+export function ensureDictionaryNullable<T>(something: unknown, deserializer: Deserializer<T>): Record<string, T> | null {
 	if (something === null) return null;
-	return ensureDictionary(something, ensure);
+	return ensureDictionary(something, deserializer);
 }
 
 /** Tells TypeScript that something is an unknown object (not null) */

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Authorize from "$sandbox/user/Authorize.svelte";
-	import { getUserStore } from "$sandbox/user/user.js";
+	import { getUserStore } from "$sandbox/user/userStore.js";
 	import TestComponent from "$sandbox/components/TestComponent.svelte";
-	import { testHttp } from "$sandbox/http/TestHTTP.js";
+	import { testHttp } from "$sandbox/http/TestRestAPI.js";
 
 	const user = getUserStore();
 </script>
