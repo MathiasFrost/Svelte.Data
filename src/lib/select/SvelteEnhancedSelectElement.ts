@@ -1,7 +1,5 @@
-import type { SvelteEnhancedOptionElement } from "$lib/select/SvelteEnhancedOptionElement.js";
-
 /** TODOC */
-export interface SvelteEnhancedSelectElement<T, K = string> {
+export interface SvelteEnhancedSelectElement<T, K extends string | number | boolean | bigint | Date = string> {
 	/** TODOC */
 	get name(): string;
 
@@ -15,7 +13,7 @@ export interface SvelteEnhancedSelectElement<T, K = string> {
 	get pool(): T[];
 
 	/** Reference to the elements in body with a `value` attribute */
-	get options(): SvelteEnhancedOptionElement<T>[];
+	get options(): Option[];
 
 	/** The search string */
 	get search(): Record<string, HTMLInputElement>;
@@ -31,4 +29,13 @@ export interface SvelteEnhancedSelectElement<T, K = string> {
 
 	/** TODOC */
 	close(): void;
+}
+
+/** TODOC */
+export interface Option {
+	/** TODOC */
+	readonly element: HTMLDataElement;
+
+	/** TODOC */
+	readonly parent: HTMLElement;
 }
