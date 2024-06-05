@@ -3,7 +3,10 @@ import { indefinitePromise } from "$lib/async/utility.js";
 import { WSMessage } from "$lib/ws/WSMessage.js";
 
 /** TODOC */
-export interface WSClientOptions {}
+export interface WSClientOptions {
+	/** TODOC */
+	readonly temp: boolean;
+}
 
 /** TODOC */
 export class WSClient {

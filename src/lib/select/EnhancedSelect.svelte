@@ -18,26 +18,21 @@
 
 	/** TODOC */
 	// TODOE: REMOVE WHEN https://github.com/sveltejs/svelte-eslint-parser/issues/306 IS FIXED
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	const dispatch = createEventDispatcher<{ change: SvelteEnhancedSelectElement<T, K> }>();
 
 	/** Current value */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let value: K | null = null;
 
 	/** Current value for multiple select */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let values: (K | null)[] = [];
 
 	/** Name of this select as a form input */
 	export let name = "";
 
 	/** Initial option pool */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let pool: T[] = [];
 
 	/** Select primary key. Can be a property name or a function */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export let key: keyof T | undefined = void 0;
 
 	/** Delay filter by this. Useful for async data to avoid fetching on every keystroke. */
@@ -75,15 +70,12 @@
 	let popupElement: SveltePopupElement | undefined;
 
 	/** Dynamic pool and initial pool */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	let totalPool: T[] = pool;
 
 	/** Need to preserve the item corresponding to the value for `force` revert */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	let selected: T | null = null as unknown as T; // svelte-check can't infer that this variable can be assigned later in the component's lifecycle
 
 	/** References to checked elements */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	let checked: T[];
 
 	/** The current option index that will be selected when pressing enter */
@@ -99,7 +91,6 @@
 	let searchValues: Record<string, string> = {};
 
 	/** Filter options passed in and register them internally */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	let filterOptions: (options: T[], allOnEmpty?: boolean) => T[] = getFilterOptions(searchValues);
 
 	/** The currently rendered pool elements */
@@ -124,7 +115,6 @@
 	let timeout = 0;
 
 	/** @see SvelteEnhancedSelectElement */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	export const self: SvelteEnhancedSelectElement<T, K> = {
 		get name() {
 			return name;
@@ -186,14 +176,11 @@
 	});
 
 	/** TODOC */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function getKey(item: T | null): K | null {
 		if (item === null) return null;
 
-		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 		if (typeof key !== "undefined" && isObject(item)) return item[key] as unknown as K;
 
-		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 		return item as unknown as K;
 	}
 
@@ -381,7 +368,6 @@
 	}
 
 	/** Find item based on `HTMLDataElement.value` */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function findItem(value: string): T | null {
 		return totalPool.find((item) => `${getKey(item) ?? ""}` === value) ?? null;
 	}
@@ -410,7 +396,6 @@
 			}
 		} else {
 			const oldValue = value;
-			// eslint-disable-next-line no-undef
 			value = (Number(e.element.value) || e.element.value || null) as K | null;
 
 			// We have to manually update in this case
@@ -435,11 +420,9 @@
 	}
 
 	/** Update the `search` element's search value to match current value */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateDisplay(value: K | null): void {
 		// There is no obvious way to update display when multiple
 		if (!multiple) {
-			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 			let item: T | null | undefined;
 			if (value === null) {
 				item = null;
@@ -466,7 +449,6 @@
 	}
 
 	/** Add `highlighted` class to `hover`d element */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateHighlighted(hovered: number, options: Option[]): void {
 		for (let i = 0; i < options.length; ++i) {
 			const el = options[i];
@@ -614,7 +596,6 @@
 	}
 
 	/** Get the option fully matching search strings */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function getOptionMatchingSearch(search: Record<string, string>): T | null {
 		return (
 			totalPool.find((item) => {
@@ -639,16 +620,13 @@
 	}
 
 	/** Construct the function that should filter the pool of options based on `search` values */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function getFilterOptions(search: Record<string, string>): (pool: T[], allOnEmpty?: boolean) => T[] {
 		return (dynamicPool, allOnEmpty) => {
-			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 			totalPool = dynamicPool.concat(pool).reduce<T[]>((acc, curr) => {
 				if (!acc.some((item) => getKey(item) === getKey(curr))) acc.push(curr);
 				return acc;
 			}, []);
 
-			// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 			let filtered: T[] = [];
 
 			// First check if the search matches completely and is the current value. In this case, displaying only the option that is already selected doesn't provide much utility
@@ -658,7 +636,6 @@
 			} else if (`${option}`.toLowerCase() === search[DEFAULT_NAME]?.toLowerCase()) {
 				filtered = Array.from(dynamicPool);
 			} else {
-				// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 				filtered = Object.keys(search).reduce<T[]>(
 					(prev, curr) =>
 						prev.filter((item) => {
@@ -677,15 +654,12 @@
 	}
 
 	/** Check if all pool options are contained in `values` */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function updateAllChecked(pool: T[], values: (K | null)[]): boolean {
 		return pool.filter((o) => !!o).every((o) => values.includes(getKey(o)));
 	}
 
 	/** TODOC */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function getChecked(values: (K | null)[]): T[] {
-		// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 		return values.reduce<T[]>((prev, curr) => {
 			let found = totalPool.find((item) => getKey(item) === curr);
 			// Pool could have changed since last time, so source from checked as well if not found in pool
@@ -696,7 +670,6 @@
 	}
 
 	/** TODOC */
-	// eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any
 	function uncheck(item: T): void {
 		values = values.filter((value) => getKey(item) !== value);
 	}

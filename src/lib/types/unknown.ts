@@ -164,7 +164,6 @@ export function ensureNumberString(something: unknown): number {
 }
 
 /** Make sure that something is an instance of something */
-// eslint-disable-next-line @typescript-eslint/ban-types
 export function ensureInstanceOf<T>(something: unknown, t: new (...args: never[]) => T): T {
 	if (something instanceof t) return something as T;
 	throw new Error(`Expected an instance of ${t.name}, found ${typeof something}`);

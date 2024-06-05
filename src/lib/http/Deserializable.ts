@@ -59,7 +59,7 @@ export function Deserializable(target: new (...args: never[]) => object): void {
 				case TypeCode.object:
 					break;
 				default:
-					throw new Error("Unsupported type");
+					break;
 			}
 			if (expected) {
 				throw new Error(`Expected type '${expected}' for field '${key}', got type '${typeof input[key]}'`);
