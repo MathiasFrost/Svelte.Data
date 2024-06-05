@@ -1,6 +1,21 @@
 /** @static */
 export class PopupHelper {
 	/** TODOC */
+	public static findHighestZIndex(): number {
+		let elements = document.querySelectorAll("*");
+		let highestZ = 0;
+
+		elements.forEach((el) => {
+			let zIndex = parseInt(window.getComputedStyle(el).zIndex, 10);
+			if (!isNaN(zIndex)) {
+				highestZ = Math.max(highestZ, zIndex);
+			}
+		});
+
+		return highestZ;
+	}
+
+	/** TODOC */
 	public static isOutsideClick(e: MouseEvent, bounds: Node | null | undefined): boolean {
 		// If screen doesn't have any pixels, fallback to contains
 		if (e.screenX === 0 && e.screenY === 0) {
