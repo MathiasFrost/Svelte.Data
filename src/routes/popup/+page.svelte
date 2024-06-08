@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Popup from "$lib/popup/Popup.svelte";
 	import ComboBox from "$lib/popup/ComboBox.svelte";
+	import { fly } from "svelte/transition";
+	import { SelectHelper } from "$lib/select/index.js";
 
 	interface Option {
 		readonly id: number;
@@ -48,24 +50,60 @@
 
 		return options;
 	}
+
+	const users = randomOptions(10);
 </script>
 
 <h1>Dialog</h1>
 
 <p>
-	This aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa is <Popup type="click"
+	This aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa is <Popup type="click" let:open
 		><svelte:fragment slot="summary">something</svelte:fragment>
-		<div class="popup">This is a tooltip wee woo wee woo wee woo</div></Popup>
+		{#if open}<div transition:fly class="popup">This is a tooltip wee woo wee woo wee woo</div>{/if}</Popup>
 </p>
 
-<ComboBox getter={() => randomOptions(10)} let:options>
-	<input slot="summary" type="search" />
+<ComboBox let:display let:value>
+	<input type="text" readonly value={display + " " + (value ?? "")} />
 	<ul>
-		{#each options as option, i}
-			<li><data value={i} />{option.name}</li>
-		{/each}
+		<li><data value="" /></li>
+		<li><data value="0" />Victor</li>
+		<li><data value="1" />Whiskey</li>
+		<li><data value="2" />Lima</li>
+		<li><data value="3" />Delta</li>
+		<li><data value="4" />Delta</li>
+		<li><data value="5" />Golf</li>
+		<li><data value="6" />November</li>
+		<li><data value="7" />India</li>
+		<li><data value="8" />India</li>
+		<li><data value="9" />Uniform</li>
 	</ul>
 </ComboBox>
+
+<form on:submit|preventDefault={(e) => console.log(e)}>
+	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display>
+		<input type="search" value={display} />
+		<ul>
+			<li><data value="" /></li>
+			{#each options as user}
+				<li><data value={user.id}>{user.name}</data></li>
+			{/each}
+		</ul>
+	</ComboBox>
+</form>
+
+<form on:submit|preventDefault={(e) => console.log(e)}>
+	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display>
+		<Popup open type="manual">
+			<input slot="summary" type="search" value={display} />
+			<ul class="popup">
+				<li><data value="" /></li>
+				{#each options as user}
+					<li><data value={user.id}>{user.name}</data></li>
+				{/each}
+			</ul>
+		</Popup>
+	</ComboBox>
+</form>
 
 <style lang="scss">
 	.popup {

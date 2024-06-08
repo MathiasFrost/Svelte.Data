@@ -2,21 +2,30 @@
 	import { onMount } from "svelte";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
-	export let type: "hover" | "click" | "contextmenu" = "hover";
+	export let type: "hover" | "click" | "contextmenu" | "manual" = "hover";
+	export let open = false;
 
 	let summaryContainer: HTMLSpanElement | undefined;
 	let contentContainer: HTMLDivElement | undefined;
-	let open = false;
+	let focused = false;
 	let zIndex = 0;
 	let left = "0";
 	let top = "0";
 	let closeTimeout = 0;
+	let contents = false;
+	let openedOnce = false;
+	let mounted = false;
 
 	onMount(() => {
-		console.log(summaryContainer);
+		contents = !!summaryContainer?.children.length;
+		mounted = true;
 	});
 
+	$: if (open && mounted) showPopup();
+	else if (openedOnce) close();
+
 	export function showPopup(): void {
+		openedOnce = true;
 		zIndex = PopupHelper.findHighestZIndex() + 1;
 		calculateBounds();
 		open = true;
@@ -28,13 +37,15 @@
 	}
 
 	function summaryHoverIn(e: FocusEvent | MouseEvent): void {
+		if (e instanceof FocusEvent) focused = true;
 		window.clearTimeout(closeTimeout);
 		if (type !== "hover" || open) return;
 		showPopup();
 	}
 
 	function summaryHoverOut(e: FocusEvent | MouseEvent): void {
-		if (type !== "hover" || !open) return;
+		if (e instanceof FocusEvent) focused = false;
+		if (type !== "hover" || !open || focused) return;
 		closeTimeout = window.setTimeout(() => close(), 300);
 	}
 
@@ -101,6 +112,7 @@
 
 <span
 	bind:this={summaryContainer}
+	class:contents
 	tabindex="0"
 	role="button"
 	on:click={summaryClick}
@@ -110,7 +122,7 @@
 	on:focusout={summaryHoverOut}
 	on:mouseleave={summaryHoverOut}
 	on:contextmenu={summaryContextmenu}>
-	<slot name="summary" />
+	<slot name="summary" {open} />
 </span>
 <div
 	class="content-container"
@@ -135,5 +147,9 @@
 
 	.hidden {
 		display: none;
+	}
+
+	.contents {
+		display: contents;
 	}
 </style>

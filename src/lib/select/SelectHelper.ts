@@ -1,7 +1,7 @@
 /** @static */
 export class SelectHelper {
 	/** @returns The Levenshtein distance between two strings */
-	public levenshteinDistance(a: string, b: string): number {
+	public static levenshteinDistance(a: string, b: string): number {
 		const matrix: number[][] = [];
 
 		for (let i = 0; i <= b.length; i++) {
@@ -25,8 +25,19 @@ export class SelectHelper {
 		return matrix[b.length][a.length];
 	}
 
+	public static defaultFilter<T>(items: T[], inputs: Record<string, string>): T[] {
+		return items.filter((item) => {
+			return (
+				Object.keys(inputs).reduce((prev, curr) => {
+					if (!inputs[curr]) return 0;
+					return prev + SelectHelper.levenshteinDistance(inputs[curr], JSON.stringify(item));
+				}, 0) < 25
+			);
+		});
+	}
+
 	/** @returns Array of elements satisfying the Levenshtein threshold */
-	public filter<T>(pool: T[], search: string, threshold = 2, selector?: (item: T) => string): T[] {
+	public static filter<T>(pool: T[], search: string, threshold = 2, selector?: (item: T) => string): T[] {
 		selector ??= (item) => `${item}`;
 		return pool.filter((item) => this.levenshteinDistance(selector!(item), search) > threshold);
 	}
