@@ -1,3 +1,20 @@
+<script lang="ts" context="module">
+	import { SelectHelper } from "$lib/select/index.js";
+
+	export function getDefaultSearcher<T>(pool: T[]): (inputs: Record<string, string>) => T[] {
+		return (inputs) => {
+			return pool.filter((item) => {
+				return (
+					Object.keys(inputs).reduce((prev, curr) => {
+						if (!inputs[curr]) return 0;
+						return prev + SelectHelper.levenshteinDistance(inputs[curr], JSON.stringify(item));
+					}, 0) < 25
+				);
+			});
+		};
+	}
+</script>
+
 <script lang="ts" generics="T">
 	import { onDestroy, onMount } from "svelte";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
@@ -5,7 +22,7 @@
 	export let value = "";
 	export let name = "";
 	export let selected: T[] = [];
-	export let search: (inputs: Record<string, string>) => T[] = () => [];
+	export let getOptions: (inputs: Record<string, string>) => T[] | Promise<T[]> = () => [];
 
 	let container: HTMLDivElement | undefined;
 	let open = false;
@@ -210,6 +227,19 @@
 			open = false;
 		}
 	}
+
+	let options: T[] = [];
+
+	function updateOptions(getOptions: (inputs: Record<string, string>) => T[] | Promise<T[]>, inputs: Record<string, string>): void {
+		const res = getOptions(inputs);
+		if (res instanceof Promise) {
+			res.then((result) => (options = result));
+		} else {
+			options = res;
+		}
+	}
+
+	$: updateOptions(getOptions, inputs);
 </script>
 
 <svelte:document on:click={documentClick} on:keydown={documentKeydown} />
@@ -218,5 +248,5 @@
 	<input type="hidden" hidden {name} value={value ?? ""} />
 {/if}
 <div style="display: contents;" bind:this={container} on:keydown={keydown} on:click={onClick} on:focusin={focusIn} on:focusout={focusOut}>
-	<slot options={search(inputs)} {open} {display} {value} />
+	<slot {options} {open} {display} {value} />
 </div>

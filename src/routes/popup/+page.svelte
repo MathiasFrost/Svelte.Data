@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Popup from "$lib/popup/Popup.svelte";
-	import ComboBox from "$lib/popup/ComboBox.svelte";
+	import ComboBox, { getDefaultSearcher } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
 	import { SelectHelper } from "$lib/select/index.js";
 
@@ -80,7 +80,7 @@
 </ComboBox>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display>
+	<ComboBox name="user" getOptions={getDefaultSearcher(users)} let:options let:display>
 		<input type="search" value={display} />
 		<ul>
 			<li><data value="" /></li>
@@ -92,7 +92,7 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display let:open>
+	<ComboBox name="user" getOptions={getDefaultSearcher(users)} let:options let:display let:open>
 		<Popup type="manual" {open}>
 			<input slot="summary" type="search" value={display} />
 			<ul class="popup">
