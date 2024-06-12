@@ -66,16 +66,16 @@
 	<input type="text" readonly value={display + " " + (value ?? "")} />
 	<ul>
 		<li><data value="" /></li>
-		<li><data value="0" />Victor</li>
-		<li><data value="1" />Whiskey</li>
-		<li><data value="2" />Lima</li>
-		<li><data value="3" />Delta</li>
-		<li><data value="4" />Delta</li>
-		<li><data value="5" />Golf</li>
-		<li><data value="6" />November</li>
-		<li><data value="7" />India</li>
-		<li><data value="8" />India</li>
-		<li><data value="9" />Uniform</li>
+		<li><data value="0">Victor</data></li>
+		<li><data value="1">Whiskey</data></li>
+		<li><data value="2">Lima</data></li>
+		<li><data value="3">Delta</data></li>
+		<li><data value="4">Delta</data></li>
+		<li><data value="5">Golf</data></li>
+		<li><data value="6">November</data></li>
+		<li><data value="7">India</data></li>
+		<li><data value="8">India</data></li>
+		<li><data value="9">Uniform</data></li>
 	</ul>
 </ComboBox>
 
@@ -92,8 +92,8 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display>
-		<Popup open type="manual">
+	<ComboBox name="user" search={(inputs) => SelectHelper.defaultFilter(users, inputs)} let:options let:display let:open>
+		<Popup type="manual" {open}>
 			<input slot="summary" type="search" value={display} />
 			<ul class="popup">
 				<li><data value="" /></li>
@@ -105,6 +105,10 @@
 	</ComboBox>
 </form>
 
+<select>
+	<option>test</option>
+</select>
+
 <style lang="scss">
 	.popup {
 		background-color: #222222;
@@ -112,5 +116,9 @@
 		padding: 0.3rem;
 		margin: 0.3rem;
 		border-radius: 0.3rem;
+	}
+
+	:global(.highlighted) {
+		background-color: crimson;
 	}
 </style>

@@ -101,14 +101,21 @@
 		top = bounds.top + bounds.height + window.scrollY + "px";
 	}
 
-	function bodyClick(e: MouseEvent): void {
+	function documentClick(e: MouseEvent): void {
 		if (!PopupHelper.isOutsideClick(e, summaryContainer)) return;
 		if (!PopupHelper.isOutsideClick(e, contentContainer)) return;
 		close();
 	}
+
+	function documentKeydown(e: KeyboardEvent) {
+		if (e.key === "Escape" && open) {
+			e.preventDefault();
+			close();
+		}
+	}
 </script>
 
-<svelte:document on:click={bodyClick} />
+<svelte:document on:click={documentClick} on:keydown={documentKeydown} />
 
 <span
 	bind:this={summaryContainer}
@@ -122,7 +129,7 @@
 	on:focusout={summaryHoverOut}
 	on:mouseleave={summaryHoverOut}
 	on:contextmenu={summaryContextmenu}>
-	<slot name="summary" {open} />
+	<slot name="summary" {open} {close} />
 </span>
 <div
 	class="content-container"
@@ -137,7 +144,7 @@
 	on:mouseenter={summaryHoverIn}
 	on:focusout={summaryHoverOut}
 	on:mouseleave={summaryHoverOut}>
-	<slot {open} />
+	<slot {open} {close} />
 </div>
 
 <style lang="scss">

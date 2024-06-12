@@ -2,11 +2,11 @@
 export class PopupHelper {
 	/** TODOC */
 	public static findHighestZIndex(): number {
-		let elements = document.querySelectorAll("*");
+		const elements = document.querySelectorAll("*");
 		let highestZ = 0;
 
 		elements.forEach((el) => {
-			let zIndex = parseInt(window.getComputedStyle(el).zIndex, 10);
+			const zIndex = parseInt(window.getComputedStyle(el).zIndex, 10);
 			if (!isNaN(zIndex)) {
 				highestZ = Math.max(highestZ, zIndex);
 			}
@@ -60,13 +60,21 @@ export class PopupHelper {
 	/** TODOC */
 	public static getEffectiveElements(element: Element | null): Element[] {
 		if (!element) return [];
-		if (window.getComputedStyle(element).display === "contents") {
+
+		const computedStyle = window.getComputedStyle(element);
+		if (computedStyle.display === "contents") {
+			let effectiveElements: Element[] = [];
 			const childElements = Array.from(element.children);
+
 			if (childElements.length === 0) {
 				return [element];
 			}
 
-			return childElements;
+			for (const child of childElements) {
+				effectiveElements = effectiveElements.concat(this.getEffectiveElements(child));
+			}
+
+			return effectiveElements;
 		} else {
 			return [element];
 		}
