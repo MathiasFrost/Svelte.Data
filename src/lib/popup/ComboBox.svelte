@@ -18,17 +18,20 @@
 <script lang="ts" generics="T">
 	import { onDestroy, onMount } from "svelte";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+	import { indefinitePromise } from "$lib/async/index.js";
 
 	export let value = "";
 	export let name = "";
 	export let selected: T[] = [];
-	export let getOptions: (inputs: Record<string, string>) => T[] | Promise<T[]> = () => [];
+	export let getOptions: ((inputs: Record<string, string>) => T[]) | undefined = void 0;
+	export let getOptionsAsync: ((inputs: Record<string, string>, signal: AbortSignal) => Promise<T[]>) | undefined = void 0;
 
 	let container: HTMLDivElement | undefined;
 	let open = false;
 	let observer: MutationObserver | null = null;
 	let display = "";
 	let inputs: Record<string, string> = {};
+	let lastController: AbortController | null = null;
 
 	let closeOnNextClick = false;
 	let index: number | null = null;
@@ -50,6 +53,8 @@
 	onDestroy(() => {
 		observer?.disconnect();
 		observer = null;
+		lastController?.abort();
+		lastController = null;
 	});
 
 	function mutationCallback(mutations: MutationRecord[]): void {
@@ -229,17 +234,39 @@
 	}
 
 	let options: T[] = [];
+	let optionsPromise: Promise<T[]> = indefinitePromise<T[]>();
 
-	function updateOptions(getOptions: (inputs: Record<string, string>) => T[] | Promise<T[]>, inputs: Record<string, string>): void {
-		const res = getOptions(inputs);
-		if (res instanceof Promise) {
-			res.then((result) => (options = result));
-		} else {
-			options = res;
+	function updateOptions(getOptions: ((inputs: Record<string, string>) => T[]) | undefined, inputs: Record<string, string>): void {
+		if (getOptions) {
+			options = getOptions(inputs);
+		}
+	}
+
+	async function updateAsyncOptions(
+		open: boolean,
+		getOptionsAsync: ((inputs: Record<string, string>, signal: AbortSignal) => Promise<T[]>) | undefined,
+		inputs: Record<string, string>
+	): Promise<void> {
+		if (getOptionsAsync && open) {
+			lastController?.abort();
+			const controller = new AbortController();
+			lastController = controller;
+			optionsPromise = getOptionsAsync(inputs, controller.signal);
+			try {
+				const res = await optionsPromise;
+				if (!controller.signal.aborted) {
+					options = res;
+				}
+			} catch (e) {
+				console.error(e);
+			}
+
+			lastController = null;
 		}
 	}
 
 	$: updateOptions(getOptions, inputs);
+	$: updateAsyncOptions(open, getOptionsAsync, inputs);
 </script>
 
 <svelte:document on:click={documentClick} on:keydown={documentKeydown} />
@@ -248,5 +275,5 @@
 	<input type="hidden" hidden {name} value={value ?? ""} />
 {/if}
 <div style="display: contents;" bind:this={container} on:keydown={keydown} on:click={onClick} on:focusin={focusIn} on:focusout={focusOut}>
-	<slot {options} {open} {display} {value} />
+	<slot {options} {open} {display} {value} {optionsPromise} />
 </div>

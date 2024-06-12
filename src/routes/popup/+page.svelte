@@ -51,6 +51,16 @@
 		return options;
 	}
 
+	const pool = randomOptions(100);
+
+	async function simulateSearch(inputs: Record<string, string>, signal: AbortSignal): Promise<Option[]> {
+		if (!Object.keys(inputs).some((key) => !!inputs[key])) return [];
+
+		await new Promise((resolve) => window.setTimeout(resolve, 2_000));
+		// if (signal.aborted) throw new Error("Aborted");
+		return SelectHelper.defaultFilter(pool, inputs);
+	}
+
 	const users = randomOptions(10);
 </script>
 
@@ -92,10 +102,15 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" getOptions={getDefaultSearcher(users)} let:options let:display let:open>
+	<ComboBox name="user" getOptionsAsync={simulateSearch} let:options let:display let:open let:optionsPromise>
 		<Popup type="manual" {open}>
 			<input slot="summary" type="search" value={display} />
 			<ul class="popup">
+				{#await optionsPromise}
+					<div class="spinner-overlay">
+						<div class="spinner" />
+					</div>
+				{/await}
 				<li><data value="" /></li>
 				{#each options as user}
 					<li><data value={user.id}>{user.name}</data></li>
@@ -120,5 +135,35 @@
 
 	:global(.highlighted) {
 		background-color: crimson;
+	}
+
+	.spinner-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(34, 32, 32, 0.7); /* Semi-transparent overlay */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.spinner {
+		border: 8px solid #f3f3f3;
+		border-radius: 50%;
+		border-top: 8px solid #3498db;
+		width: 50px;
+		height: 50px;
+		animation: spin 2s linear infinite;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 </style>
