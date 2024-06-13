@@ -1,15 +1,14 @@
 <script lang="ts" context="module">
 	import { SelectHelper } from "$lib/select/index.js";
 
-	export function getDefaultSearcher<T>(pool: T[]): (inputs: Record<string, string>) => T[] {
+	export function getDefaultSearcher<T>(pool: T[]): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
 		return (inputs) => {
 			return pool.filter((item) => {
-				return (
-					Object.keys(inputs).reduce((prev, curr) => {
-						if (!inputs[curr]) return 0;
-						return prev + SelectHelper.levenshteinDistance(inputs[curr], JSON.stringify(item));
-					}, 0) < 25
-				);
+				const score = (Object.keys(inputs) as (keyof T | "default")[]).reduce((prev, curr) => {
+					if (!inputs[curr]) return 0;
+					return prev + SelectHelper.levenshteinDistance(inputs[curr], JSON.stringify(item));
+				}, 0);
+				return score < 25;
 			});
 		};
 	}
@@ -20,17 +19,17 @@
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 	import { indefinitePromise } from "$lib/async/index.js";
 
+	type Inputs = Partial<Record<keyof T | "default", string>>;
+
 	export let value = "";
 	export let name = "";
-	export let selected: T[] = [];
-	export let getOptions: ((inputs: Record<string, string>) => T[]) | undefined = void 0;
-	export let getOptionsAsync: ((inputs: Record<string, string>, signal: AbortSignal) => Promise<T[]>) | undefined = void 0;
+	export let defer = false;
+	export let search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined = void 0;
 
+	let inputs: Inputs = {};
 	let container: HTMLDivElement | undefined;
 	let open = false;
 	let observer: MutationObserver | null = null;
-	let display = "";
-	let inputs: Record<string, string> = {};
 	let lastController: AbortController | null = null;
 
 	let closeOnNextClick = false;
@@ -97,6 +96,8 @@
 		}
 	}
 
+	const inputElements: Partial<Record<keyof T | "default", HTMLInputElement>> = {};
+
 	function handleElement(node: Node, act: "added" | "removed"): void {
 		if (node instanceof HTMLDataElement && node.parentElement instanceof HTMLElement) {
 			if (act === "added") {
@@ -107,16 +108,22 @@
 				node.parentElement.removeEventListener("click", optionClick);
 			}
 		} else if (node instanceof HTMLInputElement) {
+			const name = node.name ? (node.name as keyof T) : "default";
 			if (act === "added") {
 				node.addEventListener("input", input);
+				inputElements[name] = node;
+				node.autocomplete = "off";
+				inputs[name] = node.value;
 			} else if (act === "removed") {
 				node.removeEventListener("input", input);
+				delete inputElements[name];
+				delete inputs[name];
 			}
 		}
 	}
 
 	function input(this: HTMLInputElement): void {
-		inputs[this.name] = this.value;
+		inputs[this.name ? (this.name as keyof T) : "default"] = this.value;
 		if (!open) {
 			open = true;
 		}
@@ -128,10 +135,27 @@
 	}
 
 	function selectElement(element: HTMLElement): void {
-		display = element.innerText;
 		value = element.querySelector<HTMLDataElement>("data")?.value ?? "";
 		index = optionElements.indexOf(element);
-		inputs = Object.keys(inputs).reduce((prev, curr) => ({ ...prev, [curr]: "" }), {});
+		inputs = Object.keys(inputs).reduce<Inputs>((prev, curr) => ({ ...prev, [curr]: "" }), {});
+
+		const offset = optionElements.length - result.length;
+		const realIndex = index - offset;
+
+		const el = result[realIndex];
+		if (!Object.keys(inputElements).some((name) => name !== "default")) {
+			if (inputElements["default"]) inputElements["default"]!.value = element.textContent ?? "";
+		} else if (typeof el === "undefined") {
+			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
+				if (name === "default") inputElements[name]!.value = element.textContent ?? "";
+				else inputElements[name]!.value = element.textContent ?? "";
+			}
+		} else {
+			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
+				if (name === "default") inputElements[name]!.value = `${el ?? ""}`;
+				else inputElements[name]!.value = `${el?.[name] ?? ""}`;
+			}
+		}
 	}
 
 	function updateHighlighting(index: number | null): void {
@@ -164,7 +188,9 @@
 				}
 				break;
 			case "ArrowUp":
-				if (!open) return;
+				if (!open) {
+					open = true;
+				}
 				e.preventDefault();
 				if (index === null) {
 					index = optionElements.length - 1;
@@ -176,7 +202,9 @@
 
 				break;
 			case "ArrowDown":
-				if (!open) return;
+				if (!open) {
+					open = true;
+				}
 				e.preventDefault();
 				if (index === null) {
 					index = 0;
@@ -233,40 +261,38 @@
 		}
 	}
 
-	let options: T[] = [];
-	let optionsPromise: Promise<T[]> = indefinitePromise<T[]>();
+	let result: T[] = [];
+	let promise: Promise<T[]> = indefinitePromise<T[]>();
 
-	function updateOptions(getOptions: ((inputs: Record<string, string>) => T[]) | undefined, inputs: Record<string, string>): void {
-		if (getOptions) {
-			options = getOptions(inputs);
-		}
-	}
-
-	async function updateAsyncOptions(
+	async function updateOptions(
+		defer: boolean,
 		open: boolean,
-		getOptionsAsync: ((inputs: Record<string, string>, signal: AbortSignal) => Promise<T[]>) | undefined,
-		inputs: Record<string, string>
+		search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined,
+		inputs: Inputs
 	): Promise<void> {
-		if (getOptionsAsync && open) {
+		if (search && ((defer && open) || !defer)) {
 			lastController?.abort();
 			const controller = new AbortController();
 			lastController = controller;
-			optionsPromise = getOptionsAsync(inputs, controller.signal);
 			try {
-				const res = await optionsPromise;
-				if (!controller.signal.aborted) {
-					options = res;
+				const maybePromise = search(inputs, controller.signal);
+				if (maybePromise instanceof Promise) {
+					promise = maybePromise;
+					const res = await promise;
+					if (!controller.signal.aborted) {
+						console.log(res);
+						result = res;
+					}
+				} else {
+					result = maybePromise;
 				}
-			} catch (e) {
-				console.error(e);
+			} finally {
+				lastController = null;
 			}
-
-			lastController = null;
 		}
 	}
 
-	$: updateOptions(getOptions, inputs);
-	$: updateAsyncOptions(open, getOptionsAsync, inputs);
+	$: updateOptions(defer, open, search, inputs);
 </script>
 
 <svelte:document on:click={documentClick} on:keydown={documentKeydown} />
@@ -275,5 +301,5 @@
 	<input type="hidden" hidden {name} value={value ?? ""} />
 {/if}
 <div style="display: contents;" bind:this={container} on:keydown={keydown} on:click={onClick} on:focusin={focusIn} on:focusout={focusOut}>
-	<slot {options} {open} {display} {value} {optionsPromise} />
+	<slot {result} {open} {value} {promise} />
 </div>

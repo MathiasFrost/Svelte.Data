@@ -54,14 +54,19 @@
 	const pool = randomOptions(100);
 
 	async function simulateSearch(inputs: Record<string, string>, signal: AbortSignal): Promise<Option[]> {
+		console.log(inputs);
 		if (!Object.keys(inputs).some((key) => !!inputs[key])) return [];
 
 		await new Promise((resolve) => window.setTimeout(resolve, 2_000));
 		// if (signal.aborted) throw new Error("Aborted");
-		return SelectHelper.defaultFilter(pool, inputs);
+		const res = SelectHelper.defaultFilter(pool, inputs);
+		if (res.length) return res;
+		return pool;
 	}
 
 	const users = randomOptions(10);
+
+	const initial = pool[0];
 </script>
 
 <h1>Dialog</h1>
@@ -72,8 +77,8 @@
 		{#if open}<div transition:fly class="popup">This is a tooltip wee woo wee woo wee woo</div>{/if}</Popup>
 </p>
 
-<ComboBox let:display let:value>
-	<input type="text" readonly value={display + " " + (value ?? "")} />
+<ComboBox>
+	<input type="text" readonly />
 	<ul>
 		<li><data value="" /></li>
 		<li><data value="0">Victor</data></li>
@@ -90,11 +95,11 @@
 </ComboBox>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" getOptions={getDefaultSearcher(users)} let:options let:display>
-		<input type="search" value={display} />
+	<ComboBox name="user" search={getDefaultSearcher(users)} let:result>
+		<input type="search" name="name" />
 		<ul>
 			<li><data value="" /></li>
-			{#each options as user}
+			{#each result as user}
 				<li><data value={user.id}>{user.name}</data></li>
 			{/each}
 		</ul>
@@ -102,21 +107,33 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" getOptionsAsync={simulateSearch} let:options let:display let:open let:optionsPromise>
+	<ComboBox name="user" search={simulateSearch} value={initial.id.toString()} let:result let:open let:promise>
 		<Popup type="manual" {open}>
-			<input slot="summary" type="search" value={display} />
+			<input slot="summary" type="search" value={initial.name} />
 			<ul class="popup">
-				{#await optionsPromise}
+				{#await promise}
 					<div class="spinner-overlay">
 						<div class="spinner" />
 					</div>
 				{/await}
 				<li><data value="" /></li>
-				{#each options as user}
+				{#each result as user}
 					<li><data value={user.id}>{user.name}</data></li>
 				{/each}
 			</ul>
 		</Popup>
+	</ComboBox>
+</form>
+
+<form on:submit|preventDefault={(e) => console.log(e)}>
+	<ComboBox name="user" search={getDefaultSearcher(users.map((u) => u.name))} let:result>
+		<input type="search" />
+		<ul>
+			<li><data value="" /></li>
+			{#each result as user}
+				<li><data value={user}>{user}</data></li>
+			{/each}
+		</ul>
 	</ComboBox>
 </form>
 
