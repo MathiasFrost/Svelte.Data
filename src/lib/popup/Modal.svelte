@@ -1,6 +1,7 @@
+<svelte:options accessors={true} />
+
 <script lang="ts">
 	import { portalIn } from "$lib/popup/portal.js";
-	import type { SvelteEnhancedDialogElement } from "$lib/popup/SvelteEnhancedDialogElement.js";
 
 	/** TODOC */
 	export let open = false;
@@ -12,18 +13,15 @@
 	let cssClass = "";
 	export { cssClass as class };
 
-	/** @see SvelteEnhancedDialogElement */
-	export const self: SvelteEnhancedDialogElement = {
-		get open(): boolean {
-			return open;
-		},
-		close() {
-			open = false;
-		},
-		showModal() {
-			open = true;
-		}
-	};
+	/** TODOC */
+	export function close() {
+		open = false;
+	}
+
+	/** TODOC */
+	export function showModal() {
+		open = true;
+	}
 
 	/** TODOC */
 	function keypress(e: KeyboardEvent): void {

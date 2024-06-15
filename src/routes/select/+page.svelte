@@ -61,21 +61,21 @@
 	{/each}
 </datalist>
 
-<!--<h2>Multiple search props</h2>-->
-<!--<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}</p>-->
-<!--<form on:submit|preventDefault={onSubmit}>-->
-<!--	<ComboBox name="user" bind:this={select1} value={"3"} search={makeDefaultSearcher(users)} let:result>-->
-<!--		<input type="search" placeholder="Name" name="name" bind:this={input} />-->
-<!--		<input type="search" placeholder="Username" name="username" />-->
-<!--		<ul style="list-style: none; padding: 0;" class="selector">-->
-<!--			<li><data value="" />&nbsp;</li>-->
-<!--			{#each result as user}-->
-<!--				<li><data value={user.id} />{user.name}</li>-->
-<!--			{/each}-->
-<!--		</ul>-->
-<!--	</ComboBox>-->
-<!--	<button type="submit">submit</button>-->
-<!--</form>-->
+<h2>Multiple search props</h2>
+<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}</p>
+<form on:submit|preventDefault={onSubmit}>
+	<ComboBox name="user" bind:this={select1} value={"3"} search={makeDefaultSearcher(users)} let:result>
+		<input type="search" placeholder="Name" name="name" bind:this={input} />
+		<input type="search" placeholder="Username" name="username" />
+		<ul style="list-style: none; padding: 0;" class="selector">
+			<li><data value="" />&nbsp;</li>
+			{#each result as user}
+				<li><data value={user.id} />{user.name}</li>
+			{/each}
+		</ul>
+	</ComboBox>
+	<button type="submit">submit</button>
+</form>
 
 <!--<h2>Simple</h2>-->
 <!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
