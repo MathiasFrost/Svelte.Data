@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { WSClient } from "$lib/ws/WSClient.js";
 	import WSReceiver from "$lib/ws/WSReceiver.svelte";
-	import { ensureString } from "$lib/types/unknown.js";
+	import { ensureString } from "$lib/utils/unknown.js";
 
 	let status = "";
 

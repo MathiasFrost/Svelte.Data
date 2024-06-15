@@ -1,7 +1,7 @@
 <script lang="ts">
 	import "../../app.scss";
-	import EnhancedSelect from "$lib/select/EnhancedSelect.svelte";
-	import type { SvelteEnhancedSelectElement } from "$lib/select/SvelteEnhancedSelectElement.js";
+	import ComboBox, { makeDefaultSearcher } from "$lib/popup/ComboBox.svelte";
+	import Popup from "$lib/popup/Popup.svelte";
 
 	/** TODOC */
 	interface User {
@@ -11,10 +11,10 @@
 	}
 
 	/** TODOC */
-	let select1: SvelteEnhancedSelectElement<User, number> | undefined;
+	let select1: ComboBox<User> | undefined;
 
 	/** TODOC */
-	let select2: SvelteEnhancedSelectElement<User, number> | undefined;
+	let select2: ComboBox<User> | undefined;
 
 	/** TODOC */
 	const users: User[] = [
@@ -62,104 +62,117 @@
 </datalist>
 
 <h2>Multiple search props</h2>
-<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}, pool: {select1?.pool.length}</p>
+<p>Value: {select1?.value}, selectedIndex: {select1?.selectedIndex}</p>
 <form on:submit|preventDefault={onSubmit}>
-	<EnhancedSelect name="user" bind:self={select1} pool={users} value={3} key="id" let:filterOptions>
-		<svelte:fragment slot="summary" let:selected>
-			<input type="search" placeholder="Name" name="name" bind:this={input} value={selected?.name ?? ""} />
-			<input type="search" placeholder="Username" name="username" value={selected?.username ?? ""} />
-		</svelte:fragment>
+	<ComboBox name="user" bind:this={select1} value={"3"} search={makeDefaultSearcher(users)} let:result>
+		<input type="search" placeholder="Name" name="name" bind:this={input} />
+		<input type="search" placeholder="Username" name="username" />
 		<ul style="list-style: none; padding: 0;" class="selector">
 			<li><data value="" />&nbsp;</li>
-			{#each filterOptions(users) as user}
+			{#each result as user}
 				<li><data value={user.id} />{user.name}</li>
 			{/each}
 		</ul>
-	</EnhancedSelect>
+	</ComboBox>
 	<button type="submit">submit</button>
 </form>
 
 <h2>Simple</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} key="id" popup let:filterOptions>
-		<input slot="summary" let:selected type="search" placeholder="Employee" name="name" style="width: 100%;" value={selected?.name ?? ""} />
-		<ul style="list-style: none; padding: 0;" class="selector">
-			<li><data value="" />&nbsp;</li>
-			{#each filterOptions(users) as user}
-				<li><data value={user.id} />{user.name}</li>
-			{/each}
-		</ul>
-	</EnhancedSelect>
+	<ComboBox name="user" search={makeDefaultSearcher(users)} value={"3"} let:result let:open>
+		<Popup type="manual" {open}>
+			<input slot="summary" type="search" placeholder="Employee" name="name" style="width: 100%;" value={""} />
+			<ul style="list-style: none; padding: 0;" class="selector">
+				<li><data value="" />&nbsp;</li>
+				{#each result as user}
+					<li><data value={user.id} />{user.name}</li>
+				{/each}
+			</ul>
+		</Popup>
+	</ComboBox>
 </form>
 
 <h2>Multiple</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} values={[3, 1]} key="id" multiple popup>
-		<div style="width: 100%;" slot="summary" let:checked>
-			<p>Selected: {checked.map((user) => user.username).join(", ")}{checked.length}</p>
-			<input type="search" style="width: 100%" placeholder="Employee" name="name" />
-		</div>
-		<svelte:fragment let:filterOptions let:allChecked let:checked let:checkAll>
-			{@const filtered = filterOptions(users)}
+	<ComboBox
+		name="users"
+		bind:this={select2}
+		search={makeDefaultSearcher(users)}
+		values={["3", "1"]}
+		valuesText={[
+			{ name: "Mathias", username: "ML" },
+			{ name: "Josefine", username: "JMAL" }
+		]}
+		multiple
+		let:open
+		let:values
+		let:valuesText
+		let:result
+		let:all>
+		<Popup type="manual" {open}>
+			<div style="width: 100%;" slot="summary">
+				<p>Selected: {valuesText.map((user) => user.username).join(", ")} {values.length}</p>
+				<input type="search" style="width: 100%" placeholder="Employee" name="name" />
+			</div>
 			<ul style="list-style: none; padding: 0;" class="selector">
 				<li>
-					<data value={checkAll} />
-					<input tabindex="-1" type="checkbox" checked={allChecked} />
-					{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
+					<data value="[TOGGLE]" />
+					<input tabindex="-1" type="checkbox" checked={all} />
+					{#if all}Uncheck all{:else}Check all{/if} ({result.length})
 				</li>
-				{#each filterOptions(users) as user}
-					<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={checked.includes(user)} />{user.name}</li>
+				{#each result as user}
+					<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={values.includes(user.id.toString())} />{user.name}</li>
 				{/each}
 			</ul>
-		</svelte:fragment>
-	</EnhancedSelect>
+		</Popup>
+	</ComboBox>
 	<button type="submit">submit</button>
 </form>
 
 <h2>Multiple with simple display</h2>
 <form on:submit|preventDefault={onSubmit} style="width: 100%;">
-	<EnhancedSelect name="users" bind:self={select2} pool={users} key="id" values={[1, 3]} multiple popup>
-		<svelte:fragment slot="summary" let:checked let:uncheck>
-			<div role="listbox" class="input" tabindex="0">
-				{#each checked as user}
-					<button on:click={() => uncheck(user)}>{user.username}</button>
-				{/each}
-			</div>
-		</svelte:fragment>
-		<svelte:fragment let:filterOptions let:allChecked let:checked>
-			{@const filtered = filterOptions(users)}
+	<ComboBox name="users" bind:this={select2} search={makeDefaultSearcher(users)} values={["1", "3"]} multiple let:result let:open let:valuesText let:all>
+		<Popup type="manual" {open}>
+			<svelte:fragment slot="summary">
+				<div role="listbox" class="input" tabindex="0">
+					{JSON.stringify(valuesText)}
+					<!--{#each values.map((value, i) => ({ value, text: valuesText[i] })) as { value, text }}-->
+					<!--						<button><data {value}>{text.username}</data></button>-->
+					<!--					{/each}-->
+				</div>
+			</svelte:fragment>
 			<div class="selector">
 				<input type="search" placeholder="Employee" name="name" />
 				<input type="search" placeholder="Username" name="username" />
 				<ul style="list-style: none; padding: 0;">
 					<li>
-						<data value="" />
-						<input tabindex="-1" type="checkbox" checked={allChecked} />
-						{#if allChecked}Uncheck all{:else}Check all{/if} ({filtered.length})
+						<data value="[TOGGLE]" />
+						<input tabindex="-1" type="checkbox" checked={all} />
+						{#if all}Uncheck all{:else}Check all{/if} ({result.length})
 					</li>
-					{#each filtered as user}
-						<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={checked.includes(user)} />{user.name}</li>
+					{#each result as user}
+						<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={result.includes(user)} />{user.name}</li>
 					{/each}
 				</ul>
 			</div>
-		</svelte:fragment>
-	</EnhancedSelect>
+		</Popup>
+	</ComboBox>
 	<button type="submit">submit</button>
 </form>
 
 <h2>Stylized select</h2>
 <form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
-	<EnhancedSelect name="user" pool={users} value={3} key="id" popup>
-		<svelte:fragment slot="summary" let:selected>
-			<input type="text" readonly style="width: 100%;" name="name" value={selected?.name ?? ""} />
-		</svelte:fragment>
-		<ul style="list-style: none; padding: 0;" class="selector">
-			<li><data value="" />&nbsp;</li>
-			{#each users as user}
-				<li><data value={user.id} />{user.name}</li>
-			{/each}
-		</ul>
-	</EnhancedSelect>
+	<ComboBox name="user" value={"3"} let:open>
+		<Popup type="manual" {open}>
+			<input slot="summary" type="text" readonly style="width: 100%;" name="name" />
+			<ul style="list-style: none; padding: 0;" class="selector">
+				<li><data value="" />&nbsp;</li>
+				{#each users as user}
+					<li><data value={user.id} />{user.name}</li>
+				{/each}
+			</ul>
+		</Popup>
+	</ComboBox>
 </form>
 
 <style>

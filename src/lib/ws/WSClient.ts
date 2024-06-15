@@ -1,5 +1,5 @@
 import { type Writable, writable } from "svelte/store";
-import { indefinitePromise } from "$lib/async/utility.js";
+import { indefinitePromise } from "$lib/utils/async.js";
 import { WSMessage } from "$lib/ws/WSMessage.js";
 
 /** TODOC */

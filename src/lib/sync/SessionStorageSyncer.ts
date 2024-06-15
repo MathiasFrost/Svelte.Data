@@ -1,4 +1,4 @@
-import type { Serializer } from "$lib/types/Serializer.js";
+import type { Serializer } from "$lib/utils/Serializer.js";
 import { StorageSyncer } from "$lib/sync/StorageSyncer.js";
 
 /** Sync values to `window.localStorage` */

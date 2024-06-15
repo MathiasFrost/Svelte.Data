@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { ensureBoolean, ensureDateOnlyString, ensureDateString, ensureNumber, ensureType } from "$lib/types/unknown.js";
+import { ensureBoolean, ensureDateOnlyString, ensureDateString, ensureNumber, ensureType } from "$lib/utils/unknown.js";
 import type { DateOnly, DateWrap } from "$lib/date/DateOnly.js";
 
 /** TODOC */

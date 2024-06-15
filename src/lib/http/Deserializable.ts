@@ -1,4 +1,4 @@
-import type { Deserializer } from "$lib/types/unknown.js";
+import type { Deserializer } from "$lib/utils/unknown.js";
 
 export enum TypeCode {
 	string,

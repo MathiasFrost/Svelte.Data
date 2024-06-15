@@ -1,4 +1,4 @@
-import { stringSerializer } from "$lib/types/Serializer.js";
+import { stringSerializer } from "$lib/utils/Serializer.js";
 import { CookieSyncer } from "$lib/sync/CookieSyncer.js";
 import { writable, type Writable } from "svelte/store";
 

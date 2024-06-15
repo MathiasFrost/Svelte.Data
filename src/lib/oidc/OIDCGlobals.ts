@@ -1,6 +1,6 @@
 import { CookieSyncer } from "$lib/sync/CookieSyncer.js";
 import { TimeSpan } from "$lib/date/TimeSpan.js";
-import { stringSerializer } from "$lib/types/Serializer.js";
+import { stringSerializer } from "$lib/utils/Serializer.js";
 
 /** @static */
 export class OIDCGlobals {

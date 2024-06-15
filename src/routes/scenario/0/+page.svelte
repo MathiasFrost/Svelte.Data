@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { stringSerializer } from "$lib/types/Serializer.js";
+	import { stringSerializer } from "$lib/utils/Serializer.js";
 	import { SessionStorageSyncer } from "$lib/sync/SessionStorageSyncer.js";
 	import { browser } from "$app/environment";
 	import { onMount } from "svelte";

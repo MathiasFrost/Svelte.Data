@@ -9,7 +9,7 @@ import {
 	ensureNumberString,
 	ensureObject,
 	ensureString
-} from "$lib/types/unknown.js";
+} from "$lib/utils/unknown.js";
 import type { Fetch } from "$lib/http/Fetch.js";
 import type { Postprocess } from "$lib/http/Postprocess.js";
 import type { Preprocess } from "$lib/http/Preprocess.js";

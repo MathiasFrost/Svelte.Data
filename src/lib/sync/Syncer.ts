@@ -1,4 +1,4 @@
-import { type Serializer, jsonSerializer } from "$lib/types/Serializer.js";
+import { type Serializer, jsonSerializer } from "$lib/utils/Serializer.js";
 
 /** Base class for replicating data */
 export abstract class Syncer<T> {

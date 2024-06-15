@@ -1,26 +1,36 @@
+<svelte:options accessors={true} />
+
 <script lang="ts" context="module">
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
 	export function makeDefaultSearcher<T>(pool: T[], threshold = 3): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
 		return (inputs) => {
-			let hasExactMatch = false;
+			let hasExactMatch: Partial<Record<keyof T | "default", boolean>> = Object.keys(inputs).reduce((prev, curr) => ({ ...prev, [curr]: false }), {});
 			const firstRound = pool.filter((item) => {
-				if (hasExactMatch) {
+				if ((Object.keys(hasExactMatch) as (keyof T | "default")[]).every((name) => hasExactMatch[name])) {
 					return false;
 				}
 
 				const score = (Object.keys(inputs) as (keyof T | "default")[]).reduce((prev, curr) => {
-					if (!inputs[curr]) return 0;
-					if (curr === "default") return prev + PopupHelper.likenessScore(inputs[curr]!, `${item}`);
-					return prev + PopupHelper.likenessScore(inputs[curr]!, `${item[curr]}`);
-				}, 0);
+					if (!inputs[curr]) {
+						return 0;
+					}
 
-				if (score === -1) hasExactMatch = true;
+					let score = 0;
+					if (curr === "default") score = prev + PopupHelper.likenessScore(inputs[curr]!, `${item}`);
+					else score = prev + PopupHelper.likenessScore(inputs[curr]!, `${item[curr]}`);
+
+					hasExactMatch[curr] = score === -1;
+
+					return score;
+				}, 0);
 
 				return score < threshold;
 			});
 
-			if (hasExactMatch) return pool;
+			if ((Object.keys(hasExactMatch) as (keyof T | "default")[]).every((name) => hasExactMatch[name])) {
+				return pool;
+			}
 
 			return firstRound;
 		};
@@ -29,7 +39,7 @@
 
 <script lang="ts" generics="T">
 	import { onDestroy, onMount } from "svelte";
-	import { indefinitePromise } from "$lib/async/index.js";
+	import { indefinitePromise } from "$lib/utils/async.js";
 
 	type Inputs = Partial<Record<keyof T | "default", string>>;
 
@@ -38,6 +48,10 @@
 	export let defer = false;
 	export let search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined = void 0;
 	export let delay: number = 0;
+	export let values: string[] = [];
+	export let multiple = false;
+	export let controls = "";
+	export let valuesText: Inputs[] = [];
 
 	let inputs: Inputs = {};
 	let container: HTMLDivElement | undefined;
@@ -52,6 +66,8 @@
 
 	let result: T[] = [];
 	let promise: Promise<T[]> = indefinitePromise<T[]>();
+
+	const inputElements: Partial<Record<keyof T | "default", HTMLInputElement>> = {};
 
 	$: debouncedUpdateOptions = debounce(() => updateOptions(), delay);
 
@@ -122,8 +138,6 @@
 		}
 	}
 
-	const inputElements: Partial<Record<keyof T | "default", HTMLInputElement>> = {};
-
 	function handleElement(node: Node, act: "added" | "removed"): void {
 		if (node instanceof HTMLDataElement && node.parentElement instanceof HTMLElement) {
 			if (act === "added") {
@@ -171,17 +185,35 @@
 		const realIndex = index - offset;
 
 		const el = result[realIndex];
+		const res: Inputs = {};
 		if (!Object.keys(inputElements).some((name) => name !== "default")) {
-			if (inputElements["default"]) inputElements["default"]!.value = element.textContent ?? "";
+			if (inputElements["default"]) res["default"] = element.textContent ?? "";
 		} else if (typeof el === "undefined") {
 			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
-				if (name === "default") inputElements[name]!.value = element.textContent ?? "";
-				else inputElements[name]!.value = element.textContent ?? "";
+				if (name === "default") res[name] = element.textContent ?? "";
+				else res[name] = element.textContent ?? "";
 			}
 		} else {
 			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
-				if (name === "default") inputElements[name]!.value = `${el ?? ""}`;
-				else inputElements[name]!.value = `${el?.[name] ?? ""}`;
+				if (name === "default") res[name] = `${el ?? ""}`;
+				else res[name] = `${el?.[name] ?? ""}`;
+			}
+		}
+
+		for (const name of Object.keys(res) as (keyof T | "default")[]) {
+			if (name in inputElements) inputElements[name]!.value = res[name]!;
+		}
+
+		if (multiple) {
+			if (!values.includes(value)) {
+				values = values.concat(value);
+				valuesText = valuesText.concat({ ...res });
+			} else {
+				const index = values.indexOf(value);
+				values.splice(index, 1);
+				valuesText.splice(index, 1);
+				values = values;
+				valuesText = valuesText;
 			}
 		}
 	}
@@ -196,21 +228,22 @@
 		prevHighlighted = optionElements[index];
 	}
 
-	let submitNext = false;
-
 	function keydown(e: KeyboardEvent): void {
 		switch (e.key) {
 			case "Enter":
 				if (open) {
 					e.preventDefault();
-					if (index !== null && optionElements.length) {
+					if (!multiple && index !== null && optionElements.length) {
 						selectElement(optionElements[index]);
 					}
 					open = false;
-					submitNext = true;
-				} else if (submitNext) {
-					submitNext = false;
-				} else {
+				}
+				break;
+			case " ":
+				if (multiple && open && e.ctrlKey && index !== null && optionElements.length) {
+					e.preventDefault();
+					selectElement(optionElements[index]);
+				} else if (!open && e.ctrlKey) {
 					e.preventDefault();
 					open = true;
 				}
@@ -242,12 +275,6 @@
 					index = null;
 				}
 
-				break;
-			case " ":
-				if (!open && e.ctrlKey) {
-					e.preventDefault();
-					open = true;
-				}
 				break;
 		}
 	}
@@ -328,13 +355,38 @@
 	$: if (defer && open) {
 		updateOptions();
 	}
+
+	function isAllToggled(options: HTMLElement[], values: string[]): boolean {
+		return options
+			.map((element) => element.querySelector<HTMLDataElement>("data")?.value ?? "")
+			.filter((val) => !!val)
+			.every((val) => values.includes(val));
+	}
 </script>
 
 <svelte:document on:click={documentClick} on:keydown={documentKeydown} />
 
 {#if name}
-	<input type="hidden" hidden {name} value={value ?? ""} />
+	{#if multiple}
+		<select hidden {name} multiple>
+			{#each values as value}
+				<option selected {value} />
+			{/each}
+		</select>
+	{:else}
+		<input type="hidden" hidden {name} value={value ?? ""} />
+	{/if}
 {/if}
-<div style="display: contents;" bind:this={container} on:keydown={keydown} on:click={onClick} on:focusin={focusIn} on:focusout={focusOut}>
-	<slot {result} {open} {value} {promise} />
+<div
+	style="display: contents;"
+	tabindex="-1"
+	role="combobox"
+	aria-expanded={open}
+	aria-controls={controls}
+	bind:this={container}
+	on:keydown={keydown}
+	on:click={onClick}
+	on:focusin={focusIn}
+	on:focusout={focusOut}>
+	<slot {result} {open} {value} {promise} {values} {valuesText} all={isAllToggled(optionElements, values)} />
 </div>

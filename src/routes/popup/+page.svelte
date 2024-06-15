@@ -2,7 +2,6 @@
 	import Popup from "$lib/popup/Popup.svelte";
 	import ComboBox, { makeDefaultSearcher } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
-	import { PopupHelper } from "$lib/popup/index.js";
 
 	interface Option {
 		readonly id: number;
@@ -57,7 +56,7 @@
 		if (!Object.keys(inputs).some((key) => !!inputs[key])) return [];
 
 		await new Promise((resolve) => window.setTimeout(resolve, 2_000));
-		// if (signal.aborted) throw new Error("Aborted");
+		if (signal.aborted) throw new Error("Aborted");
 		const res = makeDefaultSearcher(pool)({ name: inputs["default"] });
 		if (res.length) return res;
 		return pool;
@@ -75,6 +74,21 @@
 		><svelte:fragment slot="summary">something</svelte:fragment>
 		{#if open}<div transition:fly class="popup">This is a tooltip wee woo wee woo wee woo</div>{/if}</Popup>
 </p>
+
+<form on:submit|preventDefault={(e) => console.log(new FormData(e.currentTarget))}>
+	<ComboBox name="test" search={makeDefaultSearcher(users)} let:open let:result multiple let:values let:valuesText>
+		<Popup type="manual" {open}>
+			<input slot="summary" readonly value={valuesText.map((o) => o["default"]).join(", ")} />
+			<ul class="popup">
+				<li><data value="" /></li>
+				{#each result as user}
+					{@const checked = values.includes(user.id.toString())}
+					<li><input type="checkbox" {checked} /><data value={user.id}>{user.name}</data></li>
+				{/each}
+			</ul>
+		</Popup>
+	</ComboBox>
+</form>
 
 <ComboBox>
 	<input type="text" readonly />
@@ -166,9 +180,13 @@
 	</table>
 </ComboBox>
 
-<select>
-	<option>test</option>
-</select>
+<form on:submit|preventDefault={(e) => console.log(new FormData(e.currentTarget))}>
+	<select name="test">
+		<option>test</option>
+	</select>
+	<input type="text" name="testa" />
+	<button type="submit">a</button>
+</form>
 
 <style lang="scss">
 	.popup {
