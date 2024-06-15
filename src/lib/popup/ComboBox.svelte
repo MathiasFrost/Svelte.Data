@@ -1,22 +1,34 @@
 <script lang="ts" context="module">
-	import { SelectHelper } from "$lib/select/index.js";
+	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
-	export function getDefaultSearcher<T>(pool: T[]): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
+	export function makeDefaultSearcher<T>(pool: T[], threshold = 3): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
 		return (inputs) => {
-			return pool.filter((item) => {
+			let hasExactMatch = false;
+			const firstRound = pool.filter((item) => {
+				if (hasExactMatch) {
+					return false;
+				}
+
 				const score = (Object.keys(inputs) as (keyof T | "default")[]).reduce((prev, curr) => {
 					if (!inputs[curr]) return 0;
-					return prev + SelectHelper.levenshteinDistance(inputs[curr], JSON.stringify(item));
+					if (curr === "default") return prev + PopupHelper.likenessScore(inputs[curr]!, `${item}`);
+					return prev + PopupHelper.likenessScore(inputs[curr]!, `${item[curr]}`);
 				}, 0);
-				return score < 25;
+
+				if (score === -1) hasExactMatch = true;
+
+				return score < threshold;
 			});
+
+			if (hasExactMatch) return pool;
+
+			return firstRound;
 		};
 	}
 </script>
 
 <script lang="ts" generics="T">
 	import { onDestroy, onMount } from "svelte";
-	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 	import { indefinitePromise } from "$lib/async/index.js";
 
 	type Inputs = Partial<Record<keyof T | "default", string>>;
@@ -25,6 +37,7 @@
 	export let name = "";
 	export let defer = false;
 	export let search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined = void 0;
+	export let delay: number = 0;
 
 	let inputs: Inputs = {};
 	let container: HTMLDivElement | undefined;
@@ -37,6 +50,11 @@
 	let optionElements: HTMLElement[] = [];
 	let prevHighlighted: HTMLElement | null = null;
 
+	let result: T[] = [];
+	let promise: Promise<T[]> = indefinitePromise<T[]>();
+
+	$: debouncedUpdateOptions = debounce(() => updateOptions(), delay);
+
 	$: updateHighlighting(index);
 
 	onMount(() => {
@@ -46,6 +64,14 @@
 		const existing = container.querySelectorAll("input, data");
 		for (const element of existing) {
 			handleElement(element, "added");
+		}
+
+		for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
+			inputs[name] = inputElements[name]!.value;
+		}
+
+		if (!defer) {
+			updateOptions();
 		}
 	});
 
@@ -127,6 +153,9 @@
 		if (!open) {
 			open = true;
 		}
+
+		promise = indefinitePromise<T[]>();
+		debouncedUpdateOptions();
 	}
 
 	function optionClick(this: HTMLElement): void {
@@ -137,7 +166,6 @@
 	function selectElement(element: HTMLElement): void {
 		value = element.querySelector<HTMLDataElement>("data")?.value ?? "";
 		index = optionElements.indexOf(element);
-		inputs = Object.keys(inputs).reduce<Inputs>((prev, curr) => ({ ...prev, [curr]: "" }), {});
 
 		const offset = optionElements.length - result.length;
 		const realIndex = index - offset;
@@ -261,16 +289,8 @@
 		}
 	}
 
-	let result: T[] = [];
-	let promise: Promise<T[]> = indefinitePromise<T[]>();
-
-	async function updateOptions(
-		defer: boolean,
-		open: boolean,
-		search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined,
-		inputs: Inputs
-	): Promise<void> {
-		if (search && ((defer && open) || !defer)) {
+	async function updateOptions(): Promise<void> {
+		if (search) {
 			lastController?.abort();
 			const controller = new AbortController();
 			lastController = controller;
@@ -280,7 +300,6 @@
 					promise = maybePromise;
 					const res = await promise;
 					if (!controller.signal.aborted) {
-						console.log(res);
 						result = res;
 					}
 				} else {
@@ -292,7 +311,23 @@
 		}
 	}
 
-	$: updateOptions(defer, open, search, inputs);
+	function debounce(func: (...args: unknown[]) => void, wait: number): typeof func {
+		let timeout: number | undefined;
+
+		return function executedFunction(...args: unknown[]) {
+			const later = () => {
+				clearTimeout(timeout);
+				func(...args);
+			};
+
+			clearTimeout(timeout);
+			timeout = window.setTimeout(later, wait);
+		};
+	}
+
+	$: if (defer && open) {
+		updateOptions();
+	}
 </script>
 
 <svelte:document on:click={documentClick} on:keydown={documentKeydown} />

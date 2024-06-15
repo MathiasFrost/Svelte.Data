@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Popup from "$lib/popup/Popup.svelte";
-	import ComboBox, { getDefaultSearcher } from "$lib/popup/ComboBox.svelte";
+	import ComboBox, { makeDefaultSearcher } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
-	import { SelectHelper } from "$lib/select/index.js";
+	import { PopupHelper } from "$lib/popup/index.js";
 
 	interface Option {
 		readonly id: number;
@@ -54,12 +54,11 @@
 	const pool = randomOptions(100);
 
 	async function simulateSearch(inputs: Record<string, string>, signal: AbortSignal): Promise<Option[]> {
-		console.log(inputs);
 		if (!Object.keys(inputs).some((key) => !!inputs[key])) return [];
 
 		await new Promise((resolve) => window.setTimeout(resolve, 2_000));
 		// if (signal.aborted) throw new Error("Aborted");
-		const res = SelectHelper.defaultFilter(pool, inputs);
+		const res = makeDefaultSearcher(pool)({ name: inputs["default"] });
 		if (res.length) return res;
 		return pool;
 	}
@@ -95,7 +94,7 @@
 </ComboBox>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={getDefaultSearcher(users)} let:result>
+	<ComboBox name="user" search={makeDefaultSearcher(users)} let:result>
 		<input type="search" name="name" />
 		<ul>
 			<li><data value="" /></li>
@@ -107,7 +106,7 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={simulateSearch} value={initial.id.toString()} let:result let:open let:promise>
+	<ComboBox defer delay={600} name="user" search={simulateSearch} value={initial.id.toString()} let:result let:open let:promise>
 		<Popup type="manual" {open}>
 			<input slot="summary" type="search" value={initial.name} />
 			<ul class="popup">
@@ -126,7 +125,7 @@
 </form>
 
 <form on:submit|preventDefault={(e) => console.log(e)}>
-	<ComboBox name="user" search={getDefaultSearcher(users.map((u) => u.name))} let:result>
+	<ComboBox name="user" search={makeDefaultSearcher(users.map((u) => u.name))} let:result>
 		<input type="search" />
 		<ul>
 			<li><data value="" /></li>
@@ -136,6 +135,36 @@
 		</ul>
 	</ComboBox>
 </form>
+
+<ComboBox let:value>
+	<p>Selected: {value}</p>
+	<table>
+		<tr>
+			<th>Likelihood \ Impact</th>
+			<th>Low Impact</th>
+			<th>Medium Impact</th>
+			<th>High Impact</th>
+		</tr>
+		<tr>
+			<td>Low Likelihood</td>
+			<td class="ok"><data value="OK">OK</data></td>
+			<td class="ok"><data value="OK">OK</data></td>
+			<td class="think"><data value="Think">Think</data></td>
+		</tr>
+		<tr>
+			<td>Medium Likelihood</td>
+			<td class="ok"><data value="OK">OK</data></td>
+			<td class="think"><data value="Think">Think</data></td>
+			<td class="stop"><data value="Stop">Stop</data></td>
+		</tr>
+		<tr>
+			<td>High Likelihood</td>
+			<td class="think"><data value="Think">Think</data></td>
+			<td class="stop"><data value="Stop">Stop</data></td>
+			<td class="stop"><data value="Stop">Stop</data></td>
+		</tr>
+	</table>
+</ComboBox>
 
 <select>
 	<option>test</option>
@@ -182,5 +211,31 @@
 		100% {
 			transform: rotate(360deg);
 		}
+	}
+
+	table {
+		width: 50%;
+		border-collapse: collapse;
+		margin: 50px auto;
+		text-align: center;
+		font-size: 18px;
+		font-family: Arial, sans-serif;
+	}
+	th,
+	td {
+		border: 1px solid #ddd;
+		padding: 10px;
+	}
+	th {
+		background-color: #f2f2f2;
+	}
+	.ok {
+		background-color: #90ee90; /* Light green */
+	}
+	.think {
+		background-color: #ffeb3b; /* Yellow */
+	}
+	.stop {
+		background-color: #f44336; /* Red */
 	}
 </style>
