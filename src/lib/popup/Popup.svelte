@@ -4,7 +4,9 @@
 
 	export let type: "hover" | "click" | "contextmenu" | "manual" = "hover";
 	export let open = false;
+	export let delay = 0;
 
+	let delayedOpen = false;
 	let summaryContainer: HTMLSpanElement | undefined;
 	let contentContainer: HTMLDivElement | undefined;
 	let focused = false;
@@ -29,10 +31,21 @@
 		zIndex = PopupHelper.findHighestZIndex() + 1;
 		calculateBounds();
 		open = true;
+		delayedOpen = true;
 	}
 
 	export function close(): void {
 		open = false;
+		if (delay > 0) {
+			window.clearTimeout(closeTimeout);
+			closeTimeout = window.setTimeout(() => {
+				delayedOpen = false;
+				zIndex = 0;
+			}, delay);
+			return;
+		}
+
+		delayedOpen = false;
 		zIndex = 0;
 	}
 
@@ -82,6 +95,7 @@
 					left = bounds.left + "px";
 					zIndex = PopupHelper.findHighestZIndex() + 1;
 					open = true;
+					delayedOpen = true;
 				} else {
 					close();
 				}
@@ -94,6 +108,7 @@
 			left = e.clientX + window.scrollX + "px";
 			top = e.clientY + window.scrollY + "px";
 			open = true;
+			delayedOpen = true;
 		}
 	}
 
@@ -137,7 +152,7 @@
 </span>
 <div
 	class="content-container"
-	class:hidden={!open}
+	class:hidden={!open && !delayedOpen}
 	bind:this={contentContainer}
 	tabindex="-1"
 	role="button"
@@ -148,7 +163,7 @@
 	on:mouseenter={summaryHoverIn}
 	on:focusout={summaryHoverOut}
 	on:mouseleave={summaryHoverOut}>
-	<slot {open} {close} />
+	<slot {open} {close} {delay} />
 </div>
 
 <style lang="scss">

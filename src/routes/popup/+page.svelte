@@ -70,7 +70,7 @@
 <h1>Dialog</h1>
 
 <p>
-	This aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa is <Popup type="click" let:open
+	This aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa is <Popup type="hover" let:open delay={300}
 		><svelte:fragment slot="summary">something</svelte:fragment>
 		{#if open}<div transition:fly class="popup">This is a tooltip wee woo wee woo wee woo</div>{/if}</Popup>
 </p>
