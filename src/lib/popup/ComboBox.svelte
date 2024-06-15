@@ -3,36 +3,45 @@
 <script lang="ts" context="module">
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
-	export function makeDefaultSearcher<T>(pool: T[], threshold = 3): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
+	function dynamicThreshold(distances: number[], numClosest: number) {
+		// Sort distances and select the closest 'numClosest' distances
+		const sortedDistances = [...distances].sort((a, b) => a - b);
+		const closestDistances = sortedDistances.slice(0, numClosest);
+
+		// Calculate the average of the closest distances
+		// Set the threshold to be slightly more selective, e.g., average of closest distances
+		return closestDistances.reduce((sum, val) => sum + val, 0) / closestDistances.length;
+	}
+
+	export function makeDefaultSearcher<T>(pool: T[], numClosest = 3): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
 		return (inputs) => {
-			let hasExactMatch: Partial<Record<keyof T | "default", boolean>> = Object.keys(inputs).reduce((prev, curr) => ({ ...prev, [curr]: false }), {});
-			const firstRound = pool.filter((item) => {
-				if ((Object.keys(hasExactMatch) as (keyof T | "default")[]).every((name) => hasExactMatch[name])) {
-					return false;
+			const distances = pool.map((item) => {
+				let a = "";
+				let b = "";
+				let bFull = "";
+				for (const name of Object.keys(inputs) as (keyof T | "default")[]) {
+					const inputVal = `${inputs[name]}`.toLowerCase();
+					const itemVal = (name === "default" ? `${item}` : `${item[name]}`).toLowerCase();
+					a += inputVal;
+
+					const index = itemVal.indexOf(inputVal);
+					if (index !== -1) b += itemVal.substring(index, index + inputVal.length);
+					else b += itemVal.substring(0, inputVal.length);
+
+					bFull += itemVal;
 				}
 
-				const score = (Object.keys(inputs) as (keyof T | "default")[]).reduce((prev, curr) => {
-					if (!inputs[curr]) {
-						return 0;
-					}
-
-					let score = 0;
-					if (curr === "default") score = prev + PopupHelper.likenessScore(inputs[curr]!, `${item}`);
-					else score = prev + PopupHelper.likenessScore(inputs[curr]!, `${item[curr]}`);
-
-					hasExactMatch[curr] = score === -1;
-
-					return score;
-				}, 0);
-
-				return score < threshold;
+				let score: number;
+				if (a === bFull) {
+					score = -1;
+				} else {
+					score = PopupHelper.levenshteinDistance(a, b);
+				}
+				return score;
 			});
 
-			if ((Object.keys(hasExactMatch) as (keyof T | "default")[]).every((name) => hasExactMatch[name])) {
-				return pool;
-			}
-
-			return firstRound;
+			const threshold = dynamicThreshold(distances, numClosest);
+			return pool.filter((_, i) => distances[i] <= threshold);
 		};
 	}
 </script>
@@ -147,7 +156,7 @@
 				optionElements.splice(optionElements.indexOf(node.parentElement), 1);
 				node.parentElement.removeEventListener("click", optionClick);
 			}
-		} else if (node instanceof HTMLInputElement) {
+		} else if (node instanceof HTMLInputElement && (!optionElements.length || !optionElements[optionElements.length - 1].parentElement?.contains(node))) {
 			const name = node.name ? (node.name as keyof T) : "default";
 			if (act === "added") {
 				node.addEventListener("input", input);
@@ -296,7 +305,7 @@
 	}
 
 	function onClick(): void {
-		if (closeOnNextClick) {
+		if (closeOnNextClick && !multiple) {
 			open = false;
 		} else if (!open) {
 			open = true;

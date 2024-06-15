@@ -37,6 +37,7 @@
 	}
 
 	function summaryHoverIn(e: FocusEvent | MouseEvent): void {
+		if (type === "manual") return;
 		if (e instanceof FocusEvent) focused = true;
 		window.clearTimeout(closeTimeout);
 		if (type !== "hover" || open) return;
@@ -44,12 +45,14 @@
 	}
 
 	function summaryHoverOut(e: FocusEvent | MouseEvent): void {
+		if (type === "manual") return;
 		if (e instanceof FocusEvent) focused = false;
 		if (type !== "hover" || !open || focused) return;
 		closeTimeout = window.setTimeout(() => close(), 300);
 	}
 
 	function summaryClick(e: MouseEvent | KeyboardEvent): void {
+		if (type === "manual") return;
 		if (type === "contextmenu" && e instanceof KeyboardEvent) {
 			summaryContextmenu(e);
 			return;
@@ -102,13 +105,14 @@
 	}
 
 	function documentClick(e: MouseEvent): void {
+		if (type === "manual") return;
 		if (!PopupHelper.isOutsideClick(e, summaryContainer)) return;
 		if (!PopupHelper.isOutsideClick(e, contentContainer)) return;
 		close();
 	}
 
 	function documentKeydown(e: KeyboardEvent) {
-		if (e.key === "Escape" && open) {
+		if (e.key === "Escape" && open && type !== "manual") {
 			e.preventDefault();
 			close();
 		}

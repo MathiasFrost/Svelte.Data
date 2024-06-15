@@ -145,17 +145,6 @@ export class PopupHelper {
 		return null;
 	}
 
-	/** @returns How like string `a` is to string `b`. -1 for exact match */
-	public static likenessScore(a: string, b: string): number {
-		// Bonus for exact matches
-		if (a.toLowerCase() === b.toLowerCase()) {
-			return -1;
-		}
-
-		const score = this.levenshteinDistance(a, b.substring(0, a.length));
-		return Math.max(score, 0);
-	}
-
 	/** @returns The Levenshtein distance between two strings */
 	public static levenshteinDistance(a: string, b: string): number {
 		const matrix: number[][] = [];
