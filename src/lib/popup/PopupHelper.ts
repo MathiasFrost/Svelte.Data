@@ -2,6 +2,7 @@
 export class PopupHelper {
 	/** TODOC */
 	public static findHighestZIndex(): number {
+		if (typeof window === "undefined") return 0;
 		const elements = document.querySelectorAll("*");
 		let highestZ = 0;
 
@@ -12,6 +13,7 @@ export class PopupHelper {
 			}
 		});
 
+		console.log(highestZ);
 		return highestZ;
 	}
 

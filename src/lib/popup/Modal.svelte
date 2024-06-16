@@ -1,6 +1,8 @@
 <svelte:options accessors={true} />
 
 <script lang="ts">
+	import { PopupHelper } from "$lib/popup/PopupHelper.js";
+
 	/** TODOC */
 	export let open = false;
 
@@ -30,10 +32,16 @@
 </script>
 
 {#if open}
-	<div class="modal-backdrop" on:click={() => (open = dismissible ? false : open)} role="button" tabindex="-1" on:keypress={keypress} />
-	<div class="modal-container">
+	<div
+		class="modal-backdrop"
+		on:click={() => (open = dismissible ? false : open)}
+		role="button"
+		tabindex="-1"
+		on:keypress={keypress}
+		style:z-index={PopupHelper.findHighestZIndex() + 1} />
+	<div class="modal-container" style:z-index={PopupHelper.findHighestZIndex() + 1}>
 		<div class="modal {cssClass}">
-			<slot />
+			<slot {open} {close} />
 		</div>
 	</div>
 {/if}

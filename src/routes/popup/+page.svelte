@@ -2,6 +2,7 @@
 	import Popup from "$lib/popup/Popup.svelte";
 	import ComboBox, { makeDefaultSearcher, type Inputs, type KeyWithDefault } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
+	import Modal from "$lib/popup/Modal.svelte";
 
 	interface Option {
 		readonly id: number;
@@ -187,6 +188,14 @@
 	<input type="text" name="testa" />
 	<button type="submit">a</button>
 </form>
+
+<nav style="background-color: #222222; position: fixed; top: 0; width: 100vw; margin: 0; left: 0;">
+	<p>hahaha</p>
+</nav>
+
+<Modal open>
+	<div>Test</div>
+</Modal>
 
 <ComboBox let:open>
 	<Popup type="manual" {open}>
