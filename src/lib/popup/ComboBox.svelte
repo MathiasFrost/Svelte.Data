@@ -64,8 +64,8 @@
 	export let multiple = false;
 	export let controls = "";
 	export let items: (T | Inputs<T>)[] = [];
-	export let scrollBehaviour: ScrollBehavior = "smooth";
-	export let scrollBlock: ScrollLogicalPosition = "center";
+	export let scrollBehaviour: "auto" | "instant" | "smooth" = "smooth";
+	export let scrollBlock: "center" | "end" | "nearest" | "start" = "center";
 
 	let inputs: Inputs<T> = {};
 	let container: HTMLDivElement | undefined;
