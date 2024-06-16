@@ -1,5 +1,7 @@
+<svelte:options accessors={true} />
+
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
 	export let type: "hover" | "click" | "contextmenu" | "manual" = "hover";
@@ -17,6 +19,7 @@
 	let contents = false;
 	let openedOnce = false;
 	let mounted = false;
+	let lastFocused: HTMLElement | null;
 
 	onMount(() => {
 		contents = !!summaryContainer?.children.length;
@@ -32,6 +35,7 @@
 		calculateBounds();
 		open = true;
 		delayedOpen = true;
+		focusFirst();
 	}
 
 	export function close(): void {
@@ -41,12 +45,14 @@
 			closeTimeout = window.setTimeout(() => {
 				delayedOpen = false;
 				zIndex = 0;
+				lastFocused?.focus();
 			}, delay);
 			return;
 		}
 
 		delayedOpen = false;
 		zIndex = 0;
+		lastFocused?.focus();
 	}
 
 	function summaryHoverIn(e: FocusEvent | MouseEvent): void {
@@ -96,6 +102,7 @@
 					zIndex = PopupHelper.findHighestZIndex() + 1;
 					open = true;
 					delayedOpen = true;
+					focusFirst();
 				} else {
 					close();
 				}
@@ -109,6 +116,7 @@
 			top = e.clientY + window.scrollY + "px";
 			open = true;
 			delayedOpen = true;
+			focusFirst();
 		}
 	}
 
@@ -131,6 +139,16 @@
 			e.preventDefault();
 			close();
 		}
+	}
+
+	async function focusFirst(): Promise<void> {
+		if (typeof window === "undefined") return;
+
+		const candidate = document.activeElement;
+		lastFocused = candidate instanceof HTMLElement ? candidate : null;
+
+		await tick();
+		PopupHelper.firstFocusable(contentContainer)?.focus();
 	}
 </script>
 
