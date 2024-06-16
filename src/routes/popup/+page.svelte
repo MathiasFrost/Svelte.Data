@@ -188,6 +188,17 @@
 	<button type="submit">a</button>
 </form>
 
+<ComboBox let:open>
+	<Popup type="manual" {open}>
+		<input slot="summary" readonly />
+		<ul class="popup">
+			{#each [new Date(), new Date(new Date().getHours() + 1)] as dates}
+				<li><time datetime={dates.toISOString()}>{dates.toLocaleTimeString()}</time></li>
+			{/each}
+		</ul>
+	</Popup>
+</ComboBox>
+
 <style lang="scss">
 	.popup {
 		background-color: #222222;

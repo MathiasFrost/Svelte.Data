@@ -1,8 +1,6 @@
 <svelte:options accessors={true} />
 
 <script lang="ts">
-	import { portalIn } from "$lib/popup/portal.js";
-
 	/** TODOC */
 	export let open = false;
 
@@ -32,12 +30,10 @@
 </script>
 
 {#if open}
-	<div use:portalIn={"modal"}>
-		<div class="modal-backdrop" on:click={() => (open = dismissible ? false : open)} role="button" tabindex="-1" on:keypress={keypress} />
-		<div class="modal-container">
-			<div class="modal {cssClass}">
-				<slot />
-			</div>
+	<div class="modal-backdrop" on:click={() => (open = dismissible ? false : open)} role="button" tabindex="-1" on:keypress={keypress} />
+	<div class="modal-container">
+		<div class="modal {cssClass}">
+			<slot />
 		</div>
 	</div>
 {/if}

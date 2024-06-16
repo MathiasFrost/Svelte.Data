@@ -89,7 +89,7 @@
 		if (!container) return;
 		observer = new MutationObserver(mutationCallback);
 		observer.observe(container, { subtree: true, childList: true });
-		const existing = container.querySelectorAll("input, data");
+		const existing = container.querySelectorAll("input, data, time");
 		for (const element of existing) {
 			handleElement(element, "added");
 		}
@@ -141,7 +141,7 @@
 
 		if (anyAdded || anyRemoved) {
 			const valStr = value ?? "";
-			const selected = container?.querySelector<HTMLDataElement>(`data[value="${valStr}"]`)?.parentElement;
+			const selected = container?.querySelector(`data[value="${valStr}"],time[datetime="${valStr}"]`)?.parentElement;
 			if (selected) {
 				const newIndex = optionElements.indexOf(selected);
 				if (newIndex === -1) index = null;
@@ -151,7 +151,7 @@
 	}
 
 	function handleElement(node: Node, act: "added" | "removed"): void {
-		if (node instanceof HTMLDataElement && node.parentElement instanceof HTMLElement) {
+		if ((node instanceof HTMLDataElement || node instanceof HTMLTimeElement) && node.parentElement instanceof HTMLElement) {
 			if (act === "added") {
 				optionElements.push(node.parentElement);
 				node.parentElement.addEventListener("click", optionClick);
@@ -190,14 +190,26 @@
 	}
 
 	function selectElement(element: HTMLElement): void {
-		value = element.querySelector<HTMLDataElement>("data")?.value ?? "";
+		const dataOrTime = element.querySelector("data, time");
+		if (dataOrTime instanceof HTMLDataElement) {
+			value = dataOrTime.value;
+		} else if (dataOrTime instanceof HTMLTimeElement) {
+			value = dataOrTime.dateTime;
+		} else {
+			value = "";
+		}
 
 		const options = optionElements
 			.map((el) => ({ el: el, data: el.querySelector<HTMLDataElement>("data")! }))
 			.filter(({ data }) => data && data.value !== toggle);
 
 		const getRes = (element: HTMLElement): { res: Inputs<T>; el: T | undefined } => {
-			const newIndex = options.findIndex((pair) => pair.data.value === element.querySelector<HTMLDataElement>("data")?.value);
+			const newIndex = options.findIndex((pair) => {
+				const dataOrTime = element.querySelector("data, time");
+				if (dataOrTime instanceof HTMLDataElement) return pair.data.value === dataOrTime.value;
+				if (dataOrTime instanceof HTMLTimeElement) return pair.data.value === dataOrTime.dateTime;
+				return false;
+			});
 
 			if (newIndex !== -1) {
 				index = newIndex;
@@ -399,7 +411,12 @@
 
 	function allSelected(options: HTMLElement[], values: string[]): boolean {
 		return options
-			.map((element) => element.querySelector<HTMLDataElement>("data")?.value ?? "")
+			.map((element) => {
+				const dataOrTime = element.querySelector("data, time");
+				if (dataOrTime instanceof HTMLDataElement) return dataOrTime.value;
+				if (dataOrTime instanceof HTMLTimeElement) return dataOrTime.dateTime;
+				return "";
+			})
 			.filter((val) => val !== toggle)
 			.every((val) => values.includes(val));
 	}
