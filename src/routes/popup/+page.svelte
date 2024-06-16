@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Popup from "$lib/popup/Popup.svelte";
-	import ComboBox, { makeDefaultSearcher } from "$lib/popup/ComboBox.svelte";
+	import ComboBox, { makeDefaultSearcher, type Inputs, type KeyWithDefault } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
 
 	interface Option {
@@ -52,8 +52,8 @@
 
 	const pool = randomOptions(100);
 
-	async function simulateSearch(inputs: Record<string, string>, signal: AbortSignal): Promise<Option[]> {
-		if (!Object.keys(inputs).some((key) => !!inputs[key])) return [];
+	async function simulateSearch(inputs: Inputs<Option>, signal: AbortSignal): Promise<Option[]> {
+		if (!(Object.keys(inputs) as KeyWithDefault<Option>[]).some((key) => !!inputs[key])) return [];
 
 		await new Promise((resolve) => window.setTimeout(resolve, 2_000));
 		if (signal.aborted) throw new Error("Aborted");
@@ -76,9 +76,9 @@
 </p>
 
 <form on:submit|preventDefault={(e) => console.log(new FormData(e.currentTarget))}>
-	<ComboBox name="test" search={makeDefaultSearcher(users)} let:open let:result multiple let:values let:valuesText>
+	<ComboBox name="test" search={makeDefaultSearcher(users)} let:open let:result multiple let:values let:items>
 		<Popup type="manual" {open}>
-			<input slot="summary" readonly value={valuesText.map((o) => o["default"]).join(", ")} />
+			<input slot="summary" readonly value={items.map((o) => o.name).join(", ")} />
 			<ul class="popup">
 				<li><data value="" /></li>
 				{#each result as user}

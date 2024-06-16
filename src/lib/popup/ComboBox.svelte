@@ -3,6 +3,9 @@
 <script lang="ts" context="module">
 	import { PopupHelper } from "$lib/popup/PopupHelper.js";
 
+	export type KeyWithDefault<T> = keyof T | "default";
+	export type Inputs<T> = Partial<Record<KeyWithDefault<T>, string>>;
+
 	function dynamicThreshold(distances: number[], numClosest: number) {
 		// Sort distances and select the closest 'numClosest' distances
 		const sortedDistances = [...distances].sort((a, b) => a - b);
@@ -13,13 +16,13 @@
 		return closestDistances.reduce((sum, val) => sum + val, 0) / closestDistances.length;
 	}
 
-	export function makeDefaultSearcher<T>(pool: T[], numClosest = 3): (inputs: Partial<Record<keyof T | "default", string>>) => T[] {
+	export function makeDefaultSearcher<T>(pool: T[], numClosest = 3): (inputs: Inputs<T>) => T[] {
 		return (inputs) => {
 			const distances = pool.map((item) => {
 				let a = "";
 				let b = "";
 				let bFull = "";
-				for (const name of Object.keys(inputs) as (keyof T | "default")[]) {
+				for (const name of Object.keys(inputs) as KeyWithDefault<T>[]) {
 					const inputVal = `${inputs[name]}`.toLowerCase();
 					const itemVal = (name === "default" ? `${item}` : `${item[name]}`).toLowerCase();
 					a += inputVal;
@@ -50,19 +53,19 @@
 	import { onDestroy, onMount } from "svelte";
 	import { indefinitePromise } from "$lib/utils/async.js";
 
-	type Inputs = Partial<Record<keyof T | "default", string>>;
+	const toggle = "__TOGGLE__";
 
 	export let value = "";
 	export let name = "";
 	export let defer = false;
-	export let search: ((inputs: Inputs, signal: AbortSignal) => T[] | Promise<T[]>) | undefined = void 0;
+	export let search: ((inputs: Inputs<T>, signal: AbortSignal) => T[] | Promise<T[]>) | undefined = void 0;
 	export let delay: number = 0;
 	export let values: string[] = [];
 	export let multiple = false;
 	export let controls = "";
-	export let valuesText: Inputs[] = [];
+	export let items: (T | Inputs<T>)[] = [];
 
-	let inputs: Inputs = {};
+	let inputs: Inputs<T> = {};
 	let container: HTMLDivElement | undefined;
 	let open = false;
 	let observer: MutationObserver | null = null;
@@ -76,7 +79,7 @@
 	let result: T[] = [];
 	let promise: Promise<T[]> = indefinitePromise<T[]>();
 
-	const inputElements: Partial<Record<keyof T | "default", HTMLInputElement>> = {};
+	const inputElements: Partial<Record<KeyWithDefault<T>, HTMLInputElement>> = {};
 
 	$: debouncedUpdateOptions = debounce(() => updateOptions(), delay);
 
@@ -91,7 +94,7 @@
 			handleElement(element, "added");
 		}
 
-		for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
+		for (const name of Object.keys(inputElements) as KeyWithDefault<T>[]) {
 			inputs[name] = inputElements[name]!.value;
 		}
 
@@ -188,41 +191,69 @@
 
 	function selectElement(element: HTMLElement): void {
 		value = element.querySelector<HTMLDataElement>("data")?.value ?? "";
-		index = optionElements.indexOf(element);
 
-		const offset = optionElements.length - result.length;
-		const realIndex = index - offset;
+		const options = optionElements
+			.map((el) => ({ el: el, data: el.querySelector<HTMLDataElement>("data")! }))
+			.filter(({ data }) => data && data.value !== toggle);
 
-		const el = result[realIndex];
-		const res: Inputs = {};
-		if (!Object.keys(inputElements).some((name) => name !== "default")) {
-			if (inputElements["default"]) res["default"] = element.textContent ?? "";
-		} else if (typeof el === "undefined") {
-			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
-				if (name === "default") res[name] = element.textContent ?? "";
-				else res[name] = element.textContent ?? "";
+		const getRes = (element: HTMLElement): { res: Inputs<T>; el: T | undefined } => {
+			const newIndex = options.findIndex((pair) => pair.data.value === element.querySelector<HTMLDataElement>("data")?.value);
+
+			if (newIndex !== -1) {
+				index = newIndex;
+			}
+
+			const el = typeof index === "number" ? result[index] : void 0;
+			const res: Inputs<T> = {};
+
+			if (!Object.keys(inputElements).some((name) => name !== "default")) {
+				if (inputElements["default"]) res["default"] = element.textContent ?? "";
+			} else if (typeof el === "undefined") {
+				for (const name of Object.keys(inputElements) as KeyWithDefault<T>[]) {
+					if (name === "default") res[name] = element.textContent ?? "";
+					else res[name] = element.textContent ?? "";
+				}
+			} else {
+				for (const name of Object.keys(inputElements) as KeyWithDefault<T>[]) {
+					if (name === "default") res[name] = `${el ?? ""}`;
+					else res[name] = `${el?.[name] ?? ""}`;
+				}
+			}
+
+			return { res, el };
+		};
+
+		const { res, el } = getRes(element);
+		if (!multiple) {
+			for (const name of Object.keys(res) as KeyWithDefault<T>[]) {
+				if (name in inputElements) inputElements[name]!.value = res[name]!;
 			}
 		} else {
-			for (const name of Object.keys(inputElements) as (keyof T | "default")[]) {
-				if (name === "default") res[name] = `${el ?? ""}`;
-				else res[name] = `${el?.[name] ?? ""}`;
-			}
-		}
-
-		for (const name of Object.keys(res) as (keyof T | "default")[]) {
-			if (name in inputElements) inputElements[name]!.value = res[name]!;
-		}
-
-		if (multiple) {
-			if (!values.includes(value)) {
+			if (value === toggle) {
+				const newValues = options.map((pair) => pair.data.value ?? "").filter((val) => !!val);
+				if (newValues.every((val) => values.includes(val))) {
+					const resVal: string[] = [];
+					const resItem: (T | Inputs<T>)[] = [];
+					for (let i = 0; i < values.length; i++) {
+						if (newValues.includes(values[i])) continue;
+						resVal.push(values[i]);
+						resItem.push(items[i]);
+					}
+					values = resVal;
+					items = resItem;
+				} else {
+					values = values.concat(newValues);
+					items = items.concat(options.map((pair) => getRes(pair.el)).map((pair) => pair.el ?? pair.res));
+				}
+			} else if (!values.includes(value)) {
 				values = values.concat(value);
-				valuesText = valuesText.concat({ ...res });
+				items = el ? items.concat(el) : items.concat({ ...res });
 			} else {
 				const index = values.indexOf(value);
 				values.splice(index, 1);
-				valuesText.splice(index, 1);
+				items.splice(index, 1);
 				values = values;
-				valuesText = valuesText;
+				items = items;
 			}
 		}
 	}
@@ -233,6 +264,7 @@
 			prevHighlighted = null;
 			return;
 		}
+
 		optionElements[index].classList.add("highlighted");
 		prevHighlighted = optionElements[index];
 	}
@@ -365,11 +397,46 @@
 		updateOptions();
 	}
 
-	function isAllToggled(options: HTMLElement[], values: string[]): boolean {
+	function allSelected(options: HTMLElement[], values: string[]): boolean {
 		return options
 			.map((element) => element.querySelector<HTMLDataElement>("data")?.value ?? "")
-			.filter((val) => !!val)
+			.filter((val) => val !== toggle)
 			.every((val) => values.includes(val));
+	}
+
+	interface Selection<T> {
+		readonly selected: {
+			/** If `<data>` elements are created dynamically from `search` */
+			asT(): T[];
+
+			/** If `<data>` elements are created manually with no matching element from `search` */
+			asInputs(): Inputs<T>[];
+		};
+		readonly all: boolean;
+		deselect(value: string): void;
+		readonly toggle: string;
+	}
+
+	function makeSelection(its: (T | Inputs<T>)[], options: HTMLElement[], vals: string[]): Selection<T> {
+		return {
+			toggle,
+			all: allSelected(options, vals),
+			deselect(value: string) {
+				const index = values.indexOf(value);
+				values.splice(index, 1);
+				items.splice(index, 1);
+				values = values;
+				items = items;
+			},
+			selected: {
+				asT(): T[] {
+					return its as T[];
+				},
+				asInputs(): Inputs<T>[] {
+					return its as Inputs<T>[];
+				}
+			}
+		};
 	}
 </script>
 
@@ -397,5 +464,5 @@
 	on:click={onClick}
 	on:focusin={focusIn}
 	on:focusout={focusOut}>
-	<slot {result} {open} {value} {promise} {values} {valuesText} all={isAllToggled(optionElements, values)} />
+	<slot {result} {open} {value} {promise} {values} {items} selection={makeSelection(items, optionElements, values)} />
 </div>

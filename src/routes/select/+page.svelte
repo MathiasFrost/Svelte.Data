@@ -99,27 +99,27 @@
 		bind:this={select2}
 		search={makeDefaultSearcher(users)}
 		values={["3", "1"]}
-		valuesText={[
+		items={[
 			{ name: "Mathias", username: "ML" },
 			{ name: "Josefine", username: "JMAL" }
 		]}
 		multiple
 		let:open
 		let:values
-		let:valuesText
+		let:items
 		let:result
-		let:all>
+		let:selection>
 		{result.length}
 		<Popup type="manual" {open}>
 			<div style="width: 100%;" slot="summary">
-				<p>Selected: {valuesText.map((user) => user.username).join(", ")} {values.length} {JSON.stringify(valuesText)}</p>
+				<p>Selected: {items.map((user) => user.username).join(", ")} {values.length}</p>
 				<input type="search" style="width: 100%" placeholder="Employee" name="name" />
 			</div>
 			<ul style="list-style: none; padding: 0;" class="selector">
 				<li>
-					<data value="[TOGGLE]" />
-					<input tabindex="-1" type="checkbox" checked={all} />
-					{#if all}Uncheck all{:else}Check all{/if} ({result.length})
+					<data value={selection.toggle} />
+					<input tabindex="-1" type="checkbox" checked={selection.all} />
+					{#if selection.all}Uncheck all{:else}Check all{/if} ({result.length})
 				</li>
 				{#each result as user}
 					<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={values.includes(user.id.toString())} />{user.name}</li>
@@ -130,51 +130,61 @@
 	<button type="submit">submit</button>
 </form>
 
-<!--<h2>Multiple with simple display</h2>-->
-<!--<form on:submit|preventDefault={onSubmit} style="width: 100%;">-->
-<!--	<ComboBox name="users" bind:this={select2} search={makeDefaultSearcher(users)} values={["1", "3"]} multiple let:result let:open let:valuesText let:all>-->
-<!--		<Popup type="manual" {open}>-->
-<!--			<svelte:fragment slot="summary">-->
-<!--				<div role="listbox" class="input" tabindex="0">-->
-<!--					{JSON.stringify(valuesText)}-->
-<!--					&lt;!&ndash;{#each values.map((value, i) => ({ value, text: valuesText[i] })) as { value, text }}&ndash;&gt;-->
-<!--					&lt;!&ndash;						<button><data {value}>{text.username}</data></button>&ndash;&gt;-->
-<!--					&lt;!&ndash;					{/each}&ndash;&gt;-->
-<!--				</div>-->
-<!--			</svelte:fragment>-->
-<!--			<div class="selector">-->
-<!--				<input type="search" placeholder="Employee" name="name" />-->
-<!--				<input type="search" placeholder="Username" name="username" />-->
-<!--				<ul style="list-style: none; padding: 0;">-->
-<!--					<li>-->
-<!--						<data value="[TOGGLE]" />-->
-<!--						<input tabindex="-1" type="checkbox" checked={all} />-->
-<!--						{#if all}Uncheck all{:else}Check all{/if} ({result.length})-->
-<!--					</li>-->
-<!--					{#each result as user}-->
-<!--						<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={result.includes(user)} />{user.name}</li>-->
-<!--					{/each}-->
-<!--				</ul>-->
-<!--			</div>-->
-<!--		</Popup>-->
-<!--	</ComboBox>-->
-<!--	<button type="submit">submit</button>-->
-<!--</form>-->
+<h2>Multiple with simple display</h2>
+<form on:submit|preventDefault={onSubmit} style="width: 100%;">
+	<ComboBox
+		name="users"
+		bind:this={select2}
+		search={makeDefaultSearcher(users)}
+		values={["1", "3"]}
+		items={[
+			{ id: 1, name: "Mathias", username: "ML" },
+			{ id: 3, name: "Josefine", username: "JMAL" }
+		]}
+		multiple
+		let:result
+		let:open
+		let:selection
+		let:values>
+		<Popup type="manual" {open}>
+			<div slot="summary" role="listbox" class="input" tabindex="0">
+				{#each selection.selected.asT() as user}
+					<button on:click={() => selection.deselect(user.id?.toString() ?? "")}>{user.username}</button>
+				{/each}
+			</div>
+			<div class="selector">
+				<input type="search" placeholder="Employee" name="name" />
+				<input type="search" placeholder="Username" name="username" />
+				<ul style="list-style: none; padding: 0;">
+					<li>
+						<data value={selection.toggle} />
+						<input tabindex="-1" type="checkbox" checked={selection.all} />
+						{#if selection.all}Uncheck all{:else}Check all{/if} ({result.length})
+					</li>
+					{#each result as user}
+						<li><data value={user.id} /><input tabindex="-1" type="checkbox" checked={values.includes(user.id.toString())} />{user.name}</li>
+					{/each}
+				</ul>
+			</div>
+		</Popup>
+	</ComboBox>
+	<button type="submit">submit</button>
+</form>
 
-<!--<h2>Stylized select</h2>-->
-<!--<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">-->
-<!--	<ComboBox name="user" value={"3"} let:open>-->
-<!--		<Popup type="manual" {open}>-->
-<!--			<input slot="summary" type="text" readonly style="width: 100%;" name="name" />-->
-<!--			<ul style="list-style: none; padding: 0;" class="selector">-->
-<!--				<li><data value="" />&nbsp;</li>-->
-<!--				{#each users as user}-->
-<!--					<li><data value={user.id} />{user.name}</li>-->
-<!--				{/each}-->
-<!--			</ul>-->
-<!--		</Popup>-->
-<!--	</ComboBox>-->
-<!--</form>-->
+<h2>Stylized select</h2>
+<form on:submit|preventDefault={onSubmit} class="dropdown right-dropdown" style="width: 100%;">
+	<ComboBox name="user" value={"3"} let:open>
+		<Popup type="manual" {open}>
+			<input slot="summary" type="text" readonly style="width: 100%;" name="name" />
+			<ul style="list-style: none; padding: 0;" class="selector">
+				<li><data value="" />&nbsp;</li>
+				{#each users as user}
+					<li><data value={user.id} />{user.name}</li>
+				{/each}
+			</ul>
+		</Popup>
+	</ComboBox>
+</form>
 
 <style>
 	:global(.highlighted) {
@@ -186,6 +196,6 @@
 		border: 1px solid crimson;
 		background-color: #242425;
 		overflow-y: auto;
-		max-height: 4rem !important;
+		max-height: 6rem !important;
 	}
 </style>
