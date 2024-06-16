@@ -64,6 +64,8 @@
 	export let multiple = false;
 	export let controls = "";
 	export let items: (T | Inputs<T>)[] = [];
+	export let scrollBehaviour: ScrollBehavior = "smooth";
+	export let scrollBlock: ScrollLogicalPosition = "center";
 
 	let inputs: Inputs<T> = {};
 	let container: HTMLDivElement | undefined;
@@ -279,6 +281,9 @@
 
 		optionElements[index].classList.add("highlighted");
 		prevHighlighted = optionElements[index];
+
+		const scrollBox = PopupHelper.firstScrollBox(optionElements[index]);
+		PopupHelper.ensureElementInView(scrollBox, optionElements[index], scrollBehaviour, scrollBlock);
 	}
 
 	function keydown(e: KeyboardEvent): void {

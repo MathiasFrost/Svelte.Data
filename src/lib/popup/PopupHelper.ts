@@ -147,6 +147,28 @@ export class PopupHelper {
 		return null;
 	}
 
+	/** TODOC */
+	static ensureElementInView(
+		scrollBox: Element | null,
+		element: Element | null,
+		behavior: ScrollBehavior = "smooth",
+		block: ScrollLogicalPosition = "center"
+	): void {
+		if (!scrollBox || !element) return;
+
+		// Get the bounding client rectangle of the container and the element
+		const containerRect = scrollBox.getBoundingClientRect();
+		const elementRect = element.getBoundingClientRect();
+
+		// Determine whether the element is fully within the visible bounds of the container
+		const isCompletelyVisible = elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+
+		// If the element is not completely visible, scroll smoothly to it
+		if (!isCompletelyVisible) {
+			element.scrollIntoView({ behavior, block });
+		}
+	}
+
 	/** @returns The Levenshtein distance between two strings */
 	public static levenshteinDistance(a: string, b: string): number {
 		const matrix: number[][] = [];
