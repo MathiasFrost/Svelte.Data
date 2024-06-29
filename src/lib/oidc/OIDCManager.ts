@@ -1,5 +1,5 @@
 import type { OIDCConfigurations } from "$lib/oidc/OIDCConfiguration.js";
-import { indefinitePromise } from "$lib/async/utility.js";
+import { indefinitePromise } from "$lib/utils/async.js";
 import type { Fetch } from "$lib/http/Fetch.js";
 import type { Preprocess } from "$lib/http/Preprocess.js";
 import { OIDCConfigurationProvider } from "$lib/oidc/OIDCConfigurationProvider.js";

@@ -1,4 +1,4 @@
-import { ensureObject, ensureString } from "$lib/types/unknown.js";
+import { ensureObject, ensureString } from "$lib/utils/unknown.js";
 import type { Fetch } from "$lib/http/Fetch.js";
 
 /** Class for managing OIDC configurations */

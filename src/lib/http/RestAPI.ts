@@ -34,7 +34,7 @@ export class RestAPI {
 	public constructor(baseAddress = "", options: Partial<HTTPClientOptions> = {}) {
 		try {
 			this.baseAddress = new URL(baseAddress);
-		} catch (e) {
+		} catch {
 			console.warn("Base address could not be constructed from constructor");
 			this.baseAddress = baseAddress;
 		}

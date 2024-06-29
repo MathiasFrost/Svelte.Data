@@ -1,6 +1,23 @@
 /** @static */
 export class PopupHelper {
 	/** TODOC */
+	public static findHighestZIndex(): number {
+		if (typeof window === "undefined") return 0;
+		const elements = document.querySelectorAll("*");
+		let highestZ = 0;
+
+		elements.forEach((el) => {
+			const zIndex = parseInt(window.getComputedStyle(el).zIndex, 10);
+			if (!isNaN(zIndex)) {
+				highestZ = Math.max(highestZ, zIndex);
+			}
+		});
+
+		console.log(highestZ);
+		return highestZ;
+	}
+
+	/** TODOC */
 	public static isOutsideClick(e: MouseEvent, bounds: Node | null | undefined): boolean {
 		// If screen doesn't have any pixels, fallback to contains
 		if (e.screenX === 0 && e.screenY === 0) {
@@ -45,13 +62,21 @@ export class PopupHelper {
 	/** TODOC */
 	public static getEffectiveElements(element: Element | null): Element[] {
 		if (!element) return [];
-		if (window.getComputedStyle(element).display === "contents") {
+
+		const computedStyle = window.getComputedStyle(element);
+		if (computedStyle.display === "contents") {
+			let effectiveElements: Element[] = [];
 			const childElements = Array.from(element.children);
+
 			if (childElements.length === 0) {
 				return [element];
 			}
 
-			return childElements;
+			for (const child of childElements) {
+				effectiveElements = effectiveElements.concat(this.getEffectiveElements(child));
+			}
+
+			return effectiveElements;
 		} else {
 			return [element];
 		}
@@ -120,5 +145,57 @@ export class PopupHelper {
 			startingPoint = startingPoint.parentElement;
 		}
 		return null;
+	}
+
+	/** TODOC */
+	static ensureElementInView(
+		scrollBox: Element | null,
+		element: Element | null,
+		behavior: ScrollBehavior = "smooth",
+		block: ScrollLogicalPosition = "center"
+	): void {
+		if (!scrollBox || !element) return;
+
+		// Get the bounding client rectangle of the container and the element
+		const containerRect = scrollBox.getBoundingClientRect();
+		const elementRect = element.getBoundingClientRect();
+
+		// Determine whether the element is fully within the visible bounds of the container
+		const isCompletelyVisible = elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+
+		// If the element is not completely visible, scroll smoothly to it
+		if (!isCompletelyVisible) {
+			element.scrollIntoView({ behavior, block });
+		}
+	}
+
+	/** @returns The Levenshtein distance between two strings */
+	public static levenshteinDistance(a: string, b: string): number {
+		const matrix: number[][] = [];
+
+		// Initialize the first row and column of the matrix
+		for (let i = 0; i <= b.length; i++) {
+			matrix[i] = [i];
+		}
+		for (let j = 0; j <= a.length; j++) {
+			matrix[0][j] = j;
+		}
+
+		// Calculate the distances
+		for (let i = 1; i <= b.length; i++) {
+			for (let j = 1; j <= a.length; j++) {
+				if (b.charAt(i - 1) === a.charAt(j - 1)) {
+					matrix[i][j] = matrix[i - 1][j - 1];
+				} else {
+					matrix[i][j] = Math.min(
+						matrix[i - 1][j - 1] + 1, // substitution
+						matrix[i][j - 1] + 1, // insertion
+						matrix[i - 1][j] + 1 // deletion
+					);
+				}
+			}
+		}
+
+		return matrix[b.length][a.length];
 	}
 }

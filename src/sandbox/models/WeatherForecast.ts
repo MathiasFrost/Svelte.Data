@@ -1,4 +1,4 @@
-import { ensureDateString, ensureNumber, ensureObject, ensureStringNullable } from "$lib/types/unknown.js";
+import { ensureDateString, ensureNumber, ensureObject, ensureStringNullable } from "$lib/utils/unknown.js";
 
 /** @internal */
 export class WeatherForecast {

@@ -1,3 +1,3 @@
-import { serverWritable } from "$lib/store/serverWritable.js";
+import { serverWritable } from "$lib/utils/serverStore.js";
 
 export const unauthorized = serverWritable<boolean>(false);

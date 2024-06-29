@@ -1,5 +1,5 @@
-import type { Deserializer } from "$lib/types/unknown";
-import { deserialize } from "$lib/http/Deserializable";
+import type { Deserializer } from "$lib/utils/unknown.js";
+import { deserialize } from "$lib/http/Deserializable.js";
 
 /** Create an entirely new instance of a variable, including objects with objects as properties */
 export function cloneViaSerialization<T>(
