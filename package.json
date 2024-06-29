@@ -68,10 +68,6 @@
 			"types": "./dist/ws/index.d.ts",
 			"svelte": "./dist/ws/index.js"
 		},
-		"./ws/WSReceiver.svelte": {
-			"types": "./dist/ws/WSReceiver.svelte.d.ts",
-			"svelte": "./dist/ws/WSReceiver.svelte"
-		},
 		"./utils": {
 			"types": "./dist/utils/index.d.ts",
 			"svelte": "./dist/utils/index.js"

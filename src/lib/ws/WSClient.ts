@@ -1,15 +1,36 @@
-import { type Writable, writable } from "svelte/store";
+import { type Invalidator, type Readable, type Subscriber, type Unsubscriber, type Writable, writable } from "svelte/store";
 import { indefinitePromise } from "$lib/utils/async.js";
 import { WSMessage } from "$lib/ws/WSMessage.js";
 
-/** TODOC */
-export interface WSClientOptions {
-	/** TODOC */
-	readonly temp: boolean;
+export class WSMessageContainer {
+	private readonly _messages: WSMessage[];
+	public constructor(messages: WSMessage[]) {
+		this._messages = messages;
+	}
+	public messages(target?: string): WSMessage[] {
+		if (!target) return this._messages;
+		return this._messages.filter((message) => message.target === target);
+	}
+	public messagesTo(target?: string): WSMessage[] {
+		if (!target) return this._messages.filter((message) => !message.received);
+		return this._messages.filter((message) => message.target === target && !message.received);
+	}
+	public messagesFrom(target?: string): WSMessage[] {
+		if (!target) return this._messages.filter((message) => message.received);
+		return this._messages.filter((message) => message.target === target && message.received);
+	}
 }
 
 /** TODOC */
-export class WSClient {
+export interface WSClientOptions<TContainer extends WSMessageContainer> {
+	/** Don't */
+	readonly silentRetry?: boolean;
+
+	readonly container: new (messages: WSMessage[]) => TContainer;
+}
+
+/** TODOC */
+export class WSClient<TContainer extends WSMessageContainer = WSMessageContainer> implements Readable<TContainer> {
 	/** Base address for requests made with this client */
 	public readonly baseAddress: URL;
 
@@ -17,7 +38,7 @@ export class WSClient {
 	public webSocket: WebSocket | null = null;
 
 	/** @see WSClientOptions */
-	private readonly options: Partial<WSClientOptions>;
+	private readonly options: WSClientOptions<TContainer>;
 
 	/** TODOC */
 	private connectionPromise: Promise<void> | null = null;
@@ -26,12 +47,26 @@ export class WSClient {
 	private pingInterval = 0;
 
 	/** TODOC */
-	private stores: Map<string, Writable<WSMessage | null>> = new Map();
+	private store: Writable<TContainer>;
+
+	public connecting: Promise<Event>;
+
+	private resolve: (e: Event) => void = () => {};
+
+	private reject: (reason?: unknown) => void = () => {};
 
 	/** ctor */
-	public constructor(baseAddress = "", options: Partial<WSClientOptions> = {}) {
+	public constructor(
+		baseAddress = "",
+		options: WSClientOptions<TContainer> = { container: WSMessageContainer as new (messages: WSMessage[]) => TContainer }
+	) {
 		this.baseAddress = new URL(baseAddress);
 		this.options = options;
+		this.store = writable<TContainer>(new this.options.container([]));
+		this.connecting = new Promise<Event>((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
 	}
 
 	/** TODOC */
@@ -50,19 +85,13 @@ export class WSClient {
 	}
 
 	/** TODOC */
-	public async send(target: string, ...args: unknown[]): Promise<void> {
+	public async sendMessage(target: string, ...args: unknown[]): Promise<void> {
 		await this.connect();
-		this.webSocket?.send(`{"type":1,"target":"${target}","arguments":${JSON.stringify(args)}}`);
-	}
+		const data = `{"type":1,"target":"${target}","arguments":${JSON.stringify(args)}}`;
+		this.webSocket?.send(data);
 
-	/** TODOC */
-	public async receive(target: string): Promise<Writable<WSMessage | null>> {
-		if (this.stores.has(target)) return this.stores.get(target) as Writable<WSMessage | null>;
-
-		await this.connect();
-		const store = writable<WSMessage | null>(null);
-		this.stores.set(target, store);
-		return store;
+		const message = new WSMessage(data, false);
+		this.store.update((prev) => new this.options.container([...prev.messages(), message]));
 	}
 
 	/** TODOC */
@@ -85,21 +114,36 @@ export class WSClient {
 		baseAddress.searchParams.append("id", token);
 
 		this.webSocket = new WebSocket(baseAddress);
-		this.webSocket.addEventListener("message", this.handleMessage.bind(this));
-		this.webSocket.addEventListener("close", (ev) => console.info(`${this.baseAddress}: WebSocket closed with code ${ev.code}`));
-		this.webSocket.addEventListener("error", (ev) => console.error(ev));
-		this.webSocket.addEventListener("open", () => {
-			console.info(`${this.baseAddress}: WebSocket connected, switching to JSON protocol`);
-			this.webSocket?.send('{"protocol":"json","version":1}');
-			this.pingInterval = window.setInterval(() => this.webSocket?.send('{"type":6}'), 15_000);
-		});
+		this.webSocket.addEventListener("message", this.receiveMessage.bind(this));
+		this.webSocket.addEventListener("close", this.connectionClosed.bind(this));
+		this.webSocket.addEventListener("error", this.connectionError.bind(this));
+		this.webSocket.addEventListener("open", this.connectionOpen.bind(this));
+	}
+
+	private connectionClosed(e: CloseEvent): void {
+		console.info(`${this.baseAddress}: WebSocket closed with code ${e.code}`);
+	}
+
+	private connectionError(e: Event): void {
+		this.reject(e);
+	}
+
+	public connectionOpen(e: Event): void {
+		console.log(e);
+		this.resolve(e);
+		console.info(`${this.baseAddress}: WebSocket connected, switching to JSON protocol`);
+		this.webSocket?.send('{"protocol":"json","version":1}');
+		this.pingInterval = window.setInterval(() => this.webSocket?.send('{"type":6}'), 15_000);
 	}
 
 	/** TODOC */
-	private handleMessage(e: MessageEvent): void {
-		const data = new WSMessage(e.data);
-		const store = this.stores.get(data.target);
-		if (!store) return;
-		store.set(data);
+	private receiveMessage(e: MessageEvent): void {
+		const data = new WSMessage(e.data, true);
+		this.store.update((prev) => new this.options.container([...prev.messages(), data]));
+	}
+
+	/** @inheritdoc */
+	public subscribe(run: Subscriber<TContainer>, invalidate?: Invalidator<TContainer>): Unsubscriber {
+		return this.store.subscribe(run, invalidate);
 	}
 }
