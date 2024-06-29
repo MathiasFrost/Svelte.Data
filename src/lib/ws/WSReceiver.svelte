@@ -36,3 +36,21 @@
 </script>
 
 <slot {maybePromise} />
+
+{#await hub.connecting}
+	{#each $hub.received as message}
+		<p>{message.name}: {message.text}</p>
+	{/each}
+
+	{#each $hub.messages as message}
+		{#if message.sent}
+			Yuo: {message.text}
+		{:else}
+			<p>{message.name}: {message.text}</p>
+		{/if}
+	{/each}
+
+	<form on:submit|preventDefault={(e) => hub.sendMessage(new FormData(e.currentTarget))}>
+		<input />
+	</form>
+{/await}

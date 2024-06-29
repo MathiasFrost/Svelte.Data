@@ -3,6 +3,7 @@
 	import ComboBox, { makeDefaultSearcher, type Inputs, type KeyWithDefault } from "$lib/popup/ComboBox.svelte";
 	import { fly } from "svelte/transition";
 	import Modal from "$lib/popup/Modal.svelte";
+	import Accordion from "$lib/popup/Accordion.svelte";
 
 	interface Option {
 		readonly id: number;
@@ -75,6 +76,16 @@
 		><svelte:fragment slot="summary">something</svelte:fragment>
 		{#if open}<div transition:fly class="popup">This is a tooltip wee woo wee woo wee woo</div>{/if}</Popup>
 </p>
+
+<Accordion>
+	<button slot="summary">test</button>
+	<div>Hola</div>
+</Accordion>
+
+<details>
+	<summary>Test</summary>
+	<div>Hola</div>
+</details>
 
 <form on:submit|preventDefault={(e) => console.log(new FormData(e.currentTarget))}>
 	<ComboBox name="test" search={makeDefaultSearcher(users)} let:open let:result multiple let:values let:items>
